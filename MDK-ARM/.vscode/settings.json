@@ -1,0 +1,32 @@
+{
+    "files.associations": {
+        "qr_code.h": "c",
+        "start_task.h": "c",
+        "motor_control.h": "c",
+        "main.h": "c",
+        "motor.h": "c",
+        "imu_control.h": "c",
+        "imu_task.h": "c",
+        "chassis_control_task.h": "c",
+        "IMU.C": "cpp",
+        "motor_set_task.h": "c",
+        "fast_math.h": "c",
+        "postion_control.h": "c",
+        "circle_control.h": "c",
+        "main_task.h": "c",
+        "catch.h": "c",
+        "circe.h": "c",
+        "usart.h": "c",
+        "go-m8010-6.h": "c",
+        "action_control.h": "c",
+        "action_sets.h": "c",
+        "catch_yuanpanji_task.h": "c",
+        "warehouse_app.h": "c",
+        "pid.h": "c",
+        "imu.h": "c",
+        "user.h": "c",
+        "string": "c",
+        "array": "c",
+        "string_view": "c"
+    }
+}

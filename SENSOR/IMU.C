@@ -2,7 +2,7 @@
 #include "stdio.h"
 #include "sys.h"
  #include "usart.h"
- 
+
 //配置命令数组
 //解锁寄存器 FF AA 69 88 B5
 //Z轴角度归零FF AA 76 00 00
@@ -36,7 +36,7 @@ void U2_send(unsigned char data)
 			break;
 		}
 	}
-    __HAL_UART_CLEAR_OREFLAG(&huart2);    
+    __HAL_UART_CLEAR_OREFLAG(&huart2);
 }
 
 void uart2WriteBuf(uint8_t *buf, uint8_t len)
@@ -79,16 +79,16 @@ void Imu_set500hz(void)
 void USART2_IRQHandler(void)
 {
 	uint32_t flag_idle = 0;
-	
-	flag_idle = __HAL_UART_GET_FLAG(&huart2,UART_FLAG_IDLE); 
+
+	flag_idle = __HAL_UART_GET_FLAG(&huart2,UART_FLAG_IDLE);
 	if((flag_idle != RESET))
-	{ 
+	{
 		__HAL_UART_CLEAR_IDLEFLAG(&huart2);
 
-		HAL_UART_DMAStop(&huart2); 
-		uint32_t temp = __HAL_DMA_GET_COUNTER(&hdma_usart2_rx);   
-		imu_rx_len = BUFFER_SIZE - temp; 	
-		
+		HAL_UART_DMAStop(&huart2);
+		uint32_t temp = __HAL_DMA_GET_COUNTER(&hdma_usart2_rx);
+		imu_rx_len = BUFFER_SIZE - temp;
+
 		if(imu_rx_buf[0] == 0x55)
 		{
 			uint8_t sum = 0;

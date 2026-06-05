@@ -47,7 +47,7 @@ void read_init_postion(void)
     SET_485_RE_DOWN();
 	SET_485_DE_DOWN();
 	
-    Delay_ms(5);
+    vTaskDelay(pdMS_TO_TICKS(5));
     M8010_init_postion = M8010_real_postion;
 }
 
@@ -78,55 +78,61 @@ int modify_data(MOTOR_send *motor_s)
 
 
 void M8010_send(int position) {
-    const float tolerance = 1.0f; // 允许1度误差
-    const uint32_t timeout_ms = 500000; // 5秒超时
+    const float tolerance = 1.0f;         // 允许1度误差
+    const uint32_t timeout_ms = 5000;     // 5秒超时
+    const uint32_t uart_timeout = 50;     // 单次UART发送超时50ms
     uint32_t start_time = HAL_GetTick();
-    
-    // 初始化控制命令
+    HAL_StatusTypeDef uart_ret;
+
     cmd.id = 0;
     cmd.mode = 1;
     cmd.T = 0;
     cmd.W = 0;
     cmd.K_P = 1.0;
     cmd.K_W = 0.15;
-    
-    // 计算初始误差
+
     M8010.TARGE = position;
     M8010.CHANGE = M8010.TARGE - M8010.NOW;
-    
-    while((__fabs(M8010.CHANGE) > tolerance)) 
+
+    while((__fabs(M8010.CHANGE) > tolerance))
     {
-        // 超时检查
         if(HAL_GetTick() - start_time > timeout_ms) {
-            // 可添加超时处理逻辑
             break;
         }
-        // 改进的步进逻辑
+
         int step = 0;
         if(__fabs(M8010.CHANGE) >= 10.0f) {
-            step = (M8010.CHANGE > 0) ? 10 : -10; // 根据方向确定符号
+            step = (M8010.CHANGE > 0) ? 10 : -10;
         } else {
-            step = (M8010.CHANGE > 0) ? 1 : -1; // 根据方向确定符号
+            step = (M8010.CHANGE > 0) ? 1 : -1;
         }
-        // 更新位置
+
         M8010.NOW += step;
-        // 限制在-35到280度之间(保护措施)
-        if(M8010.NOW > 400.0f || M8010.NOW<(-50)) { // 限制在-280到280度之间
+
+        if(M8010.NOW > 400.0f || M8010.NOW < (-50)) {
             M8010.NOW = (M8010.NOW > 0) ? 280.0f : -50;
         }
         M8010.CHANGE = M8010.TARGE - M8010.NOW;
-        // 单位转换
+
         cmd.Pos = (float)M8010.NOW / 180.0f * 3.1415926f * 6.33f;
         modify_data(&cmd);
-        // 可靠发送
+
         SET_485_DE_UP();
         SET_485_RE_UP();
         HAL_Delay(1);
-        HAL_UART_Transmit(&huart8, (uint8_t *)&cmd, sizeof(cmd.motor_send_data), 0xFFFF);
+
+        uart_ret = HAL_UART_Transmit(&huart8, (uint8_t *)&cmd.motor_send_data,
+                                     sizeof(cmd.motor_send_data), uart_timeout);
         HAL_Delay(1);
         SET_485_RE_DOWN();
         SET_485_DE_DOWN();
-        HAL_Delay(10); // 控制频率
+
+        if(uart_ret != HAL_OK) {
+            // UART发送失败（超时/BUSY/ERROR），退出循环
+            break;
+        }
+
+        HAL_Delay(10);
     }
 }
 
@@ -144,7 +150,7 @@ void M8010_SetAngle(int tar_angle)
 		static int change_var=0;
 		change_var=__fabs((tar_angle - M8010.NOW));
 		M8010_send(tar_angle);
-		Delay_ms((change_var)*2.0);
+		vTaskDelay(pdMS_TO_TICKS((change_var)*2));
 }
 
 float M8010_Control_pid(float differnt,float Initial_value)

@@ -5,6 +5,11 @@
 int length,i = 0;
 static uint8_t RxBuffer1[128] = {0};//接收数组
 
+// 调试：原始字节捕获，方便 Keil 断点查看
+volatile uint8_t  raw_buf[32] = {0};
+volatile uint8_t  raw_idx = 0;
+volatile uint32_t raw_total = 0;
+
 volatile int TheNumber = 0;
 
 struct COLOR_ID one;
@@ -41,10 +46,16 @@ void QR_sense_init()
 
 void UART5_IRQHandler(void)
 {
-	unsigned char res;	
-	if(UART5->ISR&(1<<5))	//?óê?μ?êy?Y
+	unsigned char res;
+	if(UART5->ISR&(1<<5))
 	{
-		res=UART5->RDR; 
+		res=UART5->RDR;
+
+		// 调试：捕获原始字节
+		raw_buf[raw_idx & 0x1F] = res;
+		raw_idx++;
+		raw_total++;
+
 		if(res == 0x48 && length == 0)
 		{
 			length = 1;

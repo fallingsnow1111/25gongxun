@@ -179,7 +179,7 @@ void Motor_Send_Postion_together(int LB, int LF, int RF, int RB, char mode) // �
         temp[i][3] = 0x2E; // �ٶ�ԭ��0x05
         temp[i][4] = 0xE0;
 
-        temp[i][5] = 0xAE; // ���ٶ�ԭ��1A
+        temp[i][5] = 0xAE; // ���ٶ�ԭ�
 
         temp[i][6] = (uint8_t)((temppostion * 14) >> 24);
         temp[i][7] = (uint8_t)((temppostion * 14) >> 16);
@@ -372,71 +372,106 @@ void Motor_Rxdata_SetSero(void)
 static uint8_t rxbuff1[128];
 static uint8_t rxbuff2[128];
 extern volatile struct  CHECK_FLAG_t  motor_check;
+volatile uint32_t motor3_rx_probe = 0;
+
+static void U3_process_single_frame(uint8_t* data, uint8_t len)
+{
+	if (data[len - 1] != 0x6B)
+	{
+		return;
+	}
+
+	/* [31:24]=len, [23:16]=tail, [15:8]=id, [7:0]=motor3 frame count */
+	{
+		uint8_t id = data[0];
+		uint8_t count3 = (uint8_t)(motor3_rx_probe & 0xFF);
+		if (len == 8 && id == 0x03)
+		{
+			count3++;
+		}
+		motor3_rx_probe = ((uint32_t)len << 24) | ((uint32_t)data[len - 1] << 16) | ((uint32_t)id << 8) | count3;
+	}
+
+	if (len == 8)
+	{
+		switch (data[0])
+		{
+		case 0x01:
+			motor1.actual_angle = (data[3] << 8*3) | (data[4] << 8*2) | (data[5] << 8) | data[6];
+			motor1.actual_angle = (motor1.actual_angle * 360) / 65536;
+			if (data[2] == 0x01)
+			{
+				motor1.actual_angle = -motor1.actual_angle;
+			}
+			motor_check.flag_finish = motor_check.flag_finish | (1 << 0);
+			break;
+		case 0x02:
+			motor2.actual_angle = (data[3] << 8*3) | (data[4] << 8*2) | (data[5] << 8) | data[6];
+			motor2.actual_angle = (motor2.actual_angle * 360) / 65536;
+			if (data[2] == 0x01)
+			{
+				motor2.actual_angle = -motor2.actual_angle;
+			}
+			motor_check.flag_finish = motor_check.flag_finish | (1 << 1);
+			break;
+		case 0x03:
+			motor3.actual_angle = (data[3] << 8*3) | (data[4] << 8*2) | (data[5] << 8) | data[6];
+			motor3.actual_angle = (motor3.actual_angle * 360) / 65536;
+			if (data[2] == 0x01)
+			{
+				motor3.actual_angle = -motor3.actual_angle;
+			}
+			motor_check.flag_finish = motor_check.flag_finish | (1 << 2);
+			break;
+		case 0x04:
+			motor4.actual_angle = (data[3] << 8*3) | (data[4] << 8*2) | (data[5] << 8) | data[6];
+			motor4.actual_angle = (motor4.actual_angle * 360) / 65536;
+			if (data[2] == 0x01)
+			{
+				motor4.actual_angle = -motor4.actual_angle;
+			}
+			motor_check.flag_finish = motor_check.flag_finish | (1 << 3);
+			break;
+		default:
+			break;
+		}
+	}
+	else if (len == 4)
+	{
+		if (data[0] == 1 && data[3] == 0x6B)
+		{
+			if (data[1] == 0xF6 && data[2] == 0x02)
+			{
+				motor_check.flag_ready = finish;
+			}
+		}
+	}
+}
 //读取电机实际角度的函数
 uint8_t U3_data_processing(uint8_t* data,uint8_t len)
 {
-	if(data[len-1] != 0x6B)
+	uint8_t index = 0;
+
+	while (index < len)
 	{
-		return 0;
-	}
-	
-	if(len==8)
-	{
-		switch (data[0])  // 0x01-0x04
+		if ((len - index) >= 8 && data[index + 7] == 0x6B)
 		{
-		case 0x01: // LB
-			
-			motor1.actual_angle = (data[3] << 8*3) | (data[4] << 8*2) | (data[5] << 8) | data[6];
-			motor1.actual_angle = (motor1.actual_angle*360)/65536; // 0-65536 -> 0-360
-			if(data[2]==0x01)
-			{
-				motor1.actual_angle=-motor1.actual_angle;
-			}
-			motor_check.flag_finish=motor_check.flag_finish | (1<<0); // 设置完成标志
-			break;
-		case 0x02: // LF
-			motor2.actual_angle = (data[3] << 8*3) | (data[4] << 8*2) | (data[5] << 8) | data[6];
-			motor2.actual_angle = (motor2.actual_angle*360)/65536; // 0-65536 -> 0-360
-			if(data[2]==0x01)
-			{
-				motor2.actual_angle=-motor2.actual_angle;
-			}
-			motor_check.flag_finish=motor_check.flag_finish | (1<<1); // 设置完成标志
-			break;
-		case 0x03: // RF
-			motor3.actual_angle = (data[3] << 8*3) | (data[4] << 8*2) | (data[5] << 8) | data[6];
-			motor3.actual_angle = (motor3.actual_angle*360)/65536; // 0-65536 -> 0-360
-			if(data[2]==0x01)
-			{
-				motor3.actual_angle=-motor3.actual_angle;
-			}
-			motor_check.flag_finish=motor_check.flag_finish | (1<<2); // 设置完成标志
-			break;
-		case 0x04: // RB
-			motor4.actual_angle = (data[3] << 8*3) | (data[4] << 8*2) | (data[5] << 8) | data[6];
-			motor4.actual_angle = (motor4.actual_angle*360)/65536; // 0-65536 -> 0-360
-			if(data[2]==0x01)
-			{
-				motor4.actual_angle=-motor4.actual_angle;
-			}
-			motor_check.flag_finish=motor_check.flag_finish | (1<<3); // 设置完成标志
-			break;
-		default:
-			return 0;
-			//break;
+			U3_process_single_frame(&data[index], 8);
+			index += 8;
+			continue;
 		}
-	}
-	//data[1] == 0xF6?
-	else if (len==4)
-	{
-		if(data[0]==1&&data[3]==0x6B)
+
+		if ((len - index) >= 4 && data[index + 3] == 0x6B)
 		{
-			if(data[1]==0xF6&&data[2]==0x02)
-			{
-				motor_check.flag_ready=finish;
-			}
+			U3_process_single_frame(&data[index], 4);
+			index += 4;
+			continue;
 		}
+
+		index++;
 	}
+
+	return 1;
 }
 
 void MOTOR_FINISHFLAGEXAM(uint8_t *RXdat) // 接收完成标志检查

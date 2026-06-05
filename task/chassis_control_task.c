@@ -42,7 +42,7 @@ void chassis_control_init(void)
 	car.actual_y = 0.0f;
 	car.actual_x = 0.0f;
 	car.actual_w = 0.0f;
-	car.imu_modeable = unable; // 陀螺仪控制不使能
+	car.imu_modeable = enable; // 陀螺仪控制不使能
 	car.Odometer_able = enable; // 里程计使能
 }
 

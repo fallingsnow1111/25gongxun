@@ -45,14 +45,31 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
 )
 
+# 自动寻找用户源文件
+file(GLOB_RECURSE USER_SOURCES CONFIGURE_DEPENDS
+        "mydefinition/*.c"
+        "MOTOR/*.c"
+        "task/*.c"
+        "APP/*.c"
+        "SENSOR/*.c"
+        "USMART/*.c"
+)
+
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
+        ${USER_SOURCES}
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
+        mydefinition
+        APP
+        MOTOR
+        SENSOR
+        task
+        USMART
 )
 
 # Add project symbols (macros)

@@ -15,7 +15,7 @@ struct IMU_RUNDATA inu_turn;
 void Gyro_Init(void)	//陀螺仪初始化
 {
 	PID_Init(&Gyro_Pid,2.6,0,0,150,-150);//对陀螺仪的PID初始化
-	imu_receive_init();//开启串口3接收陀螺仪信息
+	imu_receive_init();//开启串口2接收陀螺仪信息
 }
 
 float getAngleZ(float yaw,float my_angel) //获取相对角度

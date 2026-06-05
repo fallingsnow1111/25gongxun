@@ -915,11 +915,10 @@ ARM Macro Assembler    Page 15
 
 
 interwork --depend=mdk\startup_stm32f750xx.d -omdk\startup_stm32f750xx.o -I../C
-ore/Inc -I.\RTE\_MDK -ID:\Keil5_Pack\ARM\CMSIS\6.1.0\CMSIS\Core\Include -ID:\Ke
-il5_Pack\Keil\STM32F7xx_DFP\2.15.2\Drivers\CMSIS\Device\ST\STM32F7xx\Include --
-predefine="__MICROLIB SETA 1" --predefine="__UVISION_VERSION SETA 540" --predef
-ine="STM32F750xx SETA 1" --predefine="_RTE_ SETA 1" --list=startup_stm32f750xx.
-lst startup_stm32f750xx.s
+ore/Inc -I.\RTE\_MDK -ID:\Keil5_Pack\ARM\CMSIS\6.1.0\CMSIS\Core\Include --prede
+fine="__MICROLIB SETA 1" --predefine="__UVISION_VERSION SETA 540" --predefine="
+STM32F750xx SETA 1" --predefine="_RTE_ SETA 1" --list=startup_stm32f750xx.lst s
+tartup_stm32f750xx.s
 
 
 

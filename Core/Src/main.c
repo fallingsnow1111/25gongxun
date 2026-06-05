@@ -41,7 +41,7 @@ int x,y,z,a = 0;
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-extern uint16_t delaytime;
+extern volatile uint16_t delaytime;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/

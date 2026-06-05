@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls C:\\\\Users\\\\LuoXue\\\\Desktop\\\\Robot Project\\\\2024gongxun - 5ci\\\\task\\\\\\\\ *)",
+      "Bash(ls C:\\\\Users\\\\LuoXue\\\\Desktop\\\\Robot Project\\\\2024gongxun - 5ci\\\\MOTOR\\\\\\\\ *)",
+      "Bash(ls C:\\\\Users\\\\LuoXue\\\\Desktop\\\\Robot Project\\\\2024gongxun - 5ci\\\\SENSOR\\\\\\\\ *)",
+      "Bash(ls C:\\\\Users\\\\LuoXue\\\\Desktop\\\\Robot Project\\\\2024gongxun - 5ci\\\\APP\\\\\\\\ *)"
+    ]
+  }
+}

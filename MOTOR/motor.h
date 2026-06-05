@@ -24,6 +24,7 @@ extern struct MOTO_DATA motor1;
 extern struct MOTO_DATA motor2;
 extern struct MOTO_DATA motor3;
 extern struct MOTO_DATA motor4;
+extern volatile uint32_t motor3_rx_probe;
 
 
 struct DATA

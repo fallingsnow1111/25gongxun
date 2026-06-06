@@ -34,8 +34,8 @@ void Get_Chassis_c_output(float *x_output, float *y_output, float *w_output)
 
 void chassis_control_init(void)
 {
-	PID_Init(&chassis_pid_y, 0.280f, 0, 0, 350.0f, -350.0f);
-	PID_Init(&chassis_pid_x, 0.280f, 0, 0, 350.0f, -350.0f);
+	PID_Init(&chassis_pid_y, 0.280f, 0.005f, 0, 350.0f, -350.0f);
+	PID_Init(&chassis_pid_x, 0.280f, 0.005f, 0, 350.0f, -350.0f);
 	car.target_y = 0.0f;
 	car.target_x = 0.0f;
 	car.target_w = 0.0f;

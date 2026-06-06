@@ -386,14 +386,25 @@ static void Route_Test(void)
 	Move_To_Target_area(-1790, 0, 0, enable, Relative_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
 	Move_To_Target_area(0, 0, 180, enable, Relative_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+
+	// 回家
+	Move_To_Target_area(0, 1100, 0, enable, Relative_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+	Move_To_Target_area(70, 0, 0, enable, Relative_Position);
 }
 
 void Main_Task(void *pvParameters)
 {
-	Route_Test();
+	Set_chassis_able(enable);
+	vTaskDelay(pdMS_TO_TICKS(500));
 
 	while (1) {
-		vTaskDelay(pdMS_TO_TICKS(1000));
+		Move_To_Target_area(0, 0, 180, enable, Relative_Position);
+		vTaskDelay(pdMS_TO_TICKS(500));
+
+		Move_To_Target_area(0, 0, -180, enable, Relative_Position);
+		vTaskDelay(pdMS_TO_TICKS(500));
 	}
 }
 

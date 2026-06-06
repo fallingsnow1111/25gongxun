@@ -42,11 +42,13 @@ compiling main_task.c...
   static void M8010_Joint_Test(void)
 ..\task\main_task.c(339): warning:  #177-D: function "QR_Code_Test"  was declared but never referenced
   static void QR_Code_Test(void)
-..\task\main_task.c: 7 warnings, 0 errors
+..\task\main_task.c(365): warning:  #177-D: function "Route_Test"  was declared but never referenced
+  static void Route_Test(void)
+..\task\main_task.c: 8 warnings, 0 errors
 linking...
-Program Size: Code=36532 RO-data=1212 RW-data=728 ZI-data=20800  
+Program Size: Code=36312 RO-data=1212 RW-data=720 ZI-data=20800  
 FromELF: creating hex file...
-"MDK\MDK.axf" - 0 Error(s), 7 Warning(s).
+"MDK\MDK.axf" - 0 Error(s), 8 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -69,7 +71,7 @@ Package Vendor: Keil
 
    * Component: ARM::CMSIS:CORE@6.1.0
       Include file:  CMSIS/Core/Include/tz_context.h
-Build Time Elapsed:  00:00:06
+Build Time Elapsed:  00:00:05
 </pre>
 </body>
 </html>

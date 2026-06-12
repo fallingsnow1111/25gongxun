@@ -81,9 +81,6 @@ mdk\main_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.
 mdk\main_task.o: ..\task\start_task.h
 mdk\main_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\main_task.o: ..\task\main_task.h
-mdk\main_task.o: ..\task\imu_task.h
-mdk\main_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\main_task.o: ..\task\init_task.h
 mdk\main_task.o: ..\task\chassis_control_task.h
 mdk\main_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\main_task.o: ..\task\action_sets.h

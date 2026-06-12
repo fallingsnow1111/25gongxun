@@ -188,51 +188,6 @@ static void Claw_Test_Demo(void)
 	vTaskDelay(pdMS_TO_TICKS(400));
 }
 
-static void Motor3_Frame_Test(uint8_t repeat_times, uint32_t wait_time_ms)
-{
-	motor3_rx_probe = 0;
-
-	for (uint8_t i = 0; i < repeat_times; i++)
-	{
-		motor_read_coordination(3);
-		vTaskDelay(pdMS_TO_TICKS(wait_time_ms));
-	}
-}
-
-// 单独测试 1 号电机
-static void Motor1_Only_Test(int16_t speed, uint32_t duration_ms)
-{
-	Set_chassis_able(unable);
-
-	Motor_Send_Speed_together(speed, 0, 0, 0); // 只发1号电机速度
-	send_speed_data_switch();
-
-	vTaskDelay(pdMS_TO_TICKS(duration_ms));
-
-	// 停止
-	Motor_Send_Speed_together(0, 0, 0, 0);
-	send_speed_data_switch();
-
-	Set_chassis_able(enable);
-}
-
-void text_fuction()
-{
-	Set_chassis_able(enable);
-	vTaskDelay(pdMS_TO_TICKS(200));
-
-
-	Move_To_Target_area(-110,110,0,enable,Relative_Position);//y方向前进80cm
-	Move_To_Target_area(0,-400,0,enable,Relative_Position);//x方向上右移50cm
-	
-	Move_To_Target_area(-110,110,0,enable,Relative_Position);//y方向前进80cm
-	Move_To_Target_area(0,-400,0,enable,Relative_Position);//x方向上右移50cm
-	
-	Move_To_Target_area(-110,110,0,enable,Relative_Position);//y方向前进80cm
-	Move_To_Target_area(0,-400,0,enable,Relative_Position);//x方向上右移50cm
-
-}
-
 void User_function_final()
 {	
 	vTaskDelay(pdMS_TO_TICKS(10));
@@ -366,44 +321,48 @@ static void Route_Test(void)
 {
 	Set_chassis_able(enable);
 	vTaskDelay(pdMS_TO_TICKS(500));
-
-	Move_To_Target_area(-110, 1400, 0, enable, Relative_Position);
+	
+	//到达原料区
+	Move_To_Target_area(140, 0, 0, enable, Relative_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(0, -400, 0, enable, Relative_Position);
+	Move_To_Target_area(0, 1600, 0, enable, Relative_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(-1810, 0, 0, enable, Relative_Position);
+	Move_To_Target_area(0, -500, 0, enable, Relative_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(0, 0, 180, enable, Relative_Position);
+	Move_To_Target_area(0, 0, 90, enable, Relative_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
-
-	Move_To_Target_area(-30, -850, 0, enable, Relative_Position);
+	Move_To_Target_area(0, 1750, 0, enable, Relative_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(-850, 0, 0, enable, Relative_Position);
+	
+	//到达粗加工区
+	Move_To_Target_area(0, 0, 90, enable, Relative_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+	Move_To_Target_area(0, -750, 0, enable, Relative_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
 	Move_To_Target_area(0, 0, -90, enable, Relative_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
 
-	Move_To_Target_area(-1790, 0, 0, enable, Relative_Position);
+	//到达暂存区
+	Move_To_Target_area(0, -800, 0, enable, Relative_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(0, 0, 180, enable, Relative_Position);
+	Move_To_Target_area(0, 0, 90, enable, Relative_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
 
 	// 回家
-	Move_To_Target_area(0, 1100, 0, enable, Relative_Position);
+	Move_To_Target_area(0, 1650, 0, enable, Relative_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(70, 0, 0, enable, Relative_Position);
+	Move_To_Target_area(0, 0, 90, enable, Relative_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+	Move_To_Target_area(0, 900, 0, enable, Relative_Position);
+	
 }
 
 void Main_Task(void *pvParameters)
 {
-	Set_chassis_able(enable);
-	vTaskDelay(pdMS_TO_TICKS(500));
+	QR_sense_init();
+	Route_Test();
 
 	while (1) {
-		Move_To_Target_area(0, 0, 180, enable, Relative_Position);
-		vTaskDelay(pdMS_TO_TICKS(500));
-
-		Move_To_Target_area(0, 0, -180, enable, Relative_Position);
 		vTaskDelay(pdMS_TO_TICKS(500));
 	}
 }

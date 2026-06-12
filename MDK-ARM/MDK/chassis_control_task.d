@@ -78,6 +78,4 @@ mdk\chassis_control_task.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\chassis_control_task.o: ../MOTOR/telescopic_boom.h
 mdk\chassis_control_task.o: ../Core/Inc/usart.h
 mdk\chassis_control_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\chassis_control_task.o: ..\task\imu_task.h
-mdk\chassis_control_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\chassis_control_task.o: ../mydefinition/fast_math.h

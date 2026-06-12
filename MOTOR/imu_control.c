@@ -69,8 +69,5 @@ void Direction_Calibration(int target_angle)
     while (tar - current_val > 180.0f)  tar -= 360.0f;
     while (tar - current_val < -180.0f) tar += 360.0f;
     float w_output = PID_Compute(&Gyro_Pid, tar, current_val);
-    if (__fabs(w_output) < 2) {
-        w_output = 0.0f;
-    }
     return -w_output;
 }

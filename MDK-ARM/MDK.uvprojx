@@ -2525,16 +2525,6 @@
           <GroupName>task</GroupName>
           <Files>
             <File>
-              <FileName>main_task.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\task\main_task.c</FilePath>
-            </File>
-            <File>
-              <FileName>main_task.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\task\main_task.h</FilePath>
-            </File>
-            <File>
               <FileName>start_task.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\task\start_task.c</FilePath>
@@ -2545,26 +2535,6 @@
               <FilePath>..\task\start_task.h</FilePath>
             </File>
             <File>
-              <FileName>imu_task.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\task\imu_task.c</FilePath>
-            </File>
-            <File>
-              <FileName>imu_task.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\task\imu_task.h</FilePath>
-            </File>
-            <File>
-              <FileName>init_task.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\task\init_task.c</FilePath>
-            </File>
-            <File>
-              <FileName>init_task.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\task\init_task.h</FilePath>
-            </File>
-            <File>
               <FileName>chassis_control_task.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\task\chassis_control_task.c</FilePath>
@@ -2573,6 +2543,16 @@
               <FileName>chassis_control_task.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\task\chassis_control_task.h</FilePath>
+            </File>
+            <File>
+              <FileName>main_task.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\task\main_task.c</FilePath>
+            </File>
+            <File>
+              <FileName>main_task.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\task\main_task.h</FilePath>
             </File>
             <File>
               <FileName>action_sets.c</FileName>

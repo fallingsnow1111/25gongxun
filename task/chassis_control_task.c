@@ -1,5 +1,4 @@
 #include "chassis_control_task.h"
-#include "imu_task.h"
 #include "struct_encapsulation.h"
 #include "pid.h"
 #include "task.h"
@@ -9,10 +8,19 @@
 #define CHASSIS_CONTROL_TASK_H_PRIORITY 6//优先级
 
 #define POSITION_THRESHOLD 15.0f     // 位置误差阈值
-#define ORIENTATION_THRESHOLD 0.2f  // 角度误差阈值
+#define ORIENTATION_THRESHOLD 0.3f  // 角度误差阈值
 #define LiMITED_SPEED 3.0f // 最小速度限制
 #define LIMITED_LOW_POSITION  0
 #define LIMITED_LOW_POSITION_SPEED 0
+
+#define MAX_DELTA 20.0f     //每周期最大速度变化量
+#define MAX_W_DELTA 20.0f   //每周期最大航向变化量
+
+static inline float clamp(float val, float low, float high){
+    if (val < low)  return low;
+    if (val > high) return high;
+    return val;
+}
 
 volatile CARDATA_T   car;
 struct   PIDstruct   chassis_pid_y;
@@ -42,7 +50,7 @@ void chassis_control_init(void)
 	car.actual_y = 0.0f;
 	car.actual_x = 0.0f;
 	car.actual_w = 0.0f;
-	car.imu_modeable = enable; // 陀螺仪控制不使能
+	car.imu_modeable = enable; // 陀螺仪控制使能
 	car.Odometer_able = enable; // 里程计使能
 }
 
@@ -85,6 +93,7 @@ void check(float tar,float actual)
     //vofa_printf("check:%d\n",_check);
 }
 
+static float last_y = 0, last_x = 0, last_w = 0;
 
 void chassis_control(void)
 {
@@ -93,7 +102,7 @@ void chassis_control(void)
     if(motor_check.flag_finish<0x0F)
     {
         Motor_setspeed(0, 0, 0);
-				Delay_ms(6);
+		Delay_ms(6);
         return;
     }
     Motor_Action_Calculate_actual(&car.actual_y, &car.actual_x, &car.actual_w);
@@ -106,6 +115,18 @@ void chassis_control(void)
     w_c_output = Direction_Calibration_turn(car.target_w); 
     y_c_output = PID_Compute(&chassis_pid_y, car.target_y, car.actual_y);
     x_c_output = PID_Compute(&chassis_pid_x, car.target_x, car.actual_x);
+
+    //pid输出限幅，梯形加减速
+    float delta_y = y_c_output - last_y;
+    float delta_x = x_c_output - last_x;
+    float delta_w = w_c_output - last_w;
+    delta_y = clamp(delta_y, -MAX_DELTA, MAX_DELTA);
+    delta_x = clamp(delta_x, -MAX_DELTA, MAX_DELTA);
+    delta_w = clamp(delta_w, -MAX_DELTA, MAX_DELTA);
+    y_c_output = last_y + delta_y;
+    x_c_output = last_x + delta_x;
+    w_c_output = last_w + delta_w;
+
     // 计算位置和角度误差
     float err_y = __fabs(car.target_y - car.actual_y);
     float err_x = __fabs(car.target_x - car.actual_x);
@@ -155,10 +176,19 @@ void chassis_control(void)
         (__fabs(err_w) <= ORIENTATION_THRESHOLD))
     {
         MOTOR_ACTIONFALG = finish;
-        Motor_SetZero();
+    }
+    //动作完成后结束底盘控制输出
+    if(MOTOR_ACTIONFALG == finish){
+        last_y = 0;
+        last_x = 0;
+        last_w = 0;
+        Motor_setspeed(0, 0, 0);
+        return;
     }
     check(car.target_x,car.actual_x);
     //发送调试信息
+    last_y = y_c_output;
+    last_x = x_c_output;
     Motor_setspeed(y_c_output, x_c_output, w_c_output);
     Delay_ms(5);
     //motor_check.flag_ready=Incomplete;
@@ -168,10 +198,14 @@ void chassis_control(void)
 
 void Chassis_Control_Task(void*pvParameters)
 {
+    TickType_t last_wake = xTaskGetTickCount();
+    const TickType_t period = pdMS_TO_TICKS(30);
+
 	while(1)
 	{   
+        //固定周期唤醒
+        vTaskDelayUntil(&last_wake, period); 
         chassis_control();
-		    vTaskDelay(60);
 	}
 }
 

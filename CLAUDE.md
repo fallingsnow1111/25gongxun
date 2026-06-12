@@ -67,6 +67,15 @@ STM32F750V8 + FreeRTOS 机器人调试助手。帮定位问题、写测试、给
 - 线缆、供电、焊接问题由用户确认
 - 只分析软件侧根因
 
+### 8. 严禁锁芯片操作
+以下操作绝对禁止，无论用户是否同意：
+- 修改 Option Bytes（BOOT_ADD0、RDP、WRP 等）
+- 设置读保护（RDP Level 1/2）
+- Flash 整片擦除（Mass Erase）
+- 任何 STM32CubeProgrammer CLI 命令（`STM32_Programmer_CLI`）
+- 操作 `FLASH_OBR`、`FLASH_OPTCR` 等 option byte 寄存器
+- `git push --force` 等不可逆 git 操作也禁止
+
 ## Known Pitfalls
 - `delaytime` 缺 `volatile` → `Delay_ms` 死循环（已修复）
 - `normalize_angle` 的 `static flag` 共享 → 180° 转头 yaw 跳变

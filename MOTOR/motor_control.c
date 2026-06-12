@@ -1,4 +1,5 @@
 #include "motor_control.h"
+#include "delay.h"
 #include "motor.h"
 #include "pid.h"
 #include "imu_control.h"
@@ -43,11 +44,12 @@ void Move_To_Target_area(float x,float y,float angle,int imu_able,MODE_POSITION 
 	Set_chassis_able(car.Odometer_able);
 	//taskENTER_CRITICAL();
 	car.target_x=(x*ratio_of_pulse_distance_x);
-	car.target_y=(y*ratio_of_pulse_distance_y);
+	car.target_y=(-y*ratio_of_pulse_distance_y);
 	car.target_w=angle;
 	if(mode==Relative_Position)
 	{
 		Motor_SetZero();
+		Delay_ms(200);	//等imu稳定
 		Imu_setZero();
 	}
 	//taskEXIT_CRITICAL();
@@ -61,7 +63,6 @@ void Move_To_Target_area(float x,float y,float angle,int imu_able,MODE_POSITION 
 		}
 		Delay_ms(2);
 	}
-	MOTOR_ACTIONFALG=Incomplete;
 }
 
 void Move_To_Target_Postion(float vy,float vx,float w,char mode)//旋转,厘米为单位

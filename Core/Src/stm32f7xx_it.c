@@ -285,9 +285,9 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void)
   /* USER CODE END TIM8_TRG_COM_TIM14_IRQn 1 */
 }
 
-/**
-  * @brief This function handles UART5 global interrupt.
-  */
+///**
+//  * @brief This function handles UART5 global interrupt.
+//  */
 //void UART5_IRQHandler(void)
 //{
 //  /* USER CODE BEGIN UART5_IRQn 0 */
@@ -313,9 +313,9 @@ void TIM6_DAC_IRQHandler(void)
   /* USER CODE END TIM6_DAC_IRQn 1 */
 }
 
-/**
-  * @brief This function handles USART6 global interrupt.
-  */
+///**
+//  * @brief This function handles USART6 global interrupt.
+//  */
 //void USART6_IRQHandler(void)
 //{
 //  /* USER CODE BEGIN USART6_IRQn 0 */

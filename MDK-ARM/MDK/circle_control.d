@@ -82,9 +82,6 @@ mdk\circle_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsi
 mdk\circle_control.o: ../task/start_task.h
 mdk\circle_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\circle_control.o: ../task/main_task.h
-mdk\circle_control.o: ../task/imu_task.h
-mdk\circle_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\circle_control.o: ../task/init_task.h
 mdk\circle_control.o: ../task/chassis_control_task.h
 mdk\circle_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\circle_control.o: ../task/action_sets.h

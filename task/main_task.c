@@ -314,7 +314,7 @@ static void Route_Test_ABS(void)
 	vTaskDelay(pdMS_TO_TICKS(200));
 	Move_To_Target_area(140, 3900, 270, enable, Absolute_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(-75, 4030, 270, enable, Absolute_Position);
+	Move_To_Target_area(-75, 4050, 270, enable, Absolute_Position);
 }
 void Main_Task(void *pvParameters)
 {

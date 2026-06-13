@@ -8,15 +8,15 @@ TaskHandle_t Chassis_Control_Task_Handle;
 #define CHASSIS_CONTROL_TASK_H_STACK 512//任务堆栈
 #define CHASSIS_CONTROL_TASK_H_PRIORITY 6//优先级
 
-#define POSITION_THRESHOLD 15.0f     // 位置误差阈值
-#define HEADING_DEADZONE 0.5f       //w_c_output归零的阈值
-#define ORIENTATION_THRESHOLD 0.8f  // 姿态角到位判定阈值
+#define POSITION_THRESHOLD 10.0f     // 位置误差阈值
+#define HEADING_DEADZONE 0.2f       //w_c_output归零的阈值
+#define ORIENTATION_THRESHOLD 0.3f  // 姿态角到位判定阈值
 
 #define MIN_SPEED 2.0f    //电机响应到达最小速度
 #define MAX_DELTA 5.0f     //每周期最大速度变化量
-#define MAX_W_DELTA_TURN 25.0f   //纯转向每周期最大航向变化量
+#define MAX_W_DELTA_TURN 20.0f   //纯转向每周期最大航向变化量
 #define MAX_W_DELTA_TRANS 4.0f   //平移每周期最大航向变化量
-#define DECEL_K 0.5f
+#define DECEL_K 0.40f
 
 
 volatile CARDATA_T   car;
@@ -153,13 +153,6 @@ void chassis_control(void)
     if(err_y <= POSITION_THRESHOLD) { y_c_output = 0; last_y = 0; }
     if(err_x <= POSITION_THRESHOLD) { x_c_output = 0; last_x = 0; }
 
-    //姿态角调整，处理电机死区
-    // if(__fabs(err_w) > HEADING_DEADZONE &&
-    //    __fabs(w_c_output) > 0.0f             &&
-    //    __fabs(w_c_output) < MIN_SPEED)
-    // {
-    //     w_c_output = (w_c_output > 0.0f) ? MIN_SPEED : -MIN_SPEED;
-    // }
     if((__fabs(err_w) <= HEADING_DEADZONE))
     {
         w_c_output=0;

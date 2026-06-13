@@ -9,14 +9,14 @@ TaskHandle_t Chassis_Control_Task_Handle;
 #define CHASSIS_CONTROL_TASK_H_PRIORITY 6//优先级
 
 #define POSITION_THRESHOLD 15.0f     // 位置误差阈值
-#define HEADING_DEADZONE 0.3f       //w_c_output归零的阈值
-#define ORIENTATION_THRESHOLD 0.6f  // 姿态角到位判定阈值
+#define HEADING_DEADZONE 0.5f       //w_c_output归零的阈值
+#define ORIENTATION_THRESHOLD 0.8f  // 姿态角到位判定阈值
 
-#define MIN_SPEED 3.0f    //电机响应到达最小速度
-#define MAX_DELTA 10.0f     //每周期最大速度变化量
-#define MAX_W_DELTA_TURN 40.0f   //纯转向每周期最大航向变化量
-#define MAX_W_DELTA_TRANS 7.0f   //平移每周期最大航向变化量
-#define DECEL_K 0.55f
+#define MIN_SPEED 2.0f    //电机响应到达最小速度
+#define MAX_DELTA 5.0f     //每周期最大速度变化量
+#define MAX_W_DELTA_TURN 25.0f   //纯转向每周期最大航向变化量
+#define MAX_W_DELTA_TRANS 4.0f   //平移每周期最大航向变化量
+#define DECEL_K 0.5f
 
 
 volatile CARDATA_T   car;
@@ -93,9 +93,14 @@ void check(float tar,float actual)
     //vofa_printf("check:%d\n",_check);
 }
 
+//调试计数器，观察实际周期
+volatile uint32_t exec_time_ms = 0;  // 全局，Watch 可见
+
 static float last_y = 0, last_x = 0, last_w = 0;
 void chassis_control(void)
 {
+    uint32_t _now = HAL_GetTick();
+
     static uint8_t settle_count = 0;
     // 读取电机坐标并计算实际位置
     motor_read_coordination_all();
@@ -132,7 +137,11 @@ void chassis_control(void)
     // 计算位置和角度误差
     float err_y = __fabs(car.target_y - car.actual_y);
     float err_x = __fabs(car.target_x - car.actual_x);
-    float err_w = __fabs(car.target_w - car.actual_w);
+
+    float raw_err_w = car.target_w - car.actual_w;
+    while (raw_err_w > 180.0f) raw_err_w -= 360.0f;
+    while (raw_err_w < -180.0f) raw_err_w += 360.0f;
+    float err_w = __fabs(raw_err_w);
 
     //速度限幅，根据剩余距离限制最大速度
     float spd_cap_y = err_y * DECEL_K;
@@ -140,17 +149,17 @@ void chassis_control(void)
     y_c_output = clamp(y_c_output, -spd_cap_y, spd_cap_y);
     x_c_output = clamp(x_c_output, -spd_cap_x, spd_cap_x);
 
-    // the death dispose
-    if((__fabs(err_y) <= POSITION_THRESHOLD))  y_c_output=0;
-    if((__fabs(err_x) <= POSITION_THRESHOLD))  x_c_output=0;
+    // 位置死区
+    if(err_y <= POSITION_THRESHOLD) { y_c_output = 0; last_y = 0; }
+    if(err_x <= POSITION_THRESHOLD) { x_c_output = 0; last_x = 0; }
 
     //姿态角调整，处理电机死区
-    if(__fabs(err_w) > HEADING_DEADZONE &&
-       __fabs(w_c_output) > 0.0f             &&
-       __fabs(w_c_output) < MIN_SPEED)
-    {
-        w_c_output = (w_c_output > 0.0f) ? MIN_SPEED : -MIN_SPEED;
-    }
+    // if(__fabs(err_w) > HEADING_DEADZONE &&
+    //    __fabs(w_c_output) > 0.0f             &&
+    //    __fabs(w_c_output) < MIN_SPEED)
+    // {
+    //     w_c_output = (w_c_output > 0.0f) ? MIN_SPEED : -MIN_SPEED;
+    // }
     if((__fabs(err_w) <= HEADING_DEADZONE))
     {
         w_c_output=0;
@@ -185,14 +194,16 @@ void chassis_control(void)
 
     // 发送速度到电机
     Motor_setspeed(y_c_output, x_c_output, w_c_output);
-    Delay_ms(5);
+
+    exec_time_ms = HAL_GetTick() - _now;   // _now 是函数开头采的时间戳
+
     motor_check.flag_finish=0;
 }
 
 void Chassis_Control_Task(void*pvParameters)
 {
     TickType_t last_wake = xTaskGetTickCount();
-    const TickType_t period = pdMS_TO_TICKS(30);
+    const TickType_t period = pdMS_TO_TICKS(20);
 
 	while(1)
 	{   

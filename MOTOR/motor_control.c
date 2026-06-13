@@ -40,6 +40,8 @@ void Move_To_Target_area(float x,float y,float angle,int imu_able,MODE_POSITION 
 
 	car.imu_modeable=(ABLE_T)imu_able;
 	car.Odometer_able=enable;
+
+	// 相对模式就清零编码器和imu
 	if(mode==Relative_Position)
 	{
 		Set_chassis_able(unable);
@@ -47,6 +49,8 @@ void Move_To_Target_area(float x,float y,float angle,int imu_able,MODE_POSITION 
 		Imu_setZero();
 		Delay_ms(200);	//等imu稳定
 	}
+
+	// 绝对模式什么都不做
 	car.target_x=(x*ratio_of_pulse_distance_x);
 	car.target_y=(-y*ratio_of_pulse_distance_y);
 	car.target_w=angle;

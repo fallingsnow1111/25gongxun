@@ -229,7 +229,7 @@ static void QR_Code_Test(void)
 	}
 }
 
-// 第一圈跑图测试
+// 相对位置模式跑图测试
 static void Route_Test(void)
 {
 	Set_chassis_able(enable);
@@ -271,6 +271,38 @@ static void Route_Test(void)
 	Move_To_Target_area(-150, 100, 0, enable, Relative_Position);
 }
 
+// 扫码逻辑
+static uint8_t Scan_QR(float base_x, float base_y)
+{
+	first_code = 0;
+	second_code = 0;
+
+	const float adj[][2] = {{0,0},{-30,0},{-30, 20}, {-30, -20}};
+	const uint8_t n = 4;
+	// 超时时间
+	const uint32_t wait_ms = 1000;
+
+	// 四次尝试
+	for(uint8_t i = 0; i< n; i++)
+	{
+		Move_To_Target_area(base_x + adj[i][0], base_y + adj[i][1], 0, enable, Absolute_Position);
+		uint32_t t = HAL_GetTick();
+		while ((first_code == 0 && second_code == 0) && (HAL_GetTick() - t) < wait_ms)
+		{
+			vTaskDelay(pdMS_TO_TICKS(50));
+		}
+
+		if(first_code != 0 || second_code != 0)
+		{
+			HMI_SEND();
+			vTaskDelay(pdMS_TO_TICKS(300));
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 // 绝对模式跑图测试
 static void Route_Test_ABS(void)
 {
@@ -281,9 +313,13 @@ static void Route_Test_ABS(void)
 	vTaskDelay(pdMS_TO_TICKS(300));
 	// 之后全部用 Absolute_Position
 	
-	//到达原料区
+	//扫码
 	Move_To_Target_area(140, 0, 0, enable, Absolute_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
+
+	Scan_QR(140, 750);
+
+	// 原料区
 	Move_To_Target_area(140, 1600, 0, enable, Absolute_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
 	Move_To_Target_area(140, 1100, 0, enable, Absolute_Position);
@@ -296,25 +332,25 @@ static void Route_Test_ABS(void)
 	vTaskDelay(pdMS_TO_TICKS(200));
 	Move_To_Target_area(140, 2850, 180, enable, Absolute_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(140, 2100, 180, enable, Absolute_Position);
+	Move_To_Target_area(140, 2050, 180, enable, Absolute_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(140, 2100, 90, enable, Absolute_Position);
+	Move_To_Target_area(140, 2050, 90, enable, Absolute_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
 
 	//到达暂存区
-	Move_To_Target_area(140, 1300, 90, enable, Absolute_Position);
+	Move_To_Target_area(140, 1250, 90, enable, Absolute_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(140, 1300, 180, enable, Absolute_Position);
+	Move_To_Target_area(140, 1250, 180, enable, Absolute_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
 
 	// 回家
-	Move_To_Target_area(140, 3000, 180, enable, Absolute_Position);
+	Move_To_Target_area(140, 2950, 180, enable, Absolute_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(140, 3000, 270, enable, Absolute_Position);
+	Move_To_Target_area(140, 2950, 270, enable, Absolute_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(140, 3900, 270, enable, Absolute_Position);
+	Move_To_Target_area(140, 3850, 270, enable, Absolute_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(-75, 4050, 270, enable, Absolute_Position);
+	Move_To_Target_area(-85, 4000, 270, enable, Absolute_Position);
 }
 void Main_Task(void *pvParameters)
 {

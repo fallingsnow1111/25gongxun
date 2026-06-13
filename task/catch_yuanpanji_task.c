@@ -5,7 +5,6 @@ TaskHandle_t catch_yuanpanji_task_Handle;
 
 #define CATCH_YUANPANJI_TASK_STACK 256//任务栈
 #define CATCH_YUANPANJI_TASK_PRIORITY 7//任务优先级
-extern volatile float imu_w_c_output; // 角速度输出
 
 static uint8_t color;
 static int M8010_angle;

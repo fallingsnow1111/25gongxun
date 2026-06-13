@@ -5,7 +5,6 @@
 #include "imu_control.h"
 #include <stdio.h>
 #include "math.h"
-#include "IMU.h"
 #include "TIME.h"
 #include "IMU.h"
 #include "chassis_control_task.h"
@@ -41,18 +40,17 @@ void Move_To_Target_area(float x,float y,float angle,int imu_able,MODE_POSITION 
 
 	car.imu_modeable=(ABLE_T)imu_able;
 	car.Odometer_able=enable;
-	Set_chassis_able(car.Odometer_able);
-	//taskENTER_CRITICAL();
+	if(mode==Relative_Position)
+	{
+		Set_chassis_able(unable);
+		Motor_SetZero();
+		Imu_setZero();
+		Delay_ms(200);	//等imu稳定
+	}
 	car.target_x=(x*ratio_of_pulse_distance_x);
 	car.target_y=(-y*ratio_of_pulse_distance_y);
 	car.target_w=angle;
-	if(mode==Relative_Position)
-	{
-		Motor_SetZero();
-		Delay_ms(200);	//等imu稳定
-		Imu_setZero();
-	}
-	//taskEXIT_CRITICAL();
+	Set_chassis_able(car.Odometer_able);
 	MOTOR_ACTIONFALG=Incomplete;
 	start_tick = HAL_GetTick();
 	while (MOTOR_ACTIONFALG!=finish)

@@ -4,40 +4,33 @@
 #include "task.h"
 #include "fast_math.h"
 
+TaskHandle_t Chassis_Control_Task_Handle;
 #define CHASSIS_CONTROL_TASK_H_STACK 512//任务堆栈
 #define CHASSIS_CONTROL_TASK_H_PRIORITY 6//优先级
 
 #define POSITION_THRESHOLD 15.0f     // 位置误差阈值
-#define ORIENTATION_THRESHOLD 0.3f  // 角度误差阈值
-#define LiMITED_SPEED 3.0f // 最小速度限制
-#define LIMITED_LOW_POSITION  0
-#define LIMITED_LOW_POSITION_SPEED 0
+#define HEADING_DEADZONE 0.3f       //w_c_output归零的阈值
+#define ORIENTATION_THRESHOLD 0.6f  // 姿态角到位判定阈值
 
-#define MAX_DELTA 20.0f     //每周期最大速度变化量
-#define MAX_W_DELTA 20.0f   //每周期最大航向变化量
+#define MIN_SPEED 3.0f    //电机响应到达最小速度
+#define MAX_DELTA 10.0f     //每周期最大速度变化量
+#define MAX_W_DELTA_TURN 40.0f   //纯转向每周期最大航向变化量
+#define MAX_W_DELTA_TRANS 7.0f   //平移每周期最大航向变化量
+#define DECEL_K 0.55f
 
-static inline float clamp(float val, float low, float high){
-    if (val < low)  return low;
-    if (val > high) return high;
-    return val;
-}
 
 volatile CARDATA_T   car;
 struct   PIDstruct   chassis_pid_y;
 struct   PIDstruct   chassis_pid_x;
 volatile struct  CHECK_FLAG_t  motor_check;
 
-volatile float imu_w_c_output = 0.0f; // 角速度输出
-
 static float x_c_output,y_c_output,w_c_output;
 
-TaskHandle_t Chassis_Control_Task_Handle;
-
-void Get_Chassis_c_output(float *x_output, float *y_output, float *w_output)
-{
-	*x_output = x_c_output;
-	*y_output = y_c_output;
-	*w_output = w_c_output;
+// 限幅函数
+static inline float clamp(float val, float low, float high){
+    if (val < low)  return low;
+    if (val > high) return high;
+    return val;
 }
 
 void chassis_control_init(void)
@@ -54,6 +47,13 @@ void chassis_control_init(void)
 	car.Odometer_able = enable; // 里程计使能
 }
 
+void Get_Chassis_c_output(float *x_output, float *y_output, float *w_output)
+{
+	*x_output = x_c_output;
+	*y_output = y_c_output;
+	*w_output = w_c_output;
+}
+
 void Obimeter_SetZero(void)
 {
     car.actual_y = 0.0f;
@@ -63,14 +63,14 @@ void Obimeter_SetZero(void)
 
 void  Set_chassis_able(ABLE_T Odometer)
 {
-	taskENTER_CRITICAL(); // 进入临界区（关闭中断）
+	// taskENTER_CRITICAL(); // 进入临界区（关闭中断）
     if (Odometer == enable) {
         vTaskResume(Chassis_Control_Task_Handle);
     }
     else if (Odometer == unable) {
         vTaskSuspend(Chassis_Control_Task_Handle);
     }
-    taskEXIT_CRITICAL(); // 退出临界区
+    // taskEXIT_CRITICAL(); // 退出临界区
 }
 
 void check(float tar,float actual)
@@ -94,9 +94,9 @@ void check(float tar,float actual)
 }
 
 static float last_y = 0, last_x = 0, last_w = 0;
-
 void chassis_control(void)
 {
+    static uint8_t settle_count = 0;
     // 读取电机坐标并计算实际位置
     motor_read_coordination_all();
     if(motor_check.flag_finish<0x0F)
@@ -116,13 +116,15 @@ void chassis_control(void)
     y_c_output = PID_Compute(&chassis_pid_y, car.target_y, car.actual_y);
     x_c_output = PID_Compute(&chassis_pid_x, car.target_x, car.actual_x);
 
-    //pid输出限幅，梯形加减速
+    float w_delta_limit = (__fabs(last_y) > 1.0f || __fabs(last_x) > 1.0f) ? MAX_W_DELTA_TRANS : MAX_W_DELTA_TURN;
+
+    //加速度限幅
     float delta_y = y_c_output - last_y;
     float delta_x = x_c_output - last_x;
     float delta_w = w_c_output - last_w;
     delta_y = clamp(delta_y, -MAX_DELTA, MAX_DELTA);
     delta_x = clamp(delta_x, -MAX_DELTA, MAX_DELTA);
-    delta_w = clamp(delta_w, -MAX_DELTA, MAX_DELTA);
+    delta_w = clamp(delta_w, -w_delta_limit, w_delta_limit);
     y_c_output = last_y + delta_y;
     x_c_output = last_x + delta_x;
     w_c_output = last_w + delta_w;
@@ -131,68 +133,59 @@ void chassis_control(void)
     float err_y = __fabs(car.target_y - car.actual_y);
     float err_x = __fabs(car.target_x - car.actual_x);
     float err_w = __fabs(car.target_w - car.actual_w);
-    // the death dispose
-    //y
-    if(__fabs(err_y)<LIMITED_LOW_POSITION && (__fabs(err_y) > POSITION_THRESHOLD))
-    {
-        if(y_c_output > 0)
-        {
-            y_c_output = LIMITED_LOW_POSITION_SPEED; // 如果输出小于0.5，则设置为5
-        }
-        else if (y_c_output < 0)
-        {	
-            y_c_output = -LIMITED_LOW_POSITION_SPEED; // 如果输出小于0.5，则设置为0
-        }
-    }
-    else  if((__fabs(err_y) <= POSITION_THRESHOLD))
-    {
-        y_c_output=0;
-    }
-    //x
-    if(__fabs(err_x)<LIMITED_LOW_POSITION && (__fabs(err_x) > POSITION_THRESHOLD))
-    {
-        if(x_c_output > 0)
-        {
-            x_c_output = LIMITED_LOW_POSITION_SPEED; // 如果输出小于8，则设置为8
-        }
-        else if (x_c_output < 0)
-        {	
-            x_c_output = -LIMITED_LOW_POSITION_SPEED; // 如果输出小于8，则设置为8
-        }
-    }
-    else if((__fabs(err_x) <= POSITION_THRESHOLD))
-    {
-        x_c_output=0;
-    }
 
-    if((__fabs(err_w) <= ORIENTATION_THRESHOLD))
+    //速度限幅，根据剩余距离限制最大速度
+    float spd_cap_y = err_y * DECEL_K;
+    float spd_cap_x = err_x * DECEL_K;
+    y_c_output = clamp(y_c_output, -spd_cap_y, spd_cap_y);
+    x_c_output = clamp(x_c_output, -spd_cap_x, spd_cap_x);
+
+    // the death dispose
+    if((__fabs(err_y) <= POSITION_THRESHOLD))  y_c_output=0;
+    if((__fabs(err_x) <= POSITION_THRESHOLD))  x_c_output=0;
+
+    //姿态角调整，处理电机死区
+    if(__fabs(err_w) > HEADING_DEADZONE &&
+       __fabs(w_c_output) > 0.0f             &&
+       __fabs(w_c_output) < MIN_SPEED)
+    {
+        w_c_output = (w_c_output > 0.0f) ? MIN_SPEED : -MIN_SPEED;
+    }
+    if((__fabs(err_w) <= HEADING_DEADZONE))
     {
         w_c_output=0;
     }
-    // 判断是否到达目标位置
-    if ((__fabs(err_y) <= POSITION_THRESHOLD) && 
-        (__fabs(err_x) <= POSITION_THRESHOLD) && 
-        MOTOR_ACTIONFALG == Incomplete && 
-        (__fabs(err_w) <= ORIENTATION_THRESHOLD))
+
+    // 到位判定
+    if ((__fabs(err_y) <= POSITION_THRESHOLD)    && 
+        (__fabs(err_x) <= POSITION_THRESHOLD)    && 
+        (__fabs(err_w) <= ORIENTATION_THRESHOLD) &&
+        MOTOR_ACTIONFALG == Incomplete)
     {
-        MOTOR_ACTIONFALG = finish;
+        settle_count++;
+        if(settle_count >= 2) MOTOR_ACTIONFALG = finish;
     }
+    else settle_count = 0;
+
     //动作完成后结束底盘控制输出
     if(MOTOR_ACTIONFALG == finish){
         last_y = 0;
         last_x = 0;
         last_w = 0;
+        settle_count = 0;
         Motor_setspeed(0, 0, 0);
         return;
     }
-    check(car.target_x,car.actual_x);
+
+    // check(car.target_x,car.actual_x);
     //发送调试信息
     last_y = y_c_output;
     last_x = x_c_output;
+    last_w = w_c_output;
+
+    // 发送速度到电机
     Motor_setspeed(y_c_output, x_c_output, w_c_output);
     Delay_ms(5);
-    //motor_check.flag_ready=Incomplete;
-    // 发送速度到电机
     motor_check.flag_finish=0;
 }
 

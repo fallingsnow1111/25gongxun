@@ -26,7 +26,6 @@ MOTOR_SPEED_t car_setspeed;
 int motor_mode = speed_mode;
 int postion_bit = finish;
 
-//static uint8_t u7RxBuffer[128]; // ���ջ�����
 static uint8_t RXdat[RXdat_maxsize]={0};
 char RXdat_piont=0;
 uint8_t u3_Txdata;
@@ -107,14 +106,14 @@ void Motor_Send_Speed_together(float LB,float LF,float RF,float RB)//�Ƕ��
 						temp[i][4] = (tempspeed & 0x00FF);
 				}
 				temp[i][5] = 0xC8;
-				temp[i][6] = 0x00;
+				temp[i][6] = 0x01;
 				temp[i][7] = 0x6B;
     }
 }
 
 void Send_motor_together(void)//����ͬ��ָ��
 {
-	uint8_t data[4];
+	static uint8_t data[4];
 	data[0]=0x00;
 	data[1]=0xFF;
 	data[2]=0x66;
@@ -125,7 +124,7 @@ void Send_motor_together(void)//����ͬ��ָ��
 //向电机发送命令：读取电机实时位置
 void motor_read_coordination(uint8_t motor_id)
 {
-		uint8_t sendmotor_coordination_data[3];
+		static uint8_t sendmotor_coordination_data[3];
 		sendmotor_coordination_data[0]=motor_id;
 		sendmotor_coordination_data[1]=0x36;
 		sendmotor_coordination_data[2]=0x6B;
@@ -192,6 +191,22 @@ void Motor_Send_Postion_together(int LB, int LF, int RF, int RB, char mode) // �
     }
 }
 
+// 多电机命令，一条命令设置四个电机速度
+void send_speed_data_all(void)
+{
+	static uint8_t all_send[37];
+	all_send[0] = 0x00;
+	all_send[1] = 0xAA;
+	all_send[2] = 0x00;
+	all_send[3] = 0x25;
+	memcpy(&all_send[4], LB_send, 8);
+	memcpy(&all_send[12], LF_send, 8);
+	memcpy(&all_send[20],RF_send, 8);
+	memcpy(&all_send[28],RB_send, 8);
+	all_send[36] = 0x6B;
+	uart3WriteBuf(all_send, 37);
+}
+
 void send_speed_data_switch(void)
 {
     uart3WriteBuf(LB_send,8);
@@ -245,14 +260,13 @@ void Motor_setposition(float vy,float vx,float vw,char mode)
 	Send_motor_together();
 }
 
-//不用多机同步
-void Motor_setspeed(float vy, float vx, float vw) // �趨������ٶ�?
+//多机同步
+void Motor_setspeed(float vy, float vx, float vw)
 {
-    Motor_Action_Calculate_target(vy, vx, vw);  // ������Ŀ���ٶ�
+    Motor_Action_Calculate_target(vy, vx, vw);
 	Motor_Send_Speed_together(motor1.target_angle, motor2.target_angle, motor3.target_angle, motor4.target_angle);
-	send_speed_data_switch();
-	// ����������ɺ������������
-	//Send_motor_together();//����ͬ��ָ��
+	send_speed_data_all();
+	Send_motor_together();
 }
 
 void motor_setspeed_chassis(float vy, float vx, float vw) // ���ͨ�����趨������ٶ�

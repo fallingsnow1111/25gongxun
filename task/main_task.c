@@ -277,7 +277,7 @@ static uint8_t Scan_QR(float base_x, float base_y)
 	first_code = 0;
 	second_code = 0;
 
-	const float adj[][2] = {{0,0},{-30,0},{-30, 20}, {-30, -20}};
+	const float adj[][2] = {{0,0},{-40,0},{-40, 20}, {-40, -20}};
 	const uint8_t n = 4;
 	// 超时时间
 	const uint32_t wait_ms = 1000;
@@ -317,7 +317,7 @@ static void Route_Test_ABS(void)
 	Move_To_Target_area(140, 0, 0, enable, Absolute_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
 
-	Scan_QR(140, 750);
+	Scan_QR(150, 750);
 
 	// 原料区
 	Move_To_Target_area(140, 1600, 0, enable, Absolute_Position);
@@ -348,9 +348,9 @@ static void Route_Test_ABS(void)
 	vTaskDelay(pdMS_TO_TICKS(200));
 	Move_To_Target_area(140, 2950, 270, enable, Absolute_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(140, 3850, 270, enable, Absolute_Position);
+	Move_To_Target_area(140, 3900, 270, enable, Absolute_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(-85, 4000, 270, enable, Absolute_Position);
+	Move_To_Target_area(-85, 4020, 270, enable, Absolute_Position);
 }
 void Main_Task(void *pvParameters)
 {

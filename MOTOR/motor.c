@@ -35,7 +35,7 @@ void uart3WriteBuf(uint8_t *buf, uint8_t len)
 	HAL_UART_Transmit_DMA(&huart3,buf,len);
 }
 
-void MOTOR_Init(void)//�����ʼ��?
+void MOTOR_Init(void)// 电机初始化
 {
 	car_setspeed.x_setpeed = 0.0f;
 	car_setspeed.y_setpeed = 0.0f;
@@ -48,17 +48,17 @@ void MOTOR_Init(void)//�����ʼ��?
 	motor3.actual_angle = 0;
 	motor4.target_angle = 0;
 	motor4.actual_angle = 0;
-	__HAL_UART_ENABLE_IT(&huart3, UART_IT_RXNE);//��������3�Ľ���
-	HAL_UARTEx_ReceiveToIdle_DMA(&huart3,RXdat,RXdat_maxsize);//����DMAת��
+	__HAL_UART_ENABLE_IT(&huart3, UART_IT_RXNE);// 使能串口3接收中断
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart3,RXdat,RXdat_maxsize);// 启动DMA传输
 }
 
 /**********************************************************************************************************
-*�� �� ��: Motor_Send_Speed_together
-*����˵��: ����ٶ����ݷ���?(���ö��ͬ��ͨ�?)
-*��    ��: ��
-*�� �� ֵ: ��
+* 函数名: Motor_Send_Speed_together
+* 功能:   打包四个电机速度命令(多电机同步模式)
+* 输入:   LB, LF, RF, RB - 四个电机的目标速度
+* 返回值: 无
 **********************************************************************************************************/
-void Motor_Send_Speed_together(float LB,float LF,float RF,float RB)//�Ƕ��ͬ��?
+void Motor_Send_Speed_together(float LB,float LF,float RF,float RB)
 {
 	static uint8_t* LB_speedptr = LB_send;
     static uint8_t* LF_speedptr = LF_send;
@@ -111,7 +111,7 @@ void Motor_Send_Speed_together(float LB,float LF,float RF,float RB)//�Ƕ��
     }
 }
 
-void Send_motor_together(void)//����ͬ��ָ��
+void Send_motor_together(void)// 多机同步触发
 {
 	static uint8_t data[4];
 	data[0]=0x00;
@@ -132,12 +132,12 @@ void motor_read_coordination(uint8_t motor_id)
 }
 
 /**********************************************************************************************************
-*�� �� ��: Motor_Send_Postion_together
-*����˵��: ���λ�����ݷ���?(���ö��ͬ��ͨ�?)
-*��    ��: ��
-*�� �� ֵ: ��
+* 函数名: Motor_Send_Postion_together
+* 功能:   打包四个电机位置命令(多电机同步模式)
+* 输入:   LB, LF, RF, RB - 目标位置; mode - 位置模式标志
+* 返回值: 无
 **********************************************************************************************************/
-void Motor_Send_Postion_together(int LB, int LF, int RF, int RB, char mode) // ���ͬ��?
+void Motor_Send_Postion_together(int LB, int LF, int RF, int RB, char mode)
 {
     static uint8_t* LB_positionptr = LB_send;
     static uint8_t* LF_positionptr = LF_send;
@@ -175,10 +175,10 @@ void Motor_Send_Postion_together(int LB, int LF, int RF, int RB, char mode) // �
             temppostion = -temppostion;
             temp[i][2] = 0x01;
         }
-        temp[i][3] = 0x2E; // �ٶ�ԭ��0x05
+        temp[i][3] = 0x2E; // 速度原值0x05
         temp[i][4] = 0xE0;
 
-        temp[i][5] = 0xAE; // ���ٶ�ԭ�
+        temp[i][5] = 0xAE; // 加速度原值
 
         temp[i][6] = (uint8_t)((temppostion * 14) >> 24);
         temp[i][7] = (uint8_t)((temppostion * 14) >> 16);
@@ -237,16 +237,16 @@ void send_postion_data_switch(void)
  void Motor_Action_Calculate_target(float vy,float vx,float vw)
 {	
 	__disable_irq();
-	motor1.target_angle =  vw + vy - vx; // 1号电�?
-	motor2.target_angle =  vw + vy + vx; // 2号电�?
-	motor3.target_angle =  vw - vy + vx; // 3号电�?
-	motor4.target_angle =  vw - vy - vx; // 4号电�?
+	motor1.target_angle =  vw + vy - vx; // 1号电机
+	motor2.target_angle =  vw + vy + vx; // 2号电机
+	motor3.target_angle =  vw - vy + vx; // 3号电机
+	motor4.target_angle =  vw - vy - vx; // 4号电机
 	__enable_irq();
 }
 
 void Motor_Action_Calculate_actual(volatile float *actual_y,volatile float *actual_x,volatile float *actual_w)
 {
-    // 调整符号，匹配逆解�?
+    // 调整符号，匹配逆解算
     *actual_w = ( motor1.actual_angle + motor2.actual_angle + motor3.actual_angle + motor4.actual_angle) * 0.25f;
     *actual_y = ( motor1.actual_angle + motor2.actual_angle - motor3.actual_angle - motor4.actual_angle) * 0.25f;
     *actual_x = (-motor1.actual_angle + motor2.actual_angle + motor3.actual_angle - motor4.actual_angle) * 0.25f;
@@ -269,7 +269,7 @@ void Motor_setspeed(float vy, float vx, float vw)
 	Send_motor_together();
 }
 
-void motor_setspeed_chassis(float vy, float vx, float vw) // ���ͨ�����趨������ٶ�
+void motor_setspeed_chassis(float vy, float vx, float vw) // 普通通道设定电机速度
 {
 	car_setspeed.y_setpeed = vy;
 	car_setspeed.x_setpeed = vx;
@@ -301,7 +301,7 @@ void motor_data_reset(void)
 }
 
 
-void Motor_SetZero(void)//�������꣬����
+void Motor_SetZero(void)// 设置电机里程坐标，清零
 {
 	uint8_t TXdata[4];
 	TXdata[1]=0x0A;
@@ -316,7 +316,7 @@ void Motor_SetZero(void)//�������꣬����
 	//Delay_ms(10);
 }
 
-void Motor_SetZeroPiont(void)//�������λ��?
+void Motor_SetZeroPiont(void)// 设置电机零位置
 {
 	uint8_t TXdata[5];
 	TXdata[1]=0x93;
@@ -340,7 +340,7 @@ void Motor_ReadZeroPiontFlag(uint8_t id)
 	uart3WriteBuf((uint8_t*)TXdata,3);
 }
 
-void Motor_MakeZeroPiont(void)//��������
+void Motor_MakeZeroPiont(void)// 电机归零
 {
 	int count=0;
 	uint8_t TXdata[5];
@@ -368,7 +368,7 @@ void Motor_MakeZeroPiont(void)//��������
 	}
 }
 
-void motor_read_stateflag(uint8_t motor_id)//���ͼ���־λ��ָ��
+void motor_read_stateflag(uint8_t motor_id)// 读取状态标志位指令
 {
 	uint8_t Send_motor_state[3];
 	Send_motor_state[0]=motor_id;

@@ -173,7 +173,7 @@ uint32_t M8010_ShowRealPostion(void)
 void UART8_IRQHandler(void)
  {
     unsigned char res;	
-	if(UART8->ISR&(1<<5))	//?����?��?��y?Y
+	if(UART8->ISR&(1<<5))	// RXNE: 接收寄存器非空
 	{
 		res=UART8->RDR; 
 		if(res == 0xFD && lenth == 0)

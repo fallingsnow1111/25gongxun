@@ -126,7 +126,7 @@ void u6_data_process(uint8_t* data)
 void USART6_IRQHandler(void)
 {
 	unsigned char res;	
-	if(USART6->ISR&(1<<5))	//?����?��?��y?Y
+	if(USART6->ISR&(1<<5))	// RXNE: 接收寄存器非空
 	{
         res = USART6->RDR;
 		if(res==0x55&&USART6_stage==0)

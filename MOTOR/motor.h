@@ -44,16 +44,16 @@ struct MOTO_DATA {
 };
 
 
-void MOTOR_Init(void);//��ʼ�����
-void Motor_Send_Speed_together(float LB,float LF,float RF,float RB);//�Ƕ��ͬ��
-void Motor_Send_Postion_together(int LB,int LF,int RF,int RB,char mode);//�Ƕ��ͬ��
+void MOTOR_Init(void);                                                // 电机初始化
+void Motor_Send_Speed_together(float LB,float LF,float RF,float RB); // 打包四电机速度命令
+void Motor_Send_Postion_together(int LB,int LF,int RF,int RB,char mode); // 打包四电机位置命令
 
-void USART3_RXdata_processing(uint8_t* data,uint8_t size);//�Խ��ܵ����ݽ��д���
+void USART3_RXdata_processing(uint8_t* data,uint8_t size);          // UART3接收数据处理
 
-void Send_motor_together(void);//����ͬ��ָ��
+void Send_motor_together(void);                                      // 多电机同步触发
 
-void Motor_MakeZeroPiont(void);//��������
-void Motor_SetZeroPiont(void);//�������λ��
+void Motor_MakeZeroPiont(void);                                      // 电机归零
+void Motor_SetZeroPiont(void);                                       // 设置电机零点
 
 void Motor_setspeed_in_tim(void);
 void motor_setspeed_chassis(float vy, float vx, float vw);

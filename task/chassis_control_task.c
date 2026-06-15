@@ -16,7 +16,7 @@ TaskHandle_t Chassis_Control_Task_Handle;
 #define MAX_DELTA 5.0f     //每周期最大速度变化量
 #define MAX_W_DELTA_TURN 20.0f   //纯转向每周期最大航向变化量
 #define MAX_W_DELTA_TRANS 4.0f   //平移每周期最大航向变化量
-#define DECEL_K 0.40f
+#define DECEL_K 0.35f
 
 
 volatile CARDATA_T   car;

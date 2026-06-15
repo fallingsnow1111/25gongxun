@@ -40,138 +40,138 @@ typedef union
 
 typedef struct
 {
-    // ���� ���ݰ�ͷ
-    unsigned char start[2]; // ��ͷ
-    unsigned char motorID;  // ���ID  0,1,2,3 ...   0xBB ��ʾ�����е���㲥����ʱ�޷��أ�
-    unsigned char reserved;
+    // 接收: 数据包头
+    unsigned char start[2]; // 包头 [0x3E, 0x9A]
+    unsigned char motorID;  // 电机ID  0,1,2,3 ...  0xBB 表示广播至所有电机(广播时无返回)
+    unsigned char reserved; // 保留
 } COMHead;
 
 typedef struct
-{ // �� 4���ֽ�һ������ ����Ȼ�����������
-    // ���� ����
-    uint8_t mode;       // ��ǰ�ؽ�ģʽ
-    uint8_t ReadBit;    // ������Ʋ����޸�     �Ƿ�ɹ�λ
-    int8_t Temp;        // �����ǰƽ���¶�
-    uint8_t MError;     // ������� ��ʶ
+{ // 接收: 4字节一组 自然序号排列
+    // 接收: 数据
+    uint8_t mode;       // 当前关节模式
+    uint8_t ReadBit;    // 电机控制参数修改 是否成功位
+    int8_t Temp;        // 电机当前平均温度
+    uint8_t MError;     // 电机错误标识
 
-    COMData32 Read;     // ��ȡ�ĵ�ǰ ��� �Ŀ�������
-    int16_t T;          // ��ǰʵ�ʵ���������       7 + 8 ����
+    COMData32 Read;     // 读取的当前电机的控制参数
+    int16_t T;          // 当前实际电机扭矩 (7+8格式)
 
-    int16_t W;          // ��ǰʵ�ʵ���ٶȣ����٣�   8 + 7 ����
-    float LW;           // ��ǰʵ�ʵ���ٶȣ����٣�
+    int16_t W;          // 当前实际电机速度(转速) (8+7格式)
+    float LW;           // 当前实际电机速度(转速)
 
-    int16_t W2;         // ��ǰʵ�ʹؽ��ٶȣ����٣�   8 + 7 ����
-    float LW2;          // ��ǰʵ�ʹؽ��ٶȣ����٣�
+    int16_t W2;         // 当前实际关节速度(转速) (8+7格式)
+    float LW2;          // 当前实际关节速度(转速)
 
-    int16_t Acc;        // ���ת�Ӽ��ٶ�       15+0 ����  ������С
-    int16_t OutAcc;     // �������ٶ�         12+3 ����  �����ϴ�
+    int16_t Acc;        // 电机转子加速度 (15+0格式, 数值较小)
+    int16_t OutAcc;     // 输出轴加速度 (12+3格式, 数值较大)
 
-    int32_t Pos;        // ��ǰ���λ�ã�����0������������ؽڻ����Ա�����0��Ϊ׼��
-    int32_t Pos2;       // �ؽڱ�����λ��(���������)
+    int32_t Pos;        // 当前电机位置(零点可设), 上电默认为关节或电机编码器0为基准
+    int32_t Pos2;       // 关节编码器位置(仅多圈型号)
 
-    int16_t gyro[3];    // ���������6�ᴫ��������
+    int16_t gyro[3];    // 预留 板载6轴传感器数据
     int16_t acc[3];
 
-    // ��������������
+    // 预留 板载传感器数据
     int16_t Fgyro[3];
     int16_t Facc[3];
     int16_t Fmag[3];
-    uint8_t Ftemp;      // 8λ��ʾ���¶�  7λ��-28~100�ȣ�  1λ0.5�ȷֱ���
+    uint8_t Ftemp;      // 8位温度传感器  7位:-28~100度  1位:0.5度分辨率
 
-    int16_t Force16;    // ����������16λ����
-    int8_t Force8;      // ����������8λ����
+    int16_t Force16;    // 足端压力传感器(16位精度)
+    int8_t Force8;      // 足端压力传感器(8位精度)
 
-    uint8_t FError;     //  ��˴����������ʶ
+    uint8_t FError;     // 足端传感器错误标识
 
-    int8_t Res[1];      // ͨѶ �����ֽ�
+    int8_t Res[1];      // 通讯 保留字节
 
-} ServoComdV3; // �������ݰ��İ�ͷ ��CRC 78�ֽڣ�4+70+4��
+} ServoComdV3; // 接收数据包的包头到CRC 78字节(4+70+4)
 
 typedef struct
 {
-    uint8_t head[2];    // ��ͷ         2Byte
-    RIS_Mode_t mode;    // �������ģʽ  1Byte
-    RIS_Fbk_t   fbk;    // ����������� 11Byte
+    uint8_t head[2];    // 包头         2Byte
+    RIS_Mode_t mode;    // 控制模式     1Byte
+    RIS_Fbk_t   fbk;    // 反馈数据结构 11Byte
     uint16_t  CRC16;    // CRC          2Byte
-} MotorData_t;  //��������
+} MotorData_t;  // 接收数据包
 
 typedef struct
 {
-    uint8_t none[8];            // ����
+    uint8_t none[8];            // 预留
 
 } LowHzMotorCmd;
 
 typedef struct
-{                               // �� 4���ֽ�һ������ ����Ȼ�����������
-                                // ���� ����
-    uint8_t mode;               // �ؽ�ģʽѡ��
-    uint8_t ModifyBit;          // ������Ʋ����޸�λ
-    uint8_t ReadBit;            // ������Ʋ�������λ
-    uint8_t reserved;
+{                               // 发送: 4字节一组 自然序号排列
+                                // 发送: 数据
+    uint8_t mode;               // 关节模式选择
+    uint8_t ModifyBit;          // 电机控制参数修改位
+    uint8_t ReadBit;            // 电机控制参数读取位
+    uint8_t reserved;           // 保留
 
-    COMData32 Modify;           // ��������޸� ������
-    //ʵ�ʸ�FOC��ָ������Ϊ��
+    COMData32 Modify;           // 电机参数修改 控制参数
+    // 实际给FOC的指令值为:
     // K_P*delta_Pos + K_W*delta_W + T
-    int16_t T;                  // �����ؽڵ�������أ�������������أ�x256, 7 + 8 ����
-    int16_t W;                  // �����ؽ��ٶ� ������������ٶȣ� x128,       8 + 7����
-    int32_t Pos;                // �����ؽ�λ�� x 16384/6.2832, 14λ������������0������������ؽڻ����Ա�����0��Ϊ׼��
+    int16_t T;                  // 电机关节的前馈扭矩(负载扭矩) x256 (7+8格式)
+    int16_t W;                  // 电机关节速度 前馈速度 x128 (8+7格式)
+    int32_t Pos;                // 电机关节位置 x16384/6.2832 (14位), 上电默认电机或关节编码器0为基准
 
-    int16_t K_P;                // �ؽڸն�ϵ�� x2048  4+11 ����
-    int16_t K_W;                // �ؽ��ٶ�ϵ�� x1024  5+10 ����
+    int16_t K_P;                // 关节刚度系数 x2048 (4+11格式)
+    int16_t K_W;                // 关节速度系数 x1024 (5+10格式)
 
-    uint8_t LowHzMotorCmdIndex; // ����
-    uint8_t LowHzMotorCmdByte;  // ����
+    uint8_t LowHzMotorCmdIndex; // 预留
+    uint8_t LowHzMotorCmdByte;  // 预留
 
-    COMData32 Res[1];           // ͨѶ �����ֽ�  ����ʵ�ֱ��һЩͨѶ����
+    COMData32 Res[1];           // 通讯 保留字节 可用于实现一些通讯需求
 
-} MasterComdV3; // �������ݰ��İ�ͷ ��CRC 34�ֽ�
+} MasterComdV3; // 发送数据包的包头到CRC 34字节
 
 typedef struct
 {
-    // ���� ��������������ݰ�
-    uint8_t head[2];    // ��ͷ         2Byte
-    RIS_Mode_t mode;    // �������ģʽ  1Byte
-    RIS_Comd_t comd;    // ����������� 12Byte
+    // 发送: 控制数据包
+    uint8_t head[2];    // 包头         2Byte
+    RIS_Mode_t mode;    // 控制模式     1Byte
+    RIS_Comd_t comd;    // 控制数据结构 12Byte
     uint16_t   CRC16;   // CRC          2Byte
-} ControlData_t;     //��������������ݰ�
+} ControlData_t;     // 发送控制数据包
 
 #pragma pack()
 
 typedef struct
 {
-    // ���� ���͸�ʽ������
-    ControlData_t motor_send_data;   //����������ݽṹ��
-    int hex_len;                        //���͵�16�����������鳤��, 34
-    long long send_time;                //���͸������ʱ��, ΢��(us)
-    // �����͵ĸ�������
-    unsigned short id;                  //���ID��0����ȫ�����
-    unsigned short mode;                // 0:����, 5:����ת��, 10:�ջ�FOC����
-    //ʵ�ʸ�FOC��ָ������Ϊ��
+    // 发送格式结构体
+    ControlData_t motor_send_data;   // 发送控制数据结构体
+    int hex_len;                        // 发送的16进制数据数组长度, 34
+    long long send_time;                // 发送该数据的时间, 微秒(us)
+    // 需要发送的控制参数
+    unsigned short id;                  // 电机ID 0表示全部电机
+    unsigned short mode;                // 0:待机, 5:阻尼转动, 10:闭环FOC控制
+    // 实际给FOC的指令值为:
     // K_P*delta_Pos + K_W*delta_W + T
-    float T;                            //�����ؽڵ�������أ�������������أ���Nm��
-    float W;                            //�����ؽ��ٶȣ�����������ٶȣ�(rad/s)
-    float Pos;                          //�����ؽ�λ�ã�rad��
-    float K_P;                          //�ؽڸն�ϵ��
-    float K_W;                          //�ؽ��ٶ�ϵ��
-    COMData32 Res;                    // ͨѶ �����ֽ�  ����ʵ�ֱ��һЩͨѶ����
+    float T;                            // 电机关节的前馈扭矩(负载扭矩) (Nm)
+    float W;                            // 电机关节速度 前馈速度 (rad/s)
+    float Pos;                          // 电机关节位置 (rad)
+    float K_P;                          // 关节刚度系数
+    float K_W;                          // 关节速度系数
+    COMData32 Res;                    // 通讯 保留字节 可用于实现一些通讯需求
 } MOTOR_send;
 
 typedef struct
 {
-    // ���� ��������
-    MotorData_t motor_recv_data;    //����������ݽṹ�壬���motor_msg.h
-    int hex_len;                        //���յ�16�����������鳤��, 78
-    long long resv_time;                //���ո������ʱ��, ΢��(us)
-    int correct;                        //���������Ƿ�������1������0��������
-    //����ó��ĵ������
-    unsigned char motor_id;             //���ID
-    unsigned char mode;                 // 0:����, 5:����ת��, 10:�ջ�FOC����
-    int Temp;                           //�¶�
-    unsigned char MError;               //������
-    float T;                            // ��ǰʵ�ʵ���������
-		float W;														// speed
-    float Pos;                          // ��ǰ���λ�ã�����0������������ؽڻ����Ա�����0��Ϊ׼��
-		float footForce;												// �����ѹ���������� 12bit (0-4095)
+    // 接收数据结构体
+    MotorData_t motor_recv_data;    // 接收数据解析结构体, 见motor_msg.h
+    int hex_len;                        // 接收的16进制数据数组长度, 78
+    long long resv_time;                // 接收该数据的时间, 微秒(us)
+    int correct;                        // 接收数据是否正确 1:正确 0:错误
+    // 解析出的电机数据
+    unsigned char motor_id;             // 电机ID
+    unsigned char mode;                 // 0:待机, 5:阻尼转动, 10:闭环FOC控制
+    int Temp;                           // 温度
+    unsigned char MError;               // 电机错误
+    float T;                            // 当前实际电机扭矩
+			float W;														// speed 当前实际电机速度
+    float Pos;                          // 当前电机位置(零点可设), 上电默认电机或关节编码器0为基准
+			float footForce;												// 足端压力传感器 12bit (0-4095)
 
 } MOTOR_recv;
 

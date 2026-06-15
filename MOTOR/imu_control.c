@@ -14,7 +14,7 @@ struct IMU_RUNDATA inu_turn;
 
 void Gyro_Init(void)	//陀螺仪初始化
 {
-	PID_Init(&Gyro_Pid, 2.6, 0.0, 0.5, 150, -150);// Kd=0.5 抑制超调
+	PID_Init(&Gyro_Pid, 2.42, 0.0, 0.5, 150, -150);// Kd=0.5 抑制超调
 	imu_receive_init();//开启串口2接收陀螺仪信息
 }
 

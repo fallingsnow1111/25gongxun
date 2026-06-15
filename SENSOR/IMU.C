@@ -113,10 +113,4 @@ void USART2_IRQHandler(void)
 	HAL_UART_IRQHandler(&huart2);
 }
 
-// void USART2_IRQHandler(void)
-// {
-
-// 	HAL_UART_Receive_DMA(&huart2,&i,u,1);
-// 	HAL_UART_IRQHandler(&huart2);
-// }
 

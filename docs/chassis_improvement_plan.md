@@ -91,6 +91,23 @@ if (HAL_GetTick() - last_motor_update_tick > 30) {
 }
 ```
 
+### Relative_Position 模式与定时返回的冲突处理（motor_control.c）
+
+底盘任务挂起期间电机硬件定时器仍在推送，会覆盖刚清零的 actual_angle。需在复位前后停止/恢复定时返回：
+
+```c
+if(mode == Relative_Position)
+{
+    Set_chassis_able(unable);
+    Motor_TimedReturn_Stop();    // 停止推送，避免覆盖清零值
+    Motor_SetZero();
+    Imu_setZero();
+    Delay_ms(200);
+    Motor_TimedReturn_Init();    // 重新配置定时返回（含 2ms 错开）
+    Set_chassis_able(enable);
+}
+```
+
 ---
 
 ## 二、IMU 任务独立化 + 角速率解析
@@ -168,12 +185,16 @@ PID_Init(&chassis_pid_w_inner,  1.0f, 0.0f,  0, 150.0f, -150.0f);
 
 | 文件 | 改动内容 |
 |------|---------|
+| `MOTOR/motor.h` | MOTO_DATA 增加 `actual_speed` 字段 |
 | `MOTOR/motor.c` | 增加 Motor_TimedReturn_Init/Stop；接收回调增加 actual_speed 差分计算 |
-| `task/chassis_control_task.c` | 删 motor_read_coordination_all；增加内环 PID 结构体和计算；数据新鲜度检查 |
-| `SENSOR/IMU.C` | 增加 angular_rate 解析 |
-| `SENSOR/IMU.h` | 扩展 Imu 结构体增加 angular_rate 字段 |
-| `task/start_task.c` | 增加 Motor_TimedReturn_Init 调用；增加 IMU_Task 创建 |
-| `mydefinition/Struct_encapsulation.h` | 无需改动 |
+| `MOTOR/motor_control.c` | Relative_Position 分支加 Motor_TimedReturn_Stop/Init 对 |
+| `task/chassis_control_task.c` | 删 motor_read_coordination_all；增加内环 PID 结构体和计算；数据新鲜度检查；世界坐标累积和反变换 |
+| `SENSOR/IMU.C` | 增加 angular_rate 解析（待查协议文档确认字节偏移） |
+| `SENSOR/IMU.h` | 扩展 Imu 结构体增加 `angular_rate` 字段 |
+| `task/start_task.c` | START_TASK_STACK 128 → 256；增加 Motor_TimedReturn_Init 调用；增加 IMU_Task 创建 |
+| `mydefinition/Struct_encapsulation.h` | CARDATA_T 可选扩展 world_x/world_y（或放文件作用域） |
+
+> **注意**：angular_rate 字节偏移需对照实际 IMU 型号协议文档，实现前确认。
 
 ---
 
@@ -183,9 +204,11 @@ PID_Init(&chassis_pid_w_inner,  1.0f, 0.0f,  0, 150.0f, -150.0f);
 |------|------|------|
 | UART3 读占用时间 | ~8ms/20ms (40%) | 0ms（定时推送）|
 | 底盘控制有效时间 | ~12ms/20ms | ~20ms |
+| 底盘控制周期 | 20ms | 10ms |
 | 航向控制 | 角度单环，易震荡 | 角度+角速率串级，阻尼好 |
 | 加减速 | slew rate 开环限速 | 速度内环闭环跟踪 |
 | 数据更新率 | 20ms（轮询） | 10ms（推送） |
+| 路径规划 | 体坐标，先转再走 | 世界坐标，直接给路点 |
 
 ---
 
@@ -197,6 +220,7 @@ PID_Init(&chassis_pid_w_inner,  1.0f, 0.0f,  0, 150.0f, -150.0f);
 4. 再调速度内环（x/y 轴），参考角速率内环经验
 5. 外环参数基本不用大改（位置 PID 逻辑不变）
 6. 接入世界坐标变换后，验证 Route_Test_ABS 坐标是否等效
+7. 验证 L 型运动（边走边转）效果
 
 ---
 
@@ -286,3 +310,59 @@ Move_To_Target_area(1750, 1100, 90°); // 控制器自动处理坐标变换
 ### 误差累积
 
 纯世界坐标积分会随时间漂移，但 IMU 航向实时修正旋转矩阵，主要误差来源是轮子打滑。比赛全程约 2-3 分钟，估计漂移 < 2cm，可接受。
+
+---
+
+## 八、L 型运动（田字形地图专项优化）
+
+### 场景描述
+
+比赛地图为田字形，可行路径为田字的笔画，转弯点均为 90° 直角。当前方案在每个转角处必须先停车，再转向，再加速，耗时约 1-2 秒/个转角。
+
+L 型运动目标：机器人在接近转角时，边减速边转向，完成角度对齐后直接加速驶入下一条直线，全程不停车。
+
+### 实现思路
+
+在路径规划层加混合逻辑，不需要修改底盘控制器本身（世界坐标变换上线后，控制器已支持同时走 x/y + 转向）。
+
+**触发条件**：剩余距离 < 混合起始阈值 `BLEND_DIST`（建议 200-300mm）
+
+```c
+// Route_Test_ABS 中替换原来的 "先转再走" 为 L 型路点
+// 例：从 (0,1600,0°) 走 L 型到 (1750,1100,90°)
+
+// 原来（两步）：
+Move_To_Target_area(0, 1100, 0°);      // 先退到拐角
+Move_To_Target_area(0, 1100, 90°);     // 再转向
+Move_To_Target_area(1750, 1100, 90°);  // 再平移
+
+// 改后（一步，控制器自动处理）：
+Move_To_Target_area(1750, 1100, 90°);  // 世界坐标直给，同时走完 y 方向剩余 + 转向 + 走 x 方向
+```
+
+世界坐标控制器在接到 `(1750, 1100, 90°)` 目标后，会同时输出 y 方向减速、旋转加速、x 方向加速的合成命令，自然形成 L 型轨迹。
+
+### 减速区混合参数（chassis_control_task.c）
+
+现有 `spd_cap = err * DECEL_K` 已经处理了减速，世界坐标下两个轴同时参与减速：
+
+```c
+float spd_cap_y = fabsf(err_wy) * DECEL_K;
+float spd_cap_x = fabsf(err_wx) * DECEL_K;
+```
+
+两轴独立减速，各自收敛，自然实现 L 型轨迹而不需要额外逻辑。
+
+### 预期效果
+
+| 指标 | 当前（停车转弯） | L 型运动 |
+|------|--------------|---------|
+| 单个转角耗时 | ~1.5s | ~0.5s |
+| 田字一圈（4 个转角） | 节省约 4s | - |
+| 路径平滑度 | 有停顿 | 连续 |
+
+### 注意事项
+
+- L 型运动依赖世界坐标变换（第七节）上线后才有效
+- 旋转和平移同时进行时，角速度内环（第三节）是保证走直的关键
+- 建议先在直线和单个 L 型转角上验证，再应用到完整路线

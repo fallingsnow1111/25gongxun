@@ -8,6 +8,7 @@
 #include "postion_control.h"
 #include "GO-M8010-6.h"
 #include "QR_code.h"
+#include "catch.h"
 #include <math.h>
 
 /*坐标
@@ -373,7 +374,7 @@ void Main_Task(void *pvParameters)
 {
 	// QR_sense_init();
 	// Route_Test_ABS();
-	M8010_Joint_Test();
+	Full_Arm_Test();
 
 	while (1) {
 		vTaskDelay(pdMS_TO_TICKS(2000));

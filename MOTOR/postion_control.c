@@ -97,7 +97,9 @@ void postion_send(uint8_t id,int position)
 }
 
  void Z_SetHeight(int high)
-{		
+{	
+	uint32_t t = 0;
+
 	Z_POSTION.TARGE =(2000/106.5)*high*14;
 	//�ж���εĸ߶��Ƿ����ϴ�һ�����ǵĻ�ֱ�ӷ���??
 	if(__fabs(Z_POSTION.NOW-high)<=0.4)
@@ -106,7 +108,12 @@ void postion_send(uint8_t id,int position)
 	}
 	postion_send(0x01,Z_POSTION.TARGE);
 	Z_POSTION.BIT=Incomplete;
-	while(Z_POSTION.BIT != finish);
+	while(Z_POSTION.BIT != finish && t < 3000) 
+	{
+		vTaskDelay(pdMS_TO_TICKS(1));
+		t++;
+	}
+
 	Z_POSTION.BIT=Incomplete;
 	Z_POSTION.NOW=Z_POSTION.TARGE;
 }
@@ -136,7 +143,7 @@ void Y_SetLength(int position)
     // �ȴ��˶���ɣ�����ʱ���
     uint32_t timeout = 0;
     while ((Telescopic_POSTION.BIT != finish) && (timeout < MAX_TIMEOUT_MS)) {
-        Delay_ms(1);
+        vTaskDelay(pdMS_TO_TICKS(1));
         timeout++;
     }
     Telescopic_POSTION.BIT=Incomplete;	

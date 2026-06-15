@@ -57,10 +57,10 @@ void claw_move_2(int action_2)//应对爪子转圈碰到物料的问题//用这�
     switch(action_2)
     {
         case 1:
-            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_4,60);//OPEN//120
+            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,100);//OPEN//120
             break;
         case 2:
-            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_4,100);//初赛145，决赛157
+            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,50);//初赛145，决赛157
             break;
          default:
             break;

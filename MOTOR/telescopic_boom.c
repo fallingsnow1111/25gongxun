@@ -23,7 +23,7 @@ void Telescopic_Init(void)
 	Telescopic_POSTION.TARGE=0;
 	PID_Init(&Telescopic_pid,3.7,0,0,55,-55);
 	//todo:���ڳ�ʼ��
-	__HAL_UART_ENABLE_IT(&telescopic_usart, UART_IT_RXNE);
+	// __HAL_UART_ENABLE_IT(&telescopic_usart, UART_IT_RXNE);
 	//Telescopic_Enable();
 }
 

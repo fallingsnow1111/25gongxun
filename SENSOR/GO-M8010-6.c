@@ -33,7 +33,7 @@ void M8010_init(void)
 }
 void read_init_postion(void)
 {
-    cmd.id=0; 			//���������ָ��ṹ�帳ֵ
+    cmd.id=0; 			// 给发送指令结构体赋值
 	cmd.mode=0;
 	cmd.T=0;
 	cmd.W=10;
@@ -57,13 +57,13 @@ int modify_data(MOTOR_send *motor_s)
     motor_s->motor_send_data.head[0] = 0xFE;
     motor_s->motor_send_data.head[1] = 0xEE;
 	
-//		SATURATE(motor_s->id,   0,    15);
-//		SATURATE(motor_s->mode, 0,    7);
-		SATURATE(motor_s->K_P,  0.0f,   25.599f);
-		SATURATE(motor_s->K_W,  0.0f,   25.599f);
-		SATURATE(motor_s->T,   -127.99f,  127.99f);
-		SATURATE(motor_s->W,   -804.00f,  804.00f);
-		SATURATE(motor_s->Pos, -411774.0f,  411774.0f);
+//	SATURATE(motor_s->id,   0,    15);
+//	SATURATE(motor_s->mode, 0,    7);
+	SATURATE(motor_s->K_P,  0.0f,   25.599f);
+	SATURATE(motor_s->K_W,  0.0f,   25.599f);
+	SATURATE(motor_s->T,   -127.99f,  127.99f);
+	SATURATE(motor_s->W,   -804.00f,  804.00f);
+	SATURATE(motor_s->Pos, -411774.0f,  411774.0f);
 
     motor_s->motor_send_data.mode.id   = motor_s->id;
     motor_s->motor_send_data.mode.status  = motor_s->mode;
@@ -85,7 +85,7 @@ void M8010_send(int position) {
     HAL_StatusTypeDef uart_ret;
 
     cmd.id = 0;
-    cmd.mode = 1;
+    cmd.mode = 1;                         // FOC控制模式
     cmd.T = 0;
     cmd.W = 0;
     cmd.K_P = 1.0;
@@ -147,20 +147,20 @@ void M8010_Set_Zero(void) {
 
 void M8010_SetAngle(int tar_angle)
 {
-		static int change_var=0;
-		change_var=__fabs((tar_angle - M8010.NOW));
-		M8010_send(tar_angle);
-		vTaskDelay(pdMS_TO_TICKS((change_var)*2));
+	static int change_var=0;
+	change_var=__fabs((tar_angle - M8010.NOW));
+	M8010_send(tar_angle);
+	vTaskDelay(pdMS_TO_TICKS((change_var)*2));
 }
 
 float M8010_Control_pid(float differnt,float Initial_value)
 {
 	float output=0;
-	//����PID
+	// PID计算
 	output=PID_Compute(&M8010_pid,0,differnt);
-	//������Сֵ�޷�
+	// 最小值限幅
 	output=_LIMIT_MIN(output,3);
-	//������
+	// 输出
 	M8010_SetAngle(output+Initial_value);
 	return output+Initial_value;
 }

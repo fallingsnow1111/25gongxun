@@ -50,7 +50,6 @@ mdk\fast_math.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h
 mdk\fast_math.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 mdk\fast_math.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\fast_math.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-mdk\fast_math.o: ../APP/project.h
 mdk\fast_math.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\fast_math.o: ../MOTOR/motor.h
 mdk\fast_math.o: ../USMART/sys.h

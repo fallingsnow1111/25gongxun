@@ -50,7 +50,6 @@ mdk\gpio.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h
 mdk\gpio.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 mdk\gpio.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\gpio.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-mdk\gpio.o: ../APP/project.h
 mdk\gpio.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\gpio.o: ../MOTOR/motor.h
 mdk\gpio.o: ../USMART/sys.h

@@ -22,24 +22,18 @@ void Telescopic_Init(void)
 	Telescopic_POSTION.NOW=0;
 	Telescopic_POSTION.TARGE=0;
 	PID_Init(&Telescopic_pid,3.7,0,0,55,-55);
-	//todo:���ڳ�ʼ��
-	// __HAL_UART_ENABLE_IT(&telescopic_usart, UART_IT_RXNE);
+	//__HAL_UART_ENABLE_IT(&telescopic_usart, UART_IT_RXNE);
 	//Telescopic_Enable();
 }
 
-/**********************************************************************************************************
-*�� �� ��: Telescopic_Send_Speed
-*����˵��: ����ٶ����ݷ���
-*��    ��: ��
-*�� �� ֵ: ��
-**********************************************************************************************************/
+// 速度模式发送伸缩指令
 void Telescopic_Send_Speed(int speed)
 {
 	 Read_Y_position();
 	 Delay_ms(3);
 	 int32_t Y_position = -Get_Y_position();
 	 static uint32_t Max_Y_position = 140000; // 伸缩臂的最大脉冲
-	 static uint32_t Min_Y_position = 2000;
+	 static uint32_t Min_Y_position = 2000;   // 伸缩臂的最小脉冲
 	if(Y_position>=Max_Y_position)
 	{
 		u7_speed_send(0x02,10);
@@ -51,34 +45,21 @@ void Telescopic_Send_Speed(int speed)
 	else if(Y_position>(Min_Y_position) && Y_position<Max_Y_position){
 		u7_speed_send(0x02,-speed);
 	}
-	
 }
 
-/**********************************************************************************************************
-*�� �� ��: Telescopic_Send_Speed
-*����˵��: ����ٶ����ݷ���
-*��    ��: ��
-*�� �� ֵ: ��
-**********************************************************************************************************/
+// 急停伸缩电机
 void Telescopic_Stop(void)
 {
 	Motor_Height_Ss_Stop(2);
 }
 
-/**********************************************************************************************************
-*�� �� ��: Telescopic_Send_Position
-*����˵��: ����ٶ����ݷ���
-*��    ��: ��
-*�� �� ֵ: ��
-**********************************************************************************************************/
+// 位置模式发送伸缩指令
 void Telescopic_Send_Position(int position)
 {
-    // ��������֡����ʼ����
 	Telescopic_POSTION.TARGE=-position*(360*8.90/94.2);
 	postion_send(0x02,Telescopic_POSTION.TARGE);
 	Telescopic_POSTION.BIT=Incomplete;
 	Delay_ms(__fabs(position)*1);
-	
 }
 
 void Telescopic_set_pid(float kp,float ki,float kd)
@@ -91,9 +72,9 @@ void Telescopic_set_pid(float kp,float ki,float kd)
 void Telescopic_control_pid(int Difference_var)
 {
 	float output=0;
-	//compute the PID output
+	// PID计算
 	output=PID_Compute(&Telescopic_pid,0,Difference_var);
-	//minimize the output
+	// 最小值限幅
 	if(output<0)
 	{
 		output=_LIMIT_MIN(__fabs(output),3);
@@ -102,7 +83,6 @@ void Telescopic_control_pid(int Difference_var)
 	{
 		output=-_LIMIT_MIN(__fabs(output),3);
 	}
-	//send the output to the motor
 	Delay_ms(8);
 	Telescopic_Send_Speed(output);
 }
@@ -115,4 +95,3 @@ void Read_Telescopic_position(void)
 	data[2]=0x6B;
 	uart7WriteBuf(data,3);
 }
-

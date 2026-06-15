@@ -53,7 +53,6 @@ mdk\usmart.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h
 mdk\usmart.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 mdk\usmart.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\usmart.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-mdk\usmart.o: ../APP/project.h
 mdk\usmart.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\usmart.o: ../MOTOR/motor.h
 mdk\usmart.o: ../Core/Inc/tim.h

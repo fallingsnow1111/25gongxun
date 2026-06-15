@@ -53,7 +53,6 @@ mdk\postion_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers
 mdk\postion_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 mdk\postion_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\postion_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-mdk\postion_control.o: ../APP/project.h
 mdk\postion_control.o: ../MOTOR/motor.h
 mdk\postion_control.o: ../Core/Inc/tim.h
 mdk\postion_control.o: ../MOTOR/motor_control.h

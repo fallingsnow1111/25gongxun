@@ -50,7 +50,6 @@ mdk\delay.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h
 mdk\delay.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 mdk\delay.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\delay.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-mdk\delay.o: ../APP/project.h
 mdk\delay.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\delay.o: ../MOTOR/motor.h
 mdk\delay.o: ../USMART/sys.h

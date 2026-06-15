@@ -53,7 +53,6 @@ mdk\circle_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.
 mdk\circle_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 mdk\circle_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\circle_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-mdk\circle_control.o: ../APP/project.h
 mdk\circle_control.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\circle_control.o: ../MOTOR/motor.h
 mdk\circle_control.o: ../USMART/sys.h

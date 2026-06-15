@@ -51,7 +51,6 @@ mdk\pid.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h
 mdk\pid.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 mdk\pid.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\pid.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-mdk\pid.o: ../APP/project.h
 mdk\pid.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\pid.o: ../MOTOR/motor.h
 mdk\pid.o: ../USMART/sys.h

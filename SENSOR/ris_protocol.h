@@ -1,10 +1,10 @@
 /**
  * @file ris_protocol.h
  * @author Yichao Zhang (unitree@qq.com)
- * @brief Go-M8010-6¹Ø½Úµç»úÇı¶¯ ¾«¼òÍ¨Ñ¶Ö¸Áî¼¯
+ * @brief Go-M8010-6 å…³èŠ‚ç”µæœº ä¸²å£é€šè®¯æŒ‡ä»¤é›†
  * @version 0.1
  * @date 2022-03-04
- * 
+ *
  * @copyright Copyright (c) unitree robotics .co.ltd. 2022
  */
 
@@ -16,51 +16,51 @@
 #pragma pack(1)
 
 /**
- * @brief µç»úÄ£Ê½¿ØÖÆĞÅÏ¢
- * 
+ * @brief æ¥æ”¶æ¨¡å¼æ§åˆ¶ä¿¡æ¯
+ *
  */
 typedef struct
 {
-    uint8_t id     :4;      // µç»úID: 0,1...,13,14 15±íÊ¾ÏòËùÓĞµç»ú¹ã²¥Êı¾İ(´ËÊ±ÎŞ·µ»Ø)
-    uint8_t status :3;      // ¹¤×÷Ä£Ê½: 0.Ëø¶¨ 1.FOC±Õ»· 2.±àÂëÆ÷Ğ£×¼ 3.±£Áô
-    uint8_t none   :1;      // ±£ÁôÎ»
-} RIS_Mode_t;   // ¿ØÖÆÄ£Ê½ 1Byte
+    uint8_t id     :4;      // ç”µæœºID: 0,1...,13,14  15è¡¨ç¤ºæ‰€æœ‰ç”µæœºå¹¿æ’­(æ­¤æ—¶æ— è¿”å›)
+    uint8_t status :3;      // è¿è¡Œæ¨¡å¼: 0.å¾…æœº 1.FOCé—­ç¯ 2.ç¼–ç å™¨æ ¡å‡† 3.åˆ¹è½¦
+    uint8_t none   :1;      // ä¿ç•™ä½
+} RIS_Mode_t;   // æ¥æ”¶æ¨¡å¼ 1Byte
 
 /**
- * @brief µç»ú×´Ì¬¿ØÖÆĞÅÏ¢
- * 
+ * @brief æ¥æ”¶çŠ¶æ€æ§åˆ¶ä¿¡æ¯
+ *
  */
 typedef struct
 {
-    int16_t tor_des;        // ÆÚÍû¹Ø½ÚÊä³öÅ¤¾Ø unit: N.m      (q8)
-    int16_t spd_des;        // ÆÚÍû¹Ø½ÚÊä³öËÙ¶È unit: rad/s    (q8)
-    int32_t pos_des;        // ÆÚÍû¹Ø½ÚÊä³öÎ»ÖÃ unit: rad      (q15)
-    int16_t k_pos;          // ÆÚÍû¹Ø½Ú¸Õ¶ÈÏµÊı unit: -1.0-1.0 (q15)
-    int16_t k_spd;          // ÆÚÍû¹Ø½Ú×èÄáÏµÊı unit: -1.0-1.0 (q15)
-    
-} RIS_Comd_t;   // ¿ØÖÆ²ÎÊı 12Byte
+    int16_t tor_des;        // ç”µæœºå…³èŠ‚å‰é¦ˆæ‰­çŸ©   unit: N.m      (q8)
+    int16_t spd_des;        // ç”µæœºå…³èŠ‚å‰é¦ˆé€Ÿåº¦   unit: rad/s    (q8)
+    int32_t pos_des;        // ç”µæœºå…³èŠ‚ç›®æ ‡ä½ç½®   unit: rad      (q15)
+    int16_t k_pos;          // ç”µæœºå…³èŠ‚åˆšåº¦ç³»æ•°   unit: -1.0-1.0 (q15)
+    int16_t k_spd;          // ç”µæœºå…³èŠ‚é˜»å°¼ç³»æ•°   unit: -1.0-1.0 (q15)
+
+} RIS_Comd_t;   // æ§åˆ¶å‚æ•° 12Byte
 
 /**
- * @brief µç»ú×´Ì¬·´À¡ĞÅÏ¢
- * 
+ * @brief æ¥æ”¶çŠ¶æ€åé¦ˆä¿¡æ¯
+ *
  */
 typedef struct
 {
-    int16_t  torque;        // Êµ¼Ê¹Ø½ÚÊä³öÅ¤¾Ø unit: N.m     (q8)
-    int16_t  speed;         // Êµ¼Ê¹Ø½ÚÊä³öËÙ¶È unit: rad/s   (q8)
-    int32_t  pos;           // Êµ¼Ê¹Ø½ÚÊä³öÎ»ÖÃ unit: rad     (q15)
-    int8_t   temp;          // µç»úÎÂ¶È: -128~127¡ãC
-    uint8_t  MError :3;     // µç»ú´íÎó±êÊ¶: 0.Õı³£ 1.¹ıÈÈ 2.¹ıÁ÷ 3.¹ıÑ¹ 4.±àÂëÆ÷¹ÊÕÏ 5-7.±£Áô
-    uint16_t force  :12;    // ×ã¶ËÆøÑ¹´«¸ĞÆ÷Êı¾İ 12bit (0-4095)
-    uint8_t  none   :1;     // ±£ÁôÎ»
-} RIS_Fbk_t;   // ×´Ì¬Êı¾İ 11Byte
+    int16_t  torque;        // å®é™…å…³èŠ‚å‰é¦ˆæ‰­çŸ©   unit: N.m     (q8)
+    int16_t  speed;         // å®é™…å…³èŠ‚å‰é¦ˆé€Ÿåº¦   unit: rad/s   (q8)
+    int32_t  pos;           // å®é™…å…³èŠ‚ç›®æ ‡ä½ç½®   unit: rad     (q15)
+    int8_t   temp;          // ç”µæœºæ¸©åº¦: -128~127Â°C
+    uint8_t  MError :3;     // ç”µæœºé”™è¯¯æ ‡è¯†: 0.æ­£å¸¸ 1.è¿‡çƒ­ 2.è¿‡æµ 3.è¿‡å‹ 4.ç£ç¼–ç å¼‚å¸¸ 5-7.ä¿ç•™
+    uint16_t force  :12;    // è¶³ç«¯å‹åŠ›ä¼ æ„Ÿå™¨ 12bit (0-4095)
+    uint8_t  none   :1;     // ä¿ç•™ä½
+} RIS_Fbk_t;   // çŠ¶æ€åé¦ˆ 11Byte
 
 
 #pragma pack()
 
 #endif
 
-/* 
+/*
  * Actuator Communication Reduced Instruction Set
  * Unitree robotics (c) .Co.Ltd. 2022 All Rights Reserved.
  */

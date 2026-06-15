@@ -54,7 +54,6 @@ mdk\imu.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h
 mdk\imu.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 mdk\imu.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\imu.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-mdk\imu.o: ../APP/project.h
 mdk\imu.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\imu.o: ../MOTOR/motor.h
 mdk\imu.o: ../Core/Inc/tim.h

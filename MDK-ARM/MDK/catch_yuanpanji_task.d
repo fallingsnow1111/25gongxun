@@ -50,7 +50,6 @@ mdk\catch_yuanpanji_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/t
 mdk\catch_yuanpanji_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 mdk\catch_yuanpanji_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\catch_yuanpanji_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-mdk\catch_yuanpanji_task.o: ../APP/project.h
 mdk\catch_yuanpanji_task.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\catch_yuanpanji_task.o: ../MOTOR/motor.h
 mdk\catch_yuanpanji_task.o: ../USMART/sys.h

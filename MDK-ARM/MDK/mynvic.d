@@ -49,7 +49,6 @@ mdk\mynvic.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h
 mdk\mynvic.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 mdk\mynvic.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\mynvic.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-mdk\mynvic.o: ../APP/project.h
 mdk\mynvic.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\mynvic.o: ../MOTOR/motor.h
 mdk\mynvic.o: ../USMART/sys.h

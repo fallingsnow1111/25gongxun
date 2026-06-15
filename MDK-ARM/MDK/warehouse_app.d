@@ -50,7 +50,6 @@ mdk\warehouse_app.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h
 mdk\warehouse_app.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 mdk\warehouse_app.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\warehouse_app.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-mdk\warehouse_app.o: ../APP/project.h
 mdk\warehouse_app.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\warehouse_app.o: ../MOTOR/motor.h
 mdk\warehouse_app.o: ../USMART/sys.h

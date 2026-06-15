@@ -4,15 +4,12 @@
 #include <stdio.h>
 #include "main.h"
 /**
-	打印到屏幕串口
+    闄舵櫠椹颁覆鍙ｅ睆骞曢�氫俊
 */
-
-
 
 #define TJC_UART huart5
 #define TJC_UART_INS USART5
 extern UART_HandleTypeDef huart5;
-
 
 void TCJ_Init(void);
 void intToStr(int num, char* str);
@@ -27,10 +24,7 @@ void deleteRingBuffer(uint16_t size);
 uint16_t getRingBufferLength(void);
 uint8_t read1ByteFromRingBuffer(uint16_t position);
 
-
-
-
-#define RINGBUFFER_LEN	(500)     //定义最大接收字节数 500
+#define RINGBUFFER_LEN	(500)     // 鐜舰缂撳啿鍖烘渶澶у瓧鑺傛暟 500
 
 #define usize getRingBufferLength()
 #define code_c() initRingBuffer()
@@ -39,6 +33,5 @@ uint8_t read1ByteFromRingBuffer(uint16_t position);
 
 extern uint8_t RxBuffer[1];
 extern uint32_t msTicks;
-
 
 #endif

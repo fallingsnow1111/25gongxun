@@ -50,7 +50,6 @@ mdk\action_sets.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h
 mdk\action_sets.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 mdk\action_sets.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\action_sets.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-mdk\action_sets.o: ../APP/project.h
 mdk\action_sets.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\action_sets.o: ../MOTOR/motor.h
 mdk\action_sets.o: ../USMART/sys.h

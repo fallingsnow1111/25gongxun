@@ -50,7 +50,6 @@ mdk\go-m8010-6.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h
 mdk\go-m8010-6.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 mdk\go-m8010-6.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\go-m8010-6.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-mdk\go-m8010-6.o: ../APP/project.h
 mdk\go-m8010-6.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\go-m8010-6.o: ../MOTOR/motor.h
 mdk\go-m8010-6.o: ../USMART/sys.h

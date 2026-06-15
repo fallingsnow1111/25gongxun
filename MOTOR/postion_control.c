@@ -47,18 +47,18 @@ void u7_speed_send(uint8_t id,int speed)
         USART7_senddata[3] = 0x00;
         USART7_senddata[4] = speed;
     }
-    USART7_senddata[5] = 0xC8;//���ٶ�
+    USART7_senddata[5] = 0xC8;//加速度
     USART7_senddata[6] = 0x00;
     USART7_senddata[7] = 0x6B;
 		
-		//todo:���ͺ���
+		//todo:发送函数
    uart7WriteBuf(USART7_senddata,8);
 }
 
 void postion_send(uint8_t id,int position)
 {
-    //Z_POSTION.CHANGE = Z_POSTION.TARGE - Z_POSTION.NOW;  // ����Ŀ��λ���뵱ǰ���λ�õĲ��?
-        // ��������֡����ʼ����
+    // 计算目标与当前位置差值
+        // 设置数据帧并初始化
 		static uint8_t accel=0;//加速度
 		USART7_senddata[0] = id;
 		if(id==1)
@@ -79,10 +79,10 @@ void postion_send(uint8_t id,int position)
             position = -position;
             USART7_senddata[2] = 0x01;
         }
-        USART7_senddata[3] = 0x2E; // �ٶ�ԭ��0x0E
+        USART7_senddata[3] = 0x2E; // 速度原值0x0E
         USART7_senddata[4] = 0xFF;
 
-        USART7_senddata[5] = accel; // ���ٶ�ԭ��F7
+        USART7_senddata[5] = accel; // 加速度原值F7
 
         USART7_senddata[6] = (uint8_t)((position ) >> 24);
         USART7_senddata[7] = (uint8_t)((position ) >> 16);
@@ -92,8 +92,8 @@ void postion_send(uint8_t id,int position)
         USART7_senddata[10] = (uint8_t)0x01;
         USART7_senddata[11] = 0x00;
         USART7_senddata[12] = 0x6B;
-        // ��������
-        uart7WriteBuf(USART7_senddata, 13);  // �����ݷ��͵�����7	
+        // 发送数据
+        uart7WriteBuf(USART7_senddata, 13);  // 将数据发送到串口7
 }
 
  void Z_SetHeight(int high)
@@ -101,7 +101,7 @@ void postion_send(uint8_t id,int position)
 	uint32_t t = 0;
 
 	Z_POSTION.TARGE =(2000/106.5)*high*14;
-	//�ж���εĸ߶��Ƿ����ϴ�һ�����ǵĻ�ֱ�ӷ���??
+		// 若目标高度与当前接近则直接返回
 	if(__fabs(Z_POSTION.NOW-high)<=0.4)
 	{
 		return;
@@ -127,31 +127,31 @@ void Read_Y_position(void)
 	uart7WriteBuf(senddata,3);
 }
 
-#define GEAR_RATIO (360.0 * 8.90 / 94.2)  // ���崫���ȳ���
-#define POSITION_TOLERANCE 1.0            // λ���ݲ�
+#define GEAR_RATIO (360.0 * 8.90 / 94.2)  // 传动比常数
+#define POSITION_TOLERANCE 1.0            // 位置容差
 #define MAX_TIMEOUT_MS  300
 
 void Y_SetLength(int position) 
 {
     Telescopic_POSTION.TARGE = -position * GEAR_RATIO;
-    // ���Ŀ��λ���뵱ǰλ�ýӽ�����ֱ�ӷ���??
+    // 若目标与当前位置接近则直接返回
     // if (__fabs(Telescopic_POSTION.NOW - Telescopic_POSTION.TARGE) <= POSITION_TOLERANCE) {
     //     return ;
     // }
     postion_send(0x02,Telescopic_POSTION.TARGE);
 	Telescopic_POSTION.BIT=Incomplete;
-    // �ȴ��˶���ɣ�����ʱ���
+    // 等待运动完成，带超时保护
     uint32_t timeout = 0;
     while ((Telescopic_POSTION.BIT != finish) && (timeout < MAX_TIMEOUT_MS)) {
         vTaskDelay(pdMS_TO_TICKS(1));
         timeout++;
     }
     Telescopic_POSTION.BIT=Incomplete;	
-    // ���µ�ǰλ��
+    // 更新当前位置
     Telescopic_POSTION.NOW = Telescopic_POSTION.TARGE;
 }
 
-//�������ͣ�?,�����ۺ͸߶ȵ����??
+// 急停：伸缩臂和高度电机
 void Motor_Height_Ss_Stop(char id)
 {
 	uint8_t senddata[5];
@@ -182,8 +182,8 @@ void Read_Z_position(void)
 	uart7WriteBuf(senddata,3);
 }
 
-// �ò��ˣ���ʱ����
-// ʹ�ù̶����ݰ����ȣ�����Э�鶨��Ϊ4�ֽڣ�
+// 用不了，暂时不用
+// 使用固定数据包长度，接收协议定义为4字节
 #define PACKET_LENGTH 4
 
 void u7RXdat_dispose(uint8_t* data)
@@ -195,7 +195,7 @@ void u7RXdat_dispose(uint8_t* data)
 					{
 						if(data[2]==0x9F)
 						{
-							Z_POSTION.BIT=finish;//�����ɶ���
+							Z_POSTION.BIT=finish;// 到位完成
 							Z_POSTION.NOW = Z_POSTION.TARGE;
 						}
 					}
@@ -208,7 +208,7 @@ void u7RXdat_dispose(uint8_t* data)
 				{
 					if(data[2]==0x9F)
 					{
-						Telescopic_POSTION.BIT=finish;//�����ɶ���
+						Telescopic_POSTION.BIT=finish;// 到位完成
 						Telescopic_POSTION.NOW=Telescopic_POSTION.TARGE;
 					}
 				}
@@ -247,12 +247,12 @@ void u7RXdat_dispose_1(uint8_t* data)
 
 void MY_UART7_IRQHandler(uint8_t size)
 {	
-	if(size == 4)// ������������
+	if(size == 4)// 到位反馈(4字节)
 	{	
 		//vofa_printf("u7RXdat:%02X %02X %02X %02X\n", u7RXdat[0], u7RXdat[1], u7RXdat[2], u7RXdat[3]);
 		u7RXdat_dispose(u7RXdat);
 	}
-	else if(size == 8) // ������������
+	else if(size == 8) // 位置读取反馈(8字节)
 	{
 		//vofa_printf("u7RXdat:%02X %02X %02X %02X %02X %02X %02X %02X\n", u7RXdat[0], u7RXdat[1], u7RXdat[2], u7RXdat[3], u7RXdat[4], u7RXdat[5], u7RXdat[6], u7RXdat[7]);
 		u7RXdat_dispose_1(u7RXdat);

@@ -53,7 +53,6 @@ mdk\imu_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h
 mdk\imu_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 mdk\imu_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\imu_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-mdk\imu_control.o: ../APP/project.h
 mdk\imu_control.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\imu_control.o: ../MOTOR/motor.h
 mdk\imu_control.o: ../USMART/sys.h

@@ -50,7 +50,6 @@ mdk\chassis_control_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/t
 mdk\chassis_control_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 mdk\chassis_control_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\chassis_control_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-mdk\chassis_control_task.o: ../APP/project.h
 mdk\chassis_control_task.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\chassis_control_task.o: ../MOTOR/motor.h
 mdk\chassis_control_task.o: ../USMART/sys.h

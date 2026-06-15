@@ -53,7 +53,6 @@ mdk\motor.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h
 mdk\motor.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 mdk\motor.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\motor.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-mdk\motor.o: ../APP/project.h
 mdk\motor.o: ../MOTOR/motor.h
 mdk\motor.o: ../MOTOR/motor_control.h
 mdk\motor.o: ../Core/Inc/main.h

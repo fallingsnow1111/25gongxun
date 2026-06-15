@@ -55,7 +55,6 @@ mdk\usmart_config.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h
 mdk\usmart_config.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 mdk\usmart_config.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\usmart_config.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-mdk\usmart_config.o: ../APP/project.h
 mdk\usmart_config.o: ../MOTOR/motor.h
 mdk\usmart_config.o: ../Core/Inc/tim.h
 mdk\usmart_config.o: ../MOTOR/motor_control.h

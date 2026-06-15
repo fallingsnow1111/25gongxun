@@ -38,7 +38,6 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
 #include "Struct_encapsulation.h"
-#include "project.h"
 #include "TIME.h"
 #include "motor.h"
 #include "motor_control.h"

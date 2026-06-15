@@ -50,7 +50,6 @@ mdk\telescopic_boom.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers
 mdk\telescopic_boom.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 mdk\telescopic_boom.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\telescopic_boom.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-mdk\telescopic_boom.o: ../APP/project.h
 mdk\telescopic_boom.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\telescopic_boom.o: ../MOTOR/motor.h
 mdk\telescopic_boom.o: ../USMART/sys.h

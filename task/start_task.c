@@ -1,8 +1,9 @@
 #include "start_task.h"
+#include "imu_task.h"
 
 TaskHandle_t Start_Task_Handle;
 
-#define START_TASK_STACK 128//�����ջ
+#define START_TASK_STACK 256//任务栈
 #define START_TASK_PRIORITY 5//���ȼ�
 
 void Init_Task_Create(void)
@@ -32,8 +33,7 @@ void Init_Task_Create(void)
 void Start_Task(void*pvParameters)
 {
 	Init_Task_Create();
-	//底盘任务要在main_task前创建
-	// Chassis_Control_Task_Create();
+	IMU_Task_Create();          // IMU 5ms 解析任务
 	Main_Task_create();
 	//Catch_yuanpanji_Task_create();
 	vTaskDelete(Start_Task_Handle);

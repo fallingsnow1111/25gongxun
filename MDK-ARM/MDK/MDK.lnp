@@ -64,6 +64,7 @@
 "mdk\main_task.o"
 "mdk\action_sets.o"
 "mdk\catch_yuanpanji_task.o"
+"mdk\imu_task.o"
 "mdk\fast_math.o"
 "mdk\mynvic.o"
 --library_type=microlib --strict --scatter "MDK\MDK.sct"

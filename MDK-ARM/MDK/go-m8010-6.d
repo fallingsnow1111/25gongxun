@@ -61,6 +61,7 @@ mdk\go-m8010-6.o: ../USMART/struct_typedef.h
 mdk\go-m8010-6.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\string.h
 mdk\go-m8010-6.o: ../MOTOR/pid.h
 mdk\go-m8010-6.o: ../SENSOR/IMU.h
+mdk\go-m8010-6.o: ../Core/Inc/usart.h
 mdk\go-m8010-6.o: ../SENSOR/QR_code.h
 mdk\go-m8010-6.o: ../USMART/usmart.h
 mdk\go-m8010-6.o: ../USMART/usmart_str.h
@@ -75,7 +76,6 @@ mdk\go-m8010-6.o: ../APP/user.h
 mdk\go-m8010-6.o: ../MOTOR/delay.h
 mdk\go-m8010-6.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\go-m8010-6.o: ../MOTOR/telescopic_boom.h
-mdk\go-m8010-6.o: ../Core/Inc/usart.h
 mdk\go-m8010-6.o: ..\SENSOR\crc_ccitt.h
 mdk\go-m8010-6.o: ../Core/Inc/gpio.h
 mdk\go-m8010-6.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\math.h

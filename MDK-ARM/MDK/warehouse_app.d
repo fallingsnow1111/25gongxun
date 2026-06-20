@@ -61,6 +61,7 @@ mdk\warehouse_app.o: ../USMART/struct_typedef.h
 mdk\warehouse_app.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\string.h
 mdk\warehouse_app.o: ../MOTOR/pid.h
 mdk\warehouse_app.o: ../SENSOR/IMU.h
+mdk\warehouse_app.o: ../Core/Inc/usart.h
 mdk\warehouse_app.o: ../SENSOR/QR_code.h
 mdk\warehouse_app.o: ../USMART/usmart.h
 mdk\warehouse_app.o: ../USMART/usmart_str.h
@@ -75,4 +76,3 @@ mdk\warehouse_app.o: ../APP/user.h
 mdk\warehouse_app.o: ../MOTOR/delay.h
 mdk\warehouse_app.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\warehouse_app.o: ../MOTOR/telescopic_boom.h
-mdk\warehouse_app.o: ../Core/Inc/usart.h

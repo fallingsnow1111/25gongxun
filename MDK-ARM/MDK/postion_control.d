@@ -62,6 +62,7 @@ mdk\postion_control.o: ../USMART/struct_typedef.h
 mdk\postion_control.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\string.h
 mdk\postion_control.o: ../MOTOR/pid.h
 mdk\postion_control.o: ../SENSOR/IMU.h
+mdk\postion_control.o: ../Core/Inc/usart.h
 mdk\postion_control.o: ../SENSOR/QR_code.h
 mdk\postion_control.o: ../USMART/usmart.h
 mdk\postion_control.o: ../USMART/usmart_str.h
@@ -76,4 +77,3 @@ mdk\postion_control.o: ../APP/user.h
 mdk\postion_control.o: ../MOTOR/delay.h
 mdk\postion_control.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\postion_control.o: ../MOTOR/telescopic_boom.h
-mdk\postion_control.o: ../Core/Inc/usart.h

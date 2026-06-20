@@ -2574,6 +2574,16 @@
               <FileType>5</FileType>
               <FilePath>..\task\catch_yuanpanji_task.h</FilePath>
             </File>
+            <File>
+              <FileName>imu_task.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\task\imu_task.c</FilePath>
+            </File>
+            <File>
+              <FileName>imu_task.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\task\imu_task.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

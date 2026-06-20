@@ -63,6 +63,7 @@ mdk\catch.o: ../Core/Inc/main.h
 mdk\catch.o: ../MOTOR/imu_control.h
 mdk\catch.o: ../MOTOR/pid.h
 mdk\catch.o: ../SENSOR/IMU.h
+mdk\catch.o: ../Core/Inc/usart.h
 mdk\catch.o: ../USMART/usmart.h
 mdk\catch.o: ../USMART/usmart_str.h
 mdk\catch.o: ../MOTOR/postion_control.h
@@ -75,7 +76,6 @@ mdk\catch.o: ../APP/user.h
 mdk\catch.o: ../MOTOR/delay.h
 mdk\catch.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\catch.o: ../MOTOR/telescopic_boom.h
-mdk\catch.o: ../Core/Inc/usart.h
 mdk\catch.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\math.h
 mdk\catch.o: ../mydefinition/fast_math.h
 mdk\catch.o: ..\APP\action_control.h

@@ -60,6 +60,7 @@ mdk\tjc_usart_hmi.o: ../USMART/struct_typedef.h
 mdk\tjc_usart_hmi.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\string.h
 mdk\tjc_usart_hmi.o: ../MOTOR/pid.h
 mdk\tjc_usart_hmi.o: ../SENSOR/IMU.h
+mdk\tjc_usart_hmi.o: ../Core/Inc/usart.h
 mdk\tjc_usart_hmi.o: ../SENSOR/QR_code.h
 mdk\tjc_usart_hmi.o: ../USMART/usmart.h
 mdk\tjc_usart_hmi.o: ../USMART/usmart_str.h
@@ -74,5 +75,4 @@ mdk\tjc_usart_hmi.o: ../APP/user.h
 mdk\tjc_usart_hmi.o: ../MOTOR/delay.h
 mdk\tjc_usart_hmi.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\tjc_usart_hmi.o: ../MOTOR/telescopic_boom.h
-mdk\tjc_usart_hmi.o: ../Core/Inc/usart.h
 mdk\tjc_usart_hmi.o: ..\SENSOR\tjc_usart_hmi.h

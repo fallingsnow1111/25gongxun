@@ -60,6 +60,7 @@ mdk\mynvic.o: ../USMART/struct_typedef.h
 mdk\mynvic.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\string.h
 mdk\mynvic.o: ../MOTOR/pid.h
 mdk\mynvic.o: ../SENSOR/IMU.h
+mdk\mynvic.o: ../Core/Inc/usart.h
 mdk\mynvic.o: ../SENSOR/QR_code.h
 mdk\mynvic.o: ../USMART/usmart.h
 mdk\mynvic.o: ../USMART/usmart_str.h
@@ -74,4 +75,3 @@ mdk\mynvic.o: ../APP/user.h
 mdk\mynvic.o: ../MOTOR/delay.h
 mdk\mynvic.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\mynvic.o: ../MOTOR/telescopic_boom.h
-mdk\mynvic.o: ../Core/Inc/usart.h

@@ -62,6 +62,7 @@ mdk\circle_control.o: ../MOTOR/motor_control.h
 mdk\circle_control.o: ../MOTOR/imu_control.h
 mdk\circle_control.o: ../MOTOR/pid.h
 mdk\circle_control.o: ../SENSOR/IMU.h
+mdk\circle_control.o: ../Core/Inc/usart.h
 mdk\circle_control.o: ../SENSOR/QR_code.h
 mdk\circle_control.o: ../USMART/usmart.h
 mdk\circle_control.o: ../USMART/usmart_str.h
@@ -75,7 +76,6 @@ mdk\circle_control.o: ../APP/user.h
 mdk\circle_control.o: ../MOTOR/delay.h
 mdk\circle_control.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\circle_control.o: ../MOTOR/telescopic_boom.h
-mdk\circle_control.o: ../Core/Inc/usart.h
 mdk\circle_control.o: ../task/main_task.h
 mdk\circle_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\circle_control.o: ../task/start_task.h

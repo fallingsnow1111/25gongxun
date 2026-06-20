@@ -4,6 +4,8 @@
 #include "sys.h"
 #include "usart.h"
 
+extern DMA_HandleTypeDef hdma_usart2_rx;
+
 #define RING_BUFFER_SIZE 256
 #define IMU_FRAME_SIZE   11      // HWT101 11字节标准帧
 

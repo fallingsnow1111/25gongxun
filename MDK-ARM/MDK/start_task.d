@@ -61,6 +61,7 @@ mdk\start_task.o: ../USMART/struct_typedef.h
 mdk\start_task.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\string.h
 mdk\start_task.o: ../MOTOR/pid.h
 mdk\start_task.o: ../SENSOR/IMU.h
+mdk\start_task.o: ../Core/Inc/usart.h
 mdk\start_task.o: ../SENSOR/QR_code.h
 mdk\start_task.o: ../USMART/usmart.h
 mdk\start_task.o: ../USMART/usmart_str.h
@@ -75,7 +76,6 @@ mdk\start_task.o: ../APP/user.h
 mdk\start_task.o: ../MOTOR/delay.h
 mdk\start_task.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\start_task.o: ../MOTOR/telescopic_boom.h
-mdk\start_task.o: ../Core/Inc/usart.h
 mdk\start_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\start_task.o: ..\task\main_task.h
 mdk\start_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
@@ -86,4 +86,6 @@ mdk\start_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os
 mdk\start_task.o: ..\task\action_sets.h
 mdk\start_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\start_task.o: ..\task\catch_yuanpanji_task.h
+mdk\start_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
+mdk\start_task.o: ..\task\imu_task.h
 mdk\start_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h

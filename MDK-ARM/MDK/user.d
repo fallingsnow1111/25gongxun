@@ -61,6 +61,7 @@ mdk\user.o: ../USMART/struct_typedef.h
 mdk\user.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\string.h
 mdk\user.o: ../MOTOR/pid.h
 mdk\user.o: ../SENSOR/IMU.h
+mdk\user.o: ../Core/Inc/usart.h
 mdk\user.o: ../SENSOR/QR_code.h
 mdk\user.o: ../USMART/usmart.h
 mdk\user.o: ../USMART/usmart_str.h
@@ -75,7 +76,6 @@ mdk\user.o: ../APP/user.h
 mdk\user.o: ../MOTOR/delay.h
 mdk\user.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\user.o: ../MOTOR/telescopic_boom.h
-mdk\user.o: ../Core/Inc/usart.h
 mdk\user.o: ../task/main_task.h
 mdk\user.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\user.o: ../task/start_task.h

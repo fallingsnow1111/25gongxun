@@ -61,6 +61,7 @@ mdk\imu_control.o: ../Core/Inc/main.h
 mdk\imu_control.o: ../MOTOR/motor_control.h
 mdk\imu_control.o: ../MOTOR/pid.h
 mdk\imu_control.o: ../SENSOR/IMU.h
+mdk\imu_control.o: ../Core/Inc/usart.h
 mdk\imu_control.o: ../SENSOR/QR_code.h
 mdk\imu_control.o: ../USMART/usmart.h
 mdk\imu_control.o: ../USMART/usmart_str.h
@@ -75,5 +76,4 @@ mdk\imu_control.o: ../APP/user.h
 mdk\imu_control.o: ../MOTOR/delay.h
 mdk\imu_control.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\imu_control.o: ../MOTOR/telescopic_boom.h
-mdk\imu_control.o: ../Core/Inc/usart.h
 mdk\imu_control.o: ../SENSOR/tjc_usart_hmi.h

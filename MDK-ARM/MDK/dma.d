@@ -61,6 +61,7 @@ mdk\dma.o: ../USMART/struct_typedef.h
 mdk\dma.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\string.h
 mdk\dma.o: ../MOTOR/pid.h
 mdk\dma.o: ../SENSOR/IMU.h
+mdk\dma.o: ../Core/Inc/usart.h
 mdk\dma.o: ../SENSOR/QR_code.h
 mdk\dma.o: ../USMART/usmart.h
 mdk\dma.o: ../USMART/usmart_str.h
@@ -75,4 +76,3 @@ mdk\dma.o: ../APP/user.h
 mdk\dma.o: ../MOTOR/delay.h
 mdk\dma.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\dma.o: ../MOTOR/telescopic_boom.h
-mdk\dma.o: ../Core/Inc/usart.h

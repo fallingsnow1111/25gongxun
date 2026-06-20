@@ -61,6 +61,7 @@ mdk\action_sets.o: ../USMART/struct_typedef.h
 mdk\action_sets.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\string.h
 mdk\action_sets.o: ../MOTOR/pid.h
 mdk\action_sets.o: ../SENSOR/IMU.h
+mdk\action_sets.o: ../Core/Inc/usart.h
 mdk\action_sets.o: ../SENSOR/QR_code.h
 mdk\action_sets.o: ../USMART/usmart.h
 mdk\action_sets.o: ../USMART/usmart_str.h
@@ -75,6 +76,5 @@ mdk\action_sets.o: ../APP/user.h
 mdk\action_sets.o: ../MOTOR/delay.h
 mdk\action_sets.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\action_sets.o: ../MOTOR/telescopic_boom.h
-mdk\action_sets.o: ../Core/Inc/usart.h
 mdk\action_sets.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\action_sets.o: ../APP/action_control.h

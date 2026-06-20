@@ -11,13 +11,6 @@
 #include "catch.h"
 #include <math.h>
 
-/*坐标
-  y
-  |
-  |__ __x
-  开关
-*/
-
 TaskHandle_t main_task_Handle;
 
 #define MAIN_TASK_STACK 512//任务栈
@@ -374,7 +367,7 @@ void Main_Task(void *pvParameters)
 {
 	// QR_sense_init();
 	// Route_Test_ABS();
-	Full_Arm_Test();
+//	Full_Arm_Test();
 
 	while (1) {
 		vTaskDelay(pdMS_TO_TICKS(2000));

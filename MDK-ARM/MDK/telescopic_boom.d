@@ -61,6 +61,7 @@ mdk\telescopic_boom.o: ../USMART/struct_typedef.h
 mdk\telescopic_boom.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\string.h
 mdk\telescopic_boom.o: ../MOTOR/pid.h
 mdk\telescopic_boom.o: ../SENSOR/IMU.h
+mdk\telescopic_boom.o: ../Core/Inc/usart.h
 mdk\telescopic_boom.o: ../SENSOR/QR_code.h
 mdk\telescopic_boom.o: ../USMART/usmart.h
 mdk\telescopic_boom.o: ../USMART/usmart_str.h
@@ -75,4 +76,3 @@ mdk\telescopic_boom.o: ../APP/user.h
 mdk\telescopic_boom.o: ../MOTOR/delay.h
 mdk\telescopic_boom.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\telescopic_boom.o: ../MOTOR/telescopic_boom.h
-mdk\telescopic_boom.o: ../Core/Inc/usart.h

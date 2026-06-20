@@ -60,6 +60,7 @@ mdk\freertos.o: ../USMART/struct_typedef.h
 mdk\freertos.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\string.h
 mdk\freertos.o: ../MOTOR/pid.h
 mdk\freertos.o: ../SENSOR/IMU.h
+mdk\freertos.o: ../Core/Inc/usart.h
 mdk\freertos.o: ../SENSOR/QR_code.h
 mdk\freertos.o: ../USMART/usmart.h
 mdk\freertos.o: ../USMART/usmart_str.h
@@ -74,7 +75,6 @@ mdk\freertos.o: ../APP/user.h
 mdk\freertos.o: ../MOTOR/delay.h
 mdk\freertos.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\freertos.o: ../MOTOR/telescopic_boom.h
-mdk\freertos.o: ../Core/Inc/usart.h
 mdk\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\freertos.o: ../task/start_task.h
 mdk\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h

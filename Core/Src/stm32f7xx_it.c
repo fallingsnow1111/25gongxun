@@ -341,9 +341,9 @@ void UART7_IRQHandler(void)
   /* USER CODE END UART7_IRQn 1 */
 }
 
-/**
-  * @brief This function handles UART8 global interrupt.
-  */
+///**
+//  * @brief This function handles UART8 global interrupt.
+//  */
 //void UART8_IRQHandler(void)
 //{
 //  /* USER CODE BEGIN UART8_IRQn 0 */

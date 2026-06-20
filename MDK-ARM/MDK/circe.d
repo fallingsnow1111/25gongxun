@@ -62,6 +62,7 @@ mdk\circe.o: ../MOTOR/imu_control.h
 mdk\circe.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\string.h
 mdk\circe.o: ../MOTOR/pid.h
 mdk\circe.o: ../SENSOR/IMU.h
+mdk\circe.o: ../Core/Inc/usart.h
 mdk\circe.o: ../SENSOR/QR_code.h
 mdk\circe.o: ../USMART/usmart.h
 mdk\circe.o: ../USMART/usmart_str.h
@@ -75,6 +76,5 @@ mdk\circe.o: ../APP/user.h
 mdk\circe.o: ../MOTOR/delay.h
 mdk\circe.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\circe.o: ../MOTOR/telescopic_boom.h
-mdk\circe.o: ../Core/Inc/usart.h
 mdk\circe.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\math.h
 mdk\circe.o: ../Core/Inc/stm32f7xx_it.h

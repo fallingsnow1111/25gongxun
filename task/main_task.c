@@ -291,10 +291,10 @@ static void Route_Test_ABS(void)
 	Move_To_Target_area(-85, 4020, 270, enable, Absolute_Position);
 }
 
+// 圆盘机静态抓取测试
 void yuan_pan_catch(void)
 {
-	const int warehouse_angles[] = {THIRD_WAREHOUSE, SECOND_WAREHOUSE, FIRST_WAREHOUSE};
-	const int colors[] = {RED, GREEN, BLUE};
+	const int colors[] = {one.firse, one.second, one.thrid};
 
 	vTaskDelay(pdMS_TO_TICKS(500));
 	claw_move_2(open);
@@ -308,18 +308,22 @@ void yuan_pan_catch(void)
 
 	for(int i = 0; i < 3; i++)
 	{
+		// 识别等到在范围内
 		while(1)
 		{
 			USART6_readdata_SeetZero();
 			send_NX(colors[i]);
-			vTaskDelay(pdMS_TO_TICKS(100));
+			vTaskDelay(pdMS_TO_TICKS(300));
 
 			int x = Get_X_Change();
 			int y = Get_Y_Change();
 
-			if(x != 0xFF && y != 0xFF && Get_data_action_flag() == colors[i] && abs(x) < 40 && abs(y) < 40)
+			if(x != 0xFF && y != 0xFF
+				&& Get_data_action_flag() == colors[i]
+				&& abs(x) < 20 && abs(y) < 20)
 				break;
 		}
+
 
 		// 抓取
 		Z_SetHeight(YUAN_PAN_HEIGHT);
@@ -331,7 +335,8 @@ void yuan_pan_catch(void)
 
 		// 放仓
 		Y_SetLength(Y_LENGHT_WAREHOUSE);
-		M8010_SetAngle(warehouse_angles[i]);
+		uint8_t idx = Get_Warehouse_index_from_color(colors[i]);
+		M8010_SetAngle(Get_Warehouse_Angle(idx));
 		vTaskDelay(pdMS_TO_TICKS(800));
 		Z_SetHeight(PUT_HOUSE_HEIGHT);
 		vTaskDelay(pdMS_TO_TICKS(400));
@@ -339,6 +344,7 @@ void yuan_pan_catch(void)
 		vTaskDelay(pdMS_TO_TICKS(300));
 		Z_SetHeight(0);
 		vTaskDelay(pdMS_TO_TICKS(500));
+
 
 		// 回抓取姿态
 		Y_SetLength(YUAN_PAN_LENGHT);
@@ -352,63 +358,32 @@ void yuan_pan_catch(void)
 	while(1) vTaskDelay(pdMS_TO_TICKS(1000));
 }
 
-void Main_Task(void *pvParameters)
+void Scan_Catch(void)
 {
-	yuan_pan_catch();
+	Set_chassis_able(enable);
+	vTaskDelay(pdMS_TO_TICKS(500));
 
+	Move_To_Target_area(0,0,0,enable,Relative_Position);
+	Scan_QR(150, 750);
+	Init_Warehouse(1);
+	HMI_SEND();
+
+	Move_To_Target_area(140, 1450, 0, enable, Absolute_Position);
+
+	Set_chassis_able(unable);
+	yuan_pan_catch();
+	
+}
+
+void Main_Task(void *pvParameters)
+{	
+	Scan_Catch();
+	while(1) vTaskDelay(pdMS_TO_TICKS(1000));
 	// QR_sense_init();
 	// Route_Test_ABS();
 	//	Full_Arm_Test();
 	// OpenMV_Test();
 
-	// vTaskDelay(pdMS_TO_TICKS(500));
-
-	// const uint8_t colors[] = {RED, GREEN, BLUE};
-	// claw_move_2(open);
-
-	// while (1) 
-	// {
-		// // 物料识别测试
-		// for(int i = 0; i < 3; i++)
-		// {
-		// 	uint32_t start = HAL_GetTick();
-		// 	USART6_readdata_SeetZero();
-		// 	send_NX(colors[i]);
-
-		// 	while(HAL_GetTick() - start < 5000)
-		// 	{
-		// 		int x = Get_X_Change();
-		// 		int y = Get_Y_Change();
-		// 		int flag = Get_data_action_flag();
-
-		// 		if (x != 0xFF && y != 0xFF && flag == colors[i])
-		// 		{
-		// 			claw_move_2(close);
-		// 			vTaskDelay(pdMS_TO_TICKS(300));
-		// 			claw_move_2(open);
-
-		// 			 break;
-		// 		}	
-				
-		// 		vTaskDelay(pdMS_TO_TICKS(50));
-		// 	}
-		// }
-
-		// 抓取测试
-		// vTaskDelay(pdMS_TO_TICKS(300));
-
-		// claw_move_2(open);
-		// vTaskDelay(G);
-		// Z_SetHeight(LOW_Z_HEIGHT);
-		// vTaskDelay(G);
-		// Y_SetLength(10);
-		// vTaskDelay(G);
-		// claw_move_2(close);
-		// vTaskDelay(G);
-		// Z_SetHeight(20);
-		// vTaskDelay(G);
-		// vTaskDelay(pdMS_TO_TICKS(500));
-	// }
 
 }
 

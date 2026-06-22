@@ -192,7 +192,7 @@ void Catch_Material_YUAN_PAN_JI_with_TELESCOPIC(int times)//抓取物料，参�
 void Catch_TELESCOPIC_Polar_coordinates(char color,float car_angle)
 {
 	//the angle restrictions of M8010
-	static int ANGLE_MAX=220,ANGLE_MIN=140;
+	static int ANGLE_MAX=-140,ANGLE_MIN=-220;
 	static float	DETA_ANGLE_MAX=3;
 	int x_y_change[2],color_flag=0xFF;
 	Set_Circle_Center(117,115);
@@ -220,7 +220,7 @@ void Catch_TELESCOPIC_Polar_coordinates(char color,float car_angle)
 		// judge whether the coordinates are valid
 		if (x_y_change[0] != 0xFF && x_y_change[1] != 0xFF) {
 			// if the coordinates approach the target center 
-			if (__fabs(x_y_change[0]) <= 2 && __fabs(x_y_change[1]) <= 2) {
+			if (__fabs(x_y_change[0]) <= 2 && __fabs(x_y_change[1]) <= 8) {
 				for (char i = 0; i < 4; i++)
 				{
 					Delay_ms(6);
@@ -264,7 +264,7 @@ void Catch_TELESCOPIC_Polar_coordinates(char color,float car_angle)
 				car_angle = ANGLE_MIN;
 			}
 			// adjust the telescopic amount based on the Y deviation
-			s_r = -x_y_change[1];  // Y deviation → telescopic height
+			s_r = x_y_change[1];  // Y deviation → telescopic height
 			Telescopic_control_pid((int)s_r);  // control the telescopic boom with PID
 			M8010_SetAngle(car_angle);    // set the new angle for the GO-M8010-6
 		}

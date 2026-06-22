@@ -56,58 +56,39 @@ void UART5_IRQHandler(void)
 		raw_idx++;
 		raw_total++;
 
-		if(res == 0x48 && length == 0)
-		{
-			length = 1;
-		}
-		else if(res == 0x45 && length == 1)
-		{
-			length = 2;
-		}
-		else if(res == 0X41 && length == 2)
-		{
-			length = 3;
-		}		
-		else if(res == 0X44 && length == 3)
-		{
-			length = 4;
-            i = 0;
-		}
-		else if(length == 4 && res != 0X0D)
-		{
-            RxBuffer1[i] = res;
-            i++;
-            if(i>=7)
+        // 第一个字节必须是数字'1' - '3'
+        if(length == 0)
+        {
+            if(res >= '1' && res <= '3')
             {
-                one.firse = RxBuffer1[0] - 0x30;
-                one.second = RxBuffer1[1] - 0x30;
-                one.thrid = RxBuffer1[2] - 0x30;
-                two.firse = RxBuffer1[4] - 0x30;
-                two.second = RxBuffer1[5] - 0x30;
-                two.thrid = RxBuffer1[6] - 0x30;
-                first_code = one.firse*100+one.second*10+one.thrid;
-                second_code = two.firse*100+two.second*10+two.thrid;
-                length = 0;
-                RxBuffer1[0] = 0;
-                RxBuffer1[1] = 0;
-                RxBuffer1[2] = 0;
-                RxBuffer1[3] = 0;
-                RxBuffer1[4] = 0;
-                RxBuffer1[5] = 0;
-                RxBuffer1[6] = 0;           
+                RxBuffer1[0] = res;
+                i = 1;
+                length = 1;
             }
-		}
-		else
-		{
-			length = 0;
-			RxBuffer1[0] = 0;
-			RxBuffer1[1] = 0;
-            RxBuffer1[2] = 0;
-            RxBuffer1[3] = 0;
-            RxBuffer1[4] = 0;
-            RxBuffer1[5] = 0;
-            RxBuffer1[6] = 0;
-		}
+        }
+
+        else if(length == 1)
+        {
+            RxBuffer1[i++] = res;
+            if(i >= 7)
+            {
+                // 验证第4位是'+'
+                if(RxBuffer1[3] == '+')
+                {
+                    one.firse = RxBuffer1[0] - 0x30;
+                    one.second = RxBuffer1[1] - 0x30;
+                    one.thrid = RxBuffer1[2] - 0x30;
+                    two.firse = RxBuffer1[4] - 0x30;
+                    two.second = RxBuffer1[5] - 0x30;
+                    two.thrid = RxBuffer1[6] - 0x30;
+                    first_code = one.firse*100+one.second*10+one.thrid;
+                    second_code = two.firse*100+two.second*10+two.thrid;
+                }
+                length = 0;
+                i = 0;
+                memset(RxBuffer1, 0, 7);
+            }
+        }
 	}
   __HAL_UART_CLEAR_OREFLAG(&huart5);    
 }

@@ -133,6 +133,9 @@ void Read_Y_position(void)
 
 void Y_SetLength(int position) 
 {
+	if(position < 0) 	position = 0;
+	if(position > 80) 	position = 80;
+
     Telescopic_POSTION.TARGE = -position * GEAR_RATIO;
     // 若目标与当前位置接近则直接返回
     // if (__fabs(Telescopic_POSTION.NOW - Telescopic_POSTION.TARGE) <= POSITION_TOLERANCE) {

@@ -11,8 +11,8 @@
 #include <math.h>
 #include "stm32f7xx_it.h"
 
-int x_zhong=103;
-int y_zhong=102;
+int x_zhong=121;
+int y_zhong=120;
 int change_x = 0xFF;
 int change_y = 0xFF;
 int change_x_yuanpanji=0xFF;

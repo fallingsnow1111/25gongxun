@@ -7,7 +7,7 @@
 #pragma pack(1)
 
 #define PUT_HOUSE_ANGLE  -7
-#define PUT_AND_CATCH_ANGLE 180
+#define PUT_AND_CATCH_ANGLE -180
 
 #ifndef _LIMIT_MIN
 #define _LIMIT_MIN(x, min) ((x) < (min) ? (min) : (x))

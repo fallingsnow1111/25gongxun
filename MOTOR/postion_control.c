@@ -25,7 +25,7 @@ void POSTION_init(void)
     Z_POSTION.NOW = 0;
     Z_POSTION.TARGE = 0;
     Z_POSTION.CHANGE = 0;
-		Z_POSTION.BIT = FINISH_MOVE;
+	Z_POSTION.BIT = FINISH_MOVE;
     __HAL_UART_ENABLE_IT(&huart7, UART_IT_RXNE);
 	HAL_UARTEx_ReceiveToIdle_DMA(&huart7, u7RXdat, 8);
 }

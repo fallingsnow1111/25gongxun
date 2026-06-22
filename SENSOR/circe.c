@@ -11,7 +11,6 @@
 #include <math.h>
 #include "stm32f7xx_it.h"
 
-
 int x_zhong=103;
 int y_zhong=102;
 int change_x = 0xFF;
@@ -129,7 +128,7 @@ void USART6_IRQHandler(void)
 	if(USART6->ISR&(1<<5))	// RXNE: 接收寄存器非空
 	{
         res = USART6->RDR;
-		if(res==0x55&&USART6_stage==0)
+        if(res==0x55&&USART6_stage==0)
         {
             USART6_stage=1;
             U6_pitoner=0;

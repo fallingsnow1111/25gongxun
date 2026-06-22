@@ -57,10 +57,10 @@ void claw_move_2(int action_2)//应对爪子转圈碰到物料的问题//用这�
     switch(action_2)
     {
         case 1:
-            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,100);//OPEN//120
+            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,75);//OPEN//120
             break;
         case 2:
-            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,50);//初赛145，决赛157
+            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,130);//初赛145，决赛157
             break;
          default:
             break;
@@ -70,7 +70,7 @@ void claw_move_2(int action_2)//应对爪子转圈碰到物料的问题//用这�
 void Put_on_house(int color)
 {
 	Z_SetHeight(0);//先拉到最高
-	Y_SetLength(Y_HEIGHT_WAREHOUSE);//将伸缩臂收回
+	Y_SetLength(Y_LENGHT_WAREHOUSE);//将伸缩臂收回
 	//转到指定颜色的物料仓
 	uint8_t warehouse_index=Get_Warehouse_index_from_color(color);
 	int angle=Get_Warehouse_Angle(warehouse_index);
@@ -352,7 +352,7 @@ void catch_half_stage(int color)
 		claw_move(close);
 		Delay_ms(120);
 		Z_SetHeight(50);//抓取完成，上升到安全高度
-		Y_SetLength(Y_HEIGHT_WAREHOUSE);
+		Y_SetLength(Y_LENGHT_WAREHOUSE);
 		M8010_SetAngle(car_lift.lift_angle);
 		Z_SetHeight(65);
 		claw_move_1(open);
@@ -403,7 +403,7 @@ void Put_Layer(int layer,int color, int mode)//layer(1 or 2)，color(red,green,b
 				Z_H=HIGH_Z_HEIGHT;
 			}break;
 		}
-		Y_SetLength(Y_HEIGHT_WAREHOUSE);//Unique length
+		Y_SetLength(Y_LENGHT_WAREHOUSE);//Unique length
 		// claw_move_2(open);
 		M8010_SetAngle(car_lift.lift_angle);//There are 3 angles here, corresponding to the red, green and blue warehouses
 		claw_move_1(open);//应对下压碰到物料
@@ -473,7 +473,7 @@ void remove_material(int color)
 {
 	Z_SetHeight(50);
 	claw_move_2(open);
-	Y_SetLength(Y_HEIGHT_WAREHOUSE);
+	Y_SetLength(Y_LENGHT_WAREHOUSE);
 	int index=Get_Warehouse_index_from_color(color);
 	M8010_SetAngle(GET_Warehouse_Angle_take(index));
 	Z_SetHeight(75);

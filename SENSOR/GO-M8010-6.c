@@ -28,7 +28,7 @@ uint8_t m8010_hight_bit,m8010_low_bit = 0;
 
 void M8010_init(void)
 {
-		PID_Init(&M8010_pid,1,0.5,0,20,-20);
+	PID_Init(&M8010_pid,1,0.5,0,20,-20);
     __HAL_UART_ENABLE_IT(&huart8, UART_IT_RXNE);
 }
 void read_init_postion(void)
@@ -109,8 +109,8 @@ void M8010_send(int position) {
 
         M8010.NOW += step;
 
-        if(M8010.NOW > 400.0f || M8010.NOW < (-50)) {
-            M8010.NOW = (M8010.NOW > 0) ? 280.0f : -50;
+        if(M8010.NOW > 40.0f || M8010.NOW < (-360.f)) {
+            M8010.NOW = (M8010.NOW > 0) ? 40.0f : -360.0f;
         }
         M8010.CHANGE = M8010.TARGE - M8010.NOW;
 

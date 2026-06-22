@@ -9,6 +9,7 @@
 #include "GO-M8010-6.h"
 #include "QR_code.h"
 #include "catch.h"
+#include "circe.h"    // 顶部 include 区加这行
 #include <math.h>
 
 TaskHandle_t main_task_Handle;
@@ -138,80 +139,6 @@ void User_function_final()
 	
 	Move_To_Target_area(0,1100,0,enable,Relative_Position);//转90度
 	Move_To_Target_area(70,0,0,enable,Relative_Position);//转90度	
-}
-
-static void Full_Arm_Test(void)
-{
-    const uint32_t D = pdMS_TO_TICKS(600);   // 动作间隔
-    const uint32_t G = pdMS_TO_TICKS(400);   // 夹爪间隔
-    const int    ARM_OUT  = 60;               // 伸出长度
-    const int    ARM_IN   = 20;               // 缩回长度
-	const int    LIFT_UP  = 80;               // 升起高度
-    const int    LIFT_DN  = 20;               // 降下高度
-    const int    JOINT_DEG = 30;              // 关节摆动角度
-
-    while (1)
-    {
-        // 1. 升起
-        Z_SetHeight(LIFT_UP);
-        vTaskDelay(D);
-
-        // 2. 伸出
-        Y_SetLength(ARM_OUT);
-        vTaskDelay(D);
-
-        // 3. 夹爪开合
-        claw_move_2(open);
-        vTaskDelay(G);
-        claw_move_2(close);
-        vTaskDelay(G);
-
-        // 4. 关节正转 → 反转
-        M8010_SetAngle(JOINT_DEG);
-        vTaskDelay(D);
-        M8010_SetAngle(-JOINT_DEG);
-        vTaskDelay(D);
-        M8010_SetAngle(0);
-        vTaskDelay(D);
-
-        // 5. 缩回 → 降下
-        Y_SetLength(ARM_IN);
-        vTaskDelay(D);
-        Z_SetHeight(LIFT_DN);
-        vTaskDelay(D);
-    }
-}
-
-// M8010 关节电机测试：循环摆动
-static void M8010_Joint_Test(void)
-{
-	vTaskDelay(pdMS_TO_TICKS(500));
-
-	M8010_Set_Zero();                        // 软件零点
-	vTaskDelay(pdMS_TO_TICKS(500));
-
-	// 往正方向走 90 度
-	M8010_SetAngle(40);
-	vTaskDelay(pdMS_TO_TICKS(1000));
-
-	// 回零点
-	M8010_SetAngle(0);
-	vTaskDelay(pdMS_TO_TICKS(1000));
-
-	// 往负方向走 90 度
-	M8010_SetAngle(-40);
-	vTaskDelay(pdMS_TO_TICKS(1000));
-
-	// 回零点
-	M8010_SetAngle(0);
-	vTaskDelay(pdMS_TO_TICKS(1000));
-
-	// 走 PUT_AND_CATCH_ANGLE（抓取位姿）
-//	M8010_SetAngle(PUT_AND_CATCH_ANGLE);
-	vTaskDelay(pdMS_TO_TICKS(2000));
-
-	// 回零点
-	M8010_SetAngle(0);
 }
 
 // 二维码识别 + 串口屏显示测试
@@ -363,15 +290,126 @@ static void Route_Test_ABS(void)
 	vTaskDelay(pdMS_TO_TICKS(200));
 	Move_To_Target_area(-85, 4020, 270, enable, Absolute_Position);
 }
+
+void yuan_pan_catch(void)
+{
+	const int warehouse_angles[] = {THIRD_WAREHOUSE, SECOND_WAREHOUSE, FIRST_WAREHOUSE};
+	const int colors[] = {RED, GREEN, BLUE};
+
+	vTaskDelay(pdMS_TO_TICKS(500));
+	claw_move_2(open);
+	M8010_SetAngle(PUT_AND_CATCH_ANGLE);
+	Y_SetLength(YUAN_PAN_LENGHT);
+	vTaskDelay(pdMS_TO_TICKS(800));
+
+	// 识别高度
+	Z_SetHeight(YUAN_PAN_DETECT_HEIGHT);
+	vTaskDelay(pdMS_TO_TICKS(300));
+
+	for(int i = 0; i < 3; i++)
+	{
+		while(1)
+		{
+			USART6_readdata_SeetZero();
+			send_NX(colors[i]);
+			vTaskDelay(pdMS_TO_TICKS(100));
+
+			int x = Get_X_Change();
+			int y = Get_Y_Change();
+
+			if(x != 0xFF && y != 0xFF && Get_data_action_flag() == colors[i] && abs(x) < 40 && abs(y) < 40)
+				break;
+		}
+
+		// 抓取
+		Z_SetHeight(YUAN_PAN_HEIGHT);
+		vTaskDelay(pdMS_TO_TICKS(100));
+		claw_move_2(close);
+		vTaskDelay(pdMS_TO_TICKS(100));
+		Z_SetHeight(0);
+		vTaskDelay(pdMS_TO_TICKS(200));
+
+		// 放仓
+		Y_SetLength(Y_LENGHT_WAREHOUSE);
+		M8010_SetAngle(warehouse_angles[i]);
+		vTaskDelay(pdMS_TO_TICKS(800));
+		Z_SetHeight(PUT_HOUSE_HEIGHT);
+		vTaskDelay(pdMS_TO_TICKS(400));
+		claw_move_2(open);
+		vTaskDelay(pdMS_TO_TICKS(300));
+		Z_SetHeight(0);
+		vTaskDelay(pdMS_TO_TICKS(500));
+
+		// 回抓取姿态
+		Y_SetLength(YUAN_PAN_LENGHT);
+		M8010_SetAngle(PUT_AND_CATCH_ANGLE);
+		claw_move_2(open);
+		vTaskDelay(pdMS_TO_TICKS(800));
+		Z_SetHeight(YUAN_PAN_DETECT_HEIGHT);
+		vTaskDelay(pdMS_TO_TICKS(300));
+	}
+
+	while(1) vTaskDelay(pdMS_TO_TICKS(1000));
+}
+
 void Main_Task(void *pvParameters)
 {
+	yuan_pan_catch();
+
 	// QR_sense_init();
 	// Route_Test_ABS();
-//	Full_Arm_Test();
+	//	Full_Arm_Test();
+	// OpenMV_Test();
 
-	while (1) {
-		vTaskDelay(pdMS_TO_TICKS(2000));
-	}
+	// vTaskDelay(pdMS_TO_TICKS(500));
+
+	// const uint8_t colors[] = {RED, GREEN, BLUE};
+	// claw_move_2(open);
+
+	// while (1) 
+	// {
+		// // 物料识别测试
+		// for(int i = 0; i < 3; i++)
+		// {
+		// 	uint32_t start = HAL_GetTick();
+		// 	USART6_readdata_SeetZero();
+		// 	send_NX(colors[i]);
+
+		// 	while(HAL_GetTick() - start < 5000)
+		// 	{
+		// 		int x = Get_X_Change();
+		// 		int y = Get_Y_Change();
+		// 		int flag = Get_data_action_flag();
+
+		// 		if (x != 0xFF && y != 0xFF && flag == colors[i])
+		// 		{
+		// 			claw_move_2(close);
+		// 			vTaskDelay(pdMS_TO_TICKS(300));
+		// 			claw_move_2(open);
+
+		// 			 break;
+		// 		}	
+				
+		// 		vTaskDelay(pdMS_TO_TICKS(50));
+		// 	}
+		// }
+
+		// 抓取测试
+		// vTaskDelay(pdMS_TO_TICKS(300));
+
+		// claw_move_2(open);
+		// vTaskDelay(G);
+		// Z_SetHeight(LOW_Z_HEIGHT);
+		// vTaskDelay(G);
+		// Y_SetLength(10);
+		// vTaskDelay(G);
+		// claw_move_2(close);
+		// vTaskDelay(G);
+		// Z_SetHeight(20);
+		// vTaskDelay(G);
+		// vTaskDelay(pdMS_TO_TICKS(500));
+	// }
+
 }
 
 void Main_Task_create(void)

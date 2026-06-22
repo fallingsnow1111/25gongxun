@@ -7,10 +7,15 @@
 //tode:
 #define LOW_Z_HEIGHT   	    168.2	 //1 round height
 #define HIGH_Z_HEIGHT	 	100      //2 round height 
-// #define RED_WAREHOUSE  		-35	     //the angle of the M8010 to red warehouse
-// #define	GREEN_WAREHOUSE		0		 //the angle of the M8010 to green warehouse
-// #define	BLUE_WAREHOUSE		32       //the angle of the M8010 to blue warehouse
-#define FIRST_WAREHOUSE  		-32	     //the angle of the M8010 to 1 warehouse
+
+#define YUAN_PAN_HEIGHT     100
+#define PUT_HOUSE_HEIGHT    75  
+#define YUAN_PAN_DETECT_HEIGHT  65
+#define YUAN_PAN_LENGHT     60
+//it is the length of telescopic to catch the material in the wasehouse
+#define Y_LENGHT_WAREHOUSE      20
+
+#define FIRST_WAREHOUSE  		-34	     //the angle of the M8010 to 1 warehouse
 #define	SECOND_WAREHOUSE		0		 //the angle of the M8010 to 2 warehouse
 #define	THIRD_WAREHOUSE		    34       //the angle of the M8010 to 3 warehouse
 //the angle of the M8010 to put the material
@@ -21,8 +26,6 @@
 #define RED_PUT_AREA_HEIGHT     98
 #define GREEN_PUT_AREA_HEIGHT   50
 #define BLUE_PUT_AREA_HEIGHT    103
-//it is the length of telescopic to catch the material in the wasehouse
-#define Y_HEIGHT_WAREHOUSE  20
 
 #define open  1
 #define close  2

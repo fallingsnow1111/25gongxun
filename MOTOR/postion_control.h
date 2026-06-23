@@ -13,7 +13,7 @@ static void U7_send(unsigned char data);
 extern struct POSTION Z_POSTION;
 struct POSTION
 {
-	  int NOW;
+	int NOW;
     int TARGE;
     int CHANGE;
     int BIT;

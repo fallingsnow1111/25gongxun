@@ -367,7 +367,7 @@ void Put_Layer(int layer,int color, int mode)//layer(1 or 2)，color(red,green,b
 	//decision the height of Z axis based on the layer
 	uint8_t Z_H=0;
 	uint8_t warehouse_index=Get_Warehouse_index_from_color(color);
-	car_lift.lift_angle=GET_Warehouse_Angle_take(warehouse_index);//出仓库用这个角度
+	car_lift.lift_angle=Get_Warehouse_Angle(warehouse_index);//出仓库用这个角度
   switch(color)
     {
         case RED:
@@ -406,12 +406,12 @@ void Put_Layer(int layer,int color, int mode)//layer(1 or 2)，color(red,green,b
 		Y_SetLength(Y_LENGHT_WAREHOUSE);//Unique length
 		// claw_move_2(open);
 		M8010_SetAngle(car_lift.lift_angle);//There are 3 angles here, corresponding to the red, green and blue warehouses
-		claw_move_1(open);//应对下压碰到物料
+		claw_move_2(open);
 		Delay_ms(80);
-		Z_SetHeight(75);//decline to the height of the warehouse
-		claw_move(close);
+		Z_SetHeight(60);//decline to the height of the warehouse
+		claw_move_2(close);
 		Delay_ms(80);
-		Z_SetHeight(50);
+		Z_SetHeight(0);
 		if(layer==2)
 		{
 			Y_SetLength(2);
@@ -427,7 +427,7 @@ void Put_Layer(int layer,int color, int mode)//layer(1 or 2)，color(red,green,b
 		{
 			Z_SetHeight(129);
 		}
-		claw_move_1(open);
+		claw_move_2(open);
 		Delay_ms(80);
 		Z_SetHeight(40);
 		

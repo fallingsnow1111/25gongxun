@@ -9,8 +9,10 @@
 #include "GO-M8010-6.h"
 #include "QR_code.h"
 #include "catch.h"
+#include "user.h"
 #include "circe.h"    // 顶部 include 区加这行
 #include <math.h>
+#include "pid.h"
 
 TaskHandle_t main_task_Handle;
 
@@ -320,30 +322,28 @@ void yuan_pan_catch(void)
 
 			if(x != 0xFF && y != 0xFF
 				&& Get_data_action_flag() == colors[i]
-				&& abs(x) < 20 && abs(y) < 20)
+				&& abs(x) < 15 && abs(y) < 25)
 				break;
 		}
 
 
 		// 抓取
 		Z_SetHeight(YUAN_PAN_HEIGHT);
-		vTaskDelay(pdMS_TO_TICKS(100));
 		claw_move_2(close);
 		vTaskDelay(pdMS_TO_TICKS(100));
 		Z_SetHeight(0);
-		vTaskDelay(pdMS_TO_TICKS(200));
 
 		// 放仓
 		Y_SetLength(Y_LENGHT_WAREHOUSE);
 		uint8_t idx = Get_Warehouse_index_from_color(colors[i]);
 		M8010_SetAngle(Get_Warehouse_Angle(idx));
-		vTaskDelay(pdMS_TO_TICKS(800));
+		vTaskDelay(pdMS_TO_TICKS(100));
 		Z_SetHeight(PUT_HOUSE_HEIGHT);
-		vTaskDelay(pdMS_TO_TICKS(400));
+		vTaskDelay(pdMS_TO_TICKS(100));
 		claw_move_2(open);
-		vTaskDelay(pdMS_TO_TICKS(300));
+		vTaskDelay(pdMS_TO_TICKS(100));
 		Z_SetHeight(0);
-		vTaskDelay(pdMS_TO_TICKS(500));
+		vTaskDelay(pdMS_TO_TICKS(100));
 
 		// 前两个物料抓完回抓取姿态
 		if(i < 2)
@@ -351,9 +351,8 @@ void yuan_pan_catch(void)
 			Y_SetLength(YUAN_PAN_LENGHT);
 			M8010_SetAngle(PUT_AND_CATCH_ANGLE);
 			claw_move_2(open);
-			vTaskDelay(pdMS_TO_TICKS(800));
-			Z_SetHeight(YUAN_PAN_DETECT_HEIGHT);
 			vTaskDelay(pdMS_TO_TICKS(300));
+			Z_SetHeight(YUAN_PAN_DETECT_HEIGHT);
 		}
 
 	}
@@ -361,6 +360,149 @@ void yuan_pan_catch(void)
 	M8010_SetAngle(0);
 	claw_move_2(open);
 	vTaskDelay(pdMS_TO_TICKS(800));
+}
+
+static float Circle_Test_MinSpeed(float speed, float min_speed)
+{
+    if (speed > 0) return min_speed;
+    if (speed < 0) return -min_speed;
+    return 0;
+}
+
+int ring_x_average;
+int ring_y_average;
+float ring_step_x;
+float ring_step_y;
+
+static void Green_Ring_Move_Adjust_Test(void)
+{
+    const uint32_t timeout_ms = 15000;
+    const float K_X = 1.0f;        // 每 1 像素偏差修正多少 mm，先小一点
+    const float K_Y = 1.0f;
+    const float MIN_STEP = 12.0f;
+    const float MAX_STEP = 15.0f;  // 单次最大修正距离，避免跳太猛
+
+    float target_x = 140.0f;
+    float target_y = 2850.0f;
+    const float target_yaw = 180.0f;
+    uint32_t start_tick;
+
+    Set_chassis_able(enable);
+    vTaskDelay(pdMS_TO_TICKS(500));
+
+    M8010_SetAngle(PUT_AND_CATCH_ANGLE);
+    Y_SetLength(30);
+    Z_SetHeight(110);
+    vTaskDelay(pdMS_TO_TICKS(500));
+
+    USART6_readdata_SeetZero();
+    Set_Circle_Center(118, 106);
+    send_NX(GREEN_CIRCLE);
+    vTaskDelay(pdMS_TO_TICKS(300));
+
+    start_tick = HAL_GetTick();
+
+    while ((HAL_GetTick() - start_tick) < timeout_ms)
+    {
+        send_NX(GREEN_CIRCLE);
+        vTaskDelay(pdMS_TO_TICKS(100));
+
+        ring_x_average = Get_X_Change();
+        ring_y_average = Get_Y_Change();
+
+        if (Get_data_action_flag() != GREEN_CIRCLE)
+        {
+            continue;
+        }
+
+        if (ring_x_average == 0xFF || ring_y_average == 0xFF)
+        {
+            continue;
+        }
+
+		if (__fabs(ring_x_average) <= 5 && __fabs(ring_y_average) <= 5)
+		{
+			Motor_setspeed(0, 0, 0);
+			vTaskDelay(pdMS_TO_TICKS(100));
+
+			Set_chassis_able(unable);
+
+			for (uint8_t i = 0; i < 20; i++)
+			{
+				float yaw = normalize_angle(imu.yaw);
+				if (__fabs(yaw) <= 0.5f)
+				{
+					break;
+				}
+
+				vTaskDelay(pdMS_TO_TICKS(20));
+			}
+
+			Motor_setspeed(0, 0, 0);
+			break;
+		}
+
+        float step_x = 0.0f;
+        float step_y = 0.0f;
+
+        if (__fabs(ring_y_average) > 2) {
+            step_x = -((float)ring_y_average) * K_X;
+        }
+
+        if (__fabs(ring_x_average) > 2) {
+            step_y = ((float)ring_x_average) * K_Y;
+        }
+
+        if (step_x > MAX_STEP) step_x = MAX_STEP;
+        if (step_x < -MAX_STEP) step_x = -MAX_STEP;
+        if (step_y > MAX_STEP) step_y = MAX_STEP;
+        if (step_y < -MAX_STEP) step_y = -MAX_STEP;
+
+        if (step_x != 0.0f && __fabs(step_x) < MIN_STEP) {
+            step_x = (step_x > 0) ? MIN_STEP : -MIN_STEP;
+        }
+
+        if (step_y != 0.0f && __fabs(step_y) < MIN_STEP) {
+            step_y = (step_y > 0) ? MIN_STEP : -MIN_STEP;
+        }
+
+        ring_step_x = step_x;
+        ring_step_y = step_y;
+
+        target_x += step_x;
+        target_y += step_y;
+        Move_To_Target_area(target_x, target_y, target_yaw, enable, Absolute_Position);
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+
+    Motor_setspeed(0, 0, 0);
+    Z_SetHeight(0);
+    vTaskDelay(pdMS_TO_TICKS(300));
+}
+
+static void Scan_Adjust_And_Put_Yuanpanji_Test(void)
+{
+	if (!Scan_QR(150, 750))
+	{
+		while(1)
+		{
+			Motor_setspeed(0, 0, 0);
+			vTaskDelay(pdMS_TO_TICKS(1000));
+		}
+	}
+	Init_Warehouse(1);
+	HMI_SEND();
+
+	Green_Ring_Move_Adjust_Test();
+	vTaskDelay(pdMS_TO_TICKS(300));
+
+	PUT_material_on_yuanpanji(1);
+
+	while(1)
+	{
+		Motor_setspeed(0, 0, 0);
+		vTaskDelay(pdMS_TO_TICKS(1000));
+	}
 }
 
 void Scan_Catch(void)
@@ -373,7 +515,7 @@ void Scan_Catch(void)
 	Init_Warehouse(1);
 	HMI_SEND();
 
-	Move_To_Target_area(140, 1450, 0, enable, Absolute_Position);
+	Move_To_Target_area(125, 1450, 0, enable, Absolute_Position);
 
 	yuan_pan_catch();
 
@@ -381,17 +523,22 @@ void Scan_Catch(void)
 
 	Move_To_Target_area(140, 1100, 0, enable, Absolute_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(140, 1100, 90, enable, Absolute_Position);
+	Move_To_Target_area(140, 1080, 90, enable, Absolute_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
 	Move_To_Target_area(140, 2850, 90, enable, Absolute_Position);
 	vTaskDelay(pdMS_TO_TICKS(200));
 	Move_To_Target_area(140, 2850, 180, enable, Absolute_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+
 	vTaskDelay(pdMS_TO_TICKS(200));
 }
 
 void Main_Task(void *pvParameters)
 {	
 	Scan_Catch();
+	Green_Ring_Move_Adjust_Test();
+	vTaskDelay(pdMS_TO_TICKS(300));
+	Put_Material_Processing_Area(1, 1, P_round, cu_area);
 	while(1) vTaskDelay(pdMS_TO_TICKS(1000));
 	// QR_sense_init();
 	// Route_Test_ABS();

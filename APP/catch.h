@@ -17,15 +17,15 @@
 
 #define FIRST_WAREHOUSE  		-34	     //the angle of the M8010 to 1 warehouse
 #define	SECOND_WAREHOUSE		0		 //the angle of the M8010 to 2 warehouse
-#define	THIRD_WAREHOUSE		    34       //the angle of the M8010 to 3 warehouse
+#define	THIRD_WAREHOUSE		    32       //the angle of the M8010 to 3 warehouse
 //the angle of the M8010 to put the material
-#define RED_PUT_AREA_ANGLE      141
-#define GREEN_PUT_AREA_ANGLE 	180
-#define BLUE_PUT_AREA_ANGLE 	217
+#define RED_PUT_AREA_ANGLE      -217
+#define GREEN_PUT_AREA_ANGLE 	-180
+#define BLUE_PUT_AREA_ANGLE 	-141
 //it's the length of telescopic for put the material
-#define RED_PUT_AREA_HEIGHT     98
+#define RED_PUT_AREA_HEIGHT     115
 #define GREEN_PUT_AREA_HEIGHT   50
-#define BLUE_PUT_AREA_HEIGHT    103
+#define BLUE_PUT_AREA_HEIGHT    105
 
 #define open  1
 #define close  2

@@ -22,27 +22,24 @@ Dialog DLL:      TCM.DLL V1.56.4.0
  
 <h2>Project:</h2>
 C:\Users\LuoXue\Desktop\Robot Project\2024gongxun - 5ci\MDK-ARM\MDK.uvprojx
-Project File Date:  06/20/2026
+Project File Date:  06/23/2026
 
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 6 (build 750)', folder: 'D:\Keil5_MDK\ARM\ARMCC\Bin'
 Build target 'MDK'
-compiling main_task.c...
-..\task\main_task.c(32): warning:  #177-D: function "Chassis_Test_Run_With_Imu"  was declared but never referenced
-  static void Chassis_Test_Run_With_Imu(float vy, float vx, float target_angle, uint32_t run_time_ms)
-..\task\main_task.c(49): warning:  #177-D: function "Chassis_Test_Rotate_With_Imu"  was declared but never referenced
-  static void Chassis_Test_Rotate_With_Imu(float target_angle, uint32_t timeout_ms)
-..\task\main_task.c(145): warning:  #177-D: function "QR_Code_Test"  was declared but never referenced
-  static void QR_Code_Test(void)
-..\task\main_task.c(171): warning:  #177-D: function "Route_Test"  was declared but never referenced
-  static void Route_Test(void)
-..\task\main_task.c(245): warning:  #177-D: function "Route_Test_ABS"  was declared but never referenced
-  static void Route_Test_ABS(void)
-..\task\main_task.c: 5 warnings, 0 errors
+compiling postion_control.c...
+compiling catch.c...
+..\APP\catch.c(493): warning:  #550-D: variable "y_piont"  was set but never used
+  	int x_piont=0xFF,y_piont=0xFF;
+..\APP\catch.c(516): warning:  #177-D: variable "grand_color"  was declared but never referenced
+  	int grand_color[3][2] = {{-1, -1}, {-1, -1}, {-1, -1}};
+..\APP\catch.c(517): warning:  #177-D: variable "flag"  was declared but never referenced
+  	int flag=-1; 
+..\APP\catch.c: 3 warnings, 0 errors
 linking...
-Program Size: Code=40620 RO-data=1244 RW-data=748 ZI-data=20988  
+Program Size: Code=41968 RO-data=1244 RW-data=764 ZI-data=21060  
 FromELF: creating hex file...
-"MDK\MDK.axf" - 0 Error(s), 5 Warning(s).
+"MDK\MDK.axf" - 0 Error(s), 3 Warning(s).
 
 <h2>Software Packages used:</h2>
 

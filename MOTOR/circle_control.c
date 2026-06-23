@@ -6,6 +6,8 @@
 #include "circe.h"
 #include "main_task.h"
 
+#define CIRCLE_CENTER_OK 2.0f
+
 static inline int SATU(float _IN, float _AIM)
 {
     if (_IN < 0)
@@ -115,7 +117,7 @@ void Circle_Position_Center_SPEED_yuanpanji(char color) {
                 x_valspeed = SATU(x_valspeed, CENTER_SPEED_EDGE_YUANPANJI);
             }
 
-            Motor_setspeed(y_valspeed, x_valspeed, 0);
+            Motor_setspeed(x_valspeed, -y_valspeed, 0);
         }
 
         // 退出条件
@@ -138,21 +140,33 @@ void Circle_Position_Center_SPEED(char color)//mode为Preliminary_round(初赛) 
 	}
 	else if(color==GREEN_CIRCLE)
 	{
-		Set_Circle_Center(113,123);
+		Set_Circle_Center(118,106);
 	}
 	send_NX(color);
 
-	//   M8010_SetAngle(PUT_AND_CATCH_ANGLE);
-	//   Y_SetLength(50);//must step
-	//   Z_SetHeight(100);
-	Wait_other_task_finish(Get_action_task_notify()); // 等待动作组完成
+	// Wait_other_task_finish(Get_action_task_notify()); // 等待动作组完成
 	Delay_ms(50);//等待摄像头稳定下来
+
+	uint8_t has_seen_target = 0;
+	uint8_t search_step = 0;
 	while(1)
 	{
 		x_average=change_x;
 		y_average=change_y;
 		if((x_average!=0xFF)&&(y_average!=0xFF))
 		{
+			has_seen_target = 1;
+
+			if((__fabs(x_average) <= CIRCLE_CENTER_OK) && (__fabs(y_average) <= CIRCLE_CENTER_OK))
+			{
+				for (char i = 0; i < 4; i++)
+				{
+					Delay_ms(5);
+					Motor_setspeed(0,0,0);
+				}
+				break;
+			}
+
 			//进行PID计算
 			y_valspeed=PID_Compute(&Pid_Circle_Positioning,y_average,0);
 			x_valspeed=PID_Compute(&Pid_Circle_Positioning,x_average,0);
@@ -166,18 +180,51 @@ void Circle_Position_Center_SPEED(char color)//mode为Preliminary_round(初赛) 
 				x_valspeed=SATU(x_valspeed,1.0f);
 			}
 			//最后输出
-			//Delay_ms(10);
 			Delay_ms(10);
-			Motor_setspeed(x_valspeed,y_valspeed,0);//进行PID计算
+			Motor_setspeed(x_valspeed,-y_valspeed,0);//进行PID计算
+
 		}
-		if((__fabs(x_average)==0)&&(__fabs(y_average)==0))
+
+		else
 		{
-			for (char i = 0; i < 4; i++)
+			send_NX(color);
+			
+			if(has_seen_target)
 			{
-				Delay_ms(5);
-				Motor_setspeed(0,0,0);
+				Motor_setspeed(0, 0, 0);
+				Delay_ms(30);
 			}
-			break;
+			else
+			{
+				switch(search_step)
+				{
+					case 0:
+						Motor_setspeed(1.0f, 0, 0);
+						break;
+					case 1:
+						Motor_setspeed(-1.0f, 0, 0);
+						break;
+					case 2:
+						Motor_setspeed(0, 1.0f, 0);
+						break;
+					case 3:
+						Motor_setspeed(0, -1.0f, 0);
+						break;
+					default:
+						search_step = 0;
+						break;
+				}
+
+				Delay_ms(120);
+				Motor_setspeed(0, 0, 0);
+				Delay_ms(120);
+
+				search_step++;
+				if(search_step >= 4)
+				{
+					search_step = 0;
+				}
+			}
 		}
 	}
   Z_SetHeight(40);
@@ -355,7 +402,7 @@ void Positioning_yuanpanji(char color)
 			}
 			//最后输出
 			Delay_ms(10);
-			Motor_setspeed(x_valspeed,y_valspeed,0);//进行PID计算
+			Motor_setspeed(x_valspeed,-y_valspeed,0);//进行PID计算
 		}
 		if(__fabs(car.actual_y)>100||__fabs(car.actual_x)>100)
 		{
@@ -407,7 +454,7 @@ void Positioning_grand(char color)
 			}
 			//最后输出
 			Delay_ms(10);
-			Motor_setspeed(x_valspeed,y_valspeed,0);//进行PID计算
+			Motor_setspeed(x_valspeed,-y_valspeed,0);//进行PID计算
 		}
 		if((__fabs(x_average)==0)&&(__fabs(y_average)==0))
 		{

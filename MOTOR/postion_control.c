@@ -12,10 +12,6 @@ int postion_redstage = 0;
 
 void uart7WriteBuf(uint8_t *buf, uint8_t len)
 {
-	// unsigned char i;
-	// for(i = 0; i < len; i++){
-	// 	U7_send(USART7_senddata[i]);
-	// }
 	HAL_UART_Transmit(&huart7, (uint8_t*)buf, len, HAL_MAX_DELAY);
 
 }
@@ -25,7 +21,7 @@ void POSTION_init(void)
     Z_POSTION.NOW = 0;
     Z_POSTION.TARGE = 0;
     Z_POSTION.CHANGE = 0;
-	Z_POSTION.BIT = FINISH_MOVE;
+	Z_POSTION.BIT = FINISH_MOVE;	// 1 运动完成  0 运动中
     __HAL_UART_ENABLE_IT(&huart7, UART_IT_RXNE);
 	HAL_UARTEx_ReceiveToIdle_DMA(&huart7, u7RXdat, 8);
 }
@@ -108,7 +104,7 @@ void postion_send(uint8_t id,int position)
 	}
 	postion_send(0x01,Z_POSTION.TARGE);
 	Z_POSTION.BIT=Incomplete;
-	while(Z_POSTION.BIT != finish && t < 3000) 
+	while(Z_POSTION.BIT != finish && t < 1500) 
 	{
 		vTaskDelay(pdMS_TO_TICKS(1));
 		t++;

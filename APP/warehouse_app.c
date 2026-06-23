@@ -128,12 +128,3 @@ int GET_Warehouse_Angle_take(uint8_t warehouse_index)
 }
 
 
-
-
-
-
-
-
-
-
-

@@ -366,3 +366,261 @@ float spd_cap_x = fabsf(err_wx) * DECEL_K;
 - L 型运动依赖世界坐标变换（第七节）上线后才有效
 - 旋转和平移同时进行时，角速度内环（第三节）是保证走直的关键
 - 建议先在直线和单个 L 型转角上验证，再应用到完整路线
+
+---
+
+## 九、2026-06-23 现场待处理记录
+
+### 9.1 圆盘机抓完后底盘不继续走
+
+**现象**：`yuan_pan_catch()` 抓完 3 个物料后，后续粗加工区路线不执行，车停住。
+
+**已验证定位**：
+- 原流程在进入圆盘机抓取前调用 `Set_chassis_able(unable)`。
+- 抓取结束后即使补了 `Set_chassis_able(enable)`，现场仍出现不继续走。
+- 临时去掉挂起底盘后，抓完 3 个物料可以继续执行后续路线。
+- 因此问题集中在“挂起/恢复底盘任务后的状态链”，不是路线坐标本身。
+
+**明日优先排查**：
+1. `Set_chassis_able(enable)` 后 `Chassis_Control_Task` 是否真的恢复运行。
+2. 第一条后续 `Move_To_Target_area(...)` 执行时，Watch：`MOTOR_ACTIONFALG`、`motor_check.flag_finish`、`car.target_y/x/w`、`car.actual_y/x/w`。
+3. 如果 `target` 更新但 `actual` 不变，优先查底盘任务是否恢复、UART3 电机反馈是否回来。
+4. 如果 `motor_check.flag_finish` 长期不是 `0x0F`，底盘控制会持续停车返回，需要先恢复反馈链。
+
+**临时试验代码**：
+```c
+// 只用于定位，不作为最终方案
+// Set_chassis_able(unable);
+yuan_pan_catch();
+// Set_chassis_able(enable);
+```
+
+**最终方向**：不要长期靠“不挂起底盘”规避问题。最终应恢复“抓取/复位时隔离底盘任务”的设计，但恢复后需要补齐底盘任务、反馈标志、状态机的重同步。
+
+### 9.2 树莓派视觉偶发启动失败
+
+**现象**：
+```text
+VIDEOIO(V4L2:/dev/video0): can't open camera by index
+Camera error
+System shutdown
+```
+
+**已验证定位**：
+- `/dev/video0` 存在，`v4l2-ctl --list-devices` 能识别 USB 摄像头。
+- `v4l2-ctl -d /dev/video0 --all` 能正常读取参数，摄像头节点可用。
+- `fuser /dev/video0` 显示占用进程是自己的 Python 视觉程序。
+- `strace -p <pid>` 能看到持续 `VIDIOC_DQBUF/QBUF`，说明进程实际在持续取帧。
+- `xclock` 能弹窗，X11 显示链正常。
+- 因此优先按软件问题处理：启动时序、重复打开摄像头、失败分支误判、GUI 显示路径，而不是优先怀疑线松。
+
+**明日优先排查**：
+1. 搜索树莓派实际运行脚本：
+   ```bash
+   grep -n "VideoCapture\|isOpened\|Camera error\|System shutdown\|imshow\|waitKey" /home/swae/Desktop/robot/color_line_det.py
+   ```
+2. 检查是否有多个 `cv.VideoCapture(0)` 或多个线程重复打开 `/dev/video0`。
+3. 摄像头打开失败不要立即退出，先加 3~5 次重试，每次间隔 0.5s。
+4. 主循环中加低频打印确认是否跑到 `imshow`。
+
+**复现时必须抓取**：
+```bash
+fuser /dev/video0
+v4l2-ctl -d /dev/video0 --all
+strace -p <pid>
+echo $DISPLAY
+```
+
+---
+
+## 十、下一步视觉定位调试计划
+
+### 10.1 原 `User_function_final()` 的绿色圆环定位思路
+
+原流程在 `task/main_task.c` 的 `User_function_final()` 中，整体结构是：
+
+1. 底盘先走到目标区域附近。
+2. 到达视觉定位点后，临时 `Set_chassis_able(unable)`，避免底盘任务和视觉/机械臂动作互相干扰。
+3. 调用视觉定位或抓放函数。
+4. 定位/抓放完成后 `Set_chassis_able(enable)`，继续后续路线。
+
+绿色圆环定位原来预留的调用是：
+```c
+Set_chassis_able(unable);
+Circle_Position_Center_SPEED(GREEN_CIRCLE);
+Set_chassis_able(enable);
+```
+
+注意：现在已经验证 `Set_chassis_able(unable/enable)` 这条链存在恢复风险，调绿色圆环时可以先不挂起底盘做定位试验；等定位逻辑稳定后，再回头修挂起恢复问题。
+
+### 10.2 `Circle_Position_Center_SPEED(GREEN_CIRCLE)` 的工作方式
+
+代码位置：`MOTOR/circle_control.c`
+
+核心逻辑：
+1. `Set_Circle_Center(113, 123)` 设置绿色圆环图像中心。
+2. `send_NX(GREEN_CIRCLE)` 通过 USART6 通知视觉端切到绿色圆环识别模式。
+3. 视觉端回传偏差，STM32 侧通过 `change_x / change_y` 获取。
+4. `PID_Compute(&Pid_Circle_Positioning, change, 0)` 把视觉偏差转成底盘速度。
+5. `Motor_setspeed(x_valspeed, y_valspeed, 0)` 直接让底盘微调。
+6. 当 `change_x == 0 && change_y == 0` 时连续停车并退出。
+
+最小测试调用建议：
+```c
+static void Green_Ring_Position_Test(void)
+{
+    Set_chassis_able(enable);
+    vTaskDelay(pdMS_TO_TICKS(500));
+
+    Circle_Position_Center_SPEED(GREEN_CIRCLE);
+
+    Motor_setspeed(0, 0, 0);
+    while (1) vTaskDelay(pdMS_TO_TICKS(1000));
+}
+```
+
+调试时 Watch：
+- `change_x`
+- `change_y`
+- `Pid_Circle_Positioning`
+- `car.actual_x`
+- `car.actual_y`
+- `motor_check.flag_finish`
+
+### 10.3 圆盘机定位追踪调试顺序
+
+不要一开始就调动态物料。按两步走：
+
+1. **机械臂追踪静态物料**
+   - 圆盘机不转或物料静止。
+   - 视觉只需要稳定输出静态物料偏差。
+   - 先验证机械臂能根据视觉偏差正确调整 `Y_SetLength`、`Z_SetHeight`、`M8010_SetAngle` 或夹爪位置。
+   - 成功标准：同一静态物料多次识别，机械臂最终位置稳定，夹取成功率稳定。
+
+2. **机械臂追踪动态物料**
+   - 静态追踪稳定后，再让圆盘机运动。
+   - 先低速动态，再逐步提高速度。
+   - 重点看视觉延迟、串口回传延迟、机械臂动作延迟三者叠加后的跟随误差。
+   - 成功标准：物料运动时偏差能收敛，不出现机械臂追过头或来回摆。
+
+阶段切换原则：静态物料没有调稳之前，不进入动态追踪。否则动态误差会把视觉阈值、串口延迟、机械臂控制三个问题混在一起，难以定位。
+
+---
+
+## 十一、串口屏系统信息与主任务日志方案
+
+目标：在 TJC 串口屏上显示机器人运行状态，例如当前阶段、主任务 log、关键 Watch 变量、任务状态、CPU/任务占用率等。
+
+### 11.1 现有条件
+
+- UART5 已用于串口屏 TX，接口在 `SENSOR/tjc_usart_hmi.c`：
+  - `tjc_send_txt(obj, "txt", text)`
+  - `tjc_send_val(obj, "val", val)`
+- UART5 RX 同时接二维码模块，`SENSOR/QR_code.c` 中使用 UART5 RXNE 中断解析扫码数据。
+- 当前 `printf` 重定向在 `Core/Src/usart.c`，目标是 `huart1`，但本板没有把 USART1 实际拉出接口，现场基本不可用。
+- `FreeRTOSConfig.h` 当前只确认开启了 `INCLUDE_uxTaskPriorityGet`；任务列表、运行时间统计还没确认开启。
+
+### 11.2 不建议直接把所有 printf 重定向到 UART5
+
+原因：
+- TJC 串口屏不是普通终端，发送格式必须是 `控件.属性=值 + 0xFF 0xFF 0xFF`。
+- 直接把 printf 原样发到 UART5，串口屏不一定能显示，还可能把屏幕指令流打乱。
+- UART5 RX 还承担二维码数据，日志刷太快会增加串口中断和主任务负担。
+- 主任务 log 如果在控制环里高频发送，会影响实时性。
+
+结论：对这块板子来说，串口屏几乎就是唯一外部文本出口；但仍不建议把所有 `printf` 直接生硬重定向到 UART5。更稳的做法是新增一个“串口屏日志/状态层”，只把筛选后的关键信息低频发送到 TJC。
+
+### 11.3 推荐显示内容分层
+
+**第一阶段：低风险状态显示**
+- 当前阶段：扫码、去原料区、圆盘机抓取、去粗加工区、绿色圆环定位等。
+- 关键变量：
+  - `MOTOR_ACTIONFALG`
+  - `motor_check.flag_finish`
+  - `car.target_y / car.target_x / car.target_w`
+  - `car.actual_y / car.actual_x / car.actual_w`
+  - `change_x / change_y`
+- 最近一条主任务 log，例如 `"yuan catch done"`、`"green ring start"`。
+
+**第二阶段：任务状态**
+- 显示已知任务是否运行：
+  - `Main_Task`
+  - `Chassis_Control_Task`
+  - `Imu_Task`
+  - `Action_sets_Task`
+- 可先只显示任务阶段和心跳计数，不急着上完整 FreeRTOS 任务列表。
+
+**第三阶段：CPU/任务占用率**
+- 需要开启 FreeRTOS 运行时统计：
+  - `configUSE_TRACE_FACILITY`
+  - `configUSE_STATS_FORMATTING_FUNCTIONS`
+  - `configGENERATE_RUN_TIME_STATS`
+- 这一步改动较大，后做。
+- 不建议直接用 `vTaskList()` / `vTaskGetRunTimeStats()` 高频刷屏，因为 `sprintf` 和统计遍历开销较大。
+
+### 11.4 建议接口设计
+
+新增轻量接口，优先走 HMI 状态层，而不是让业务代码到处直接 `printf`：
+
+```c
+void HMI_Log(const char *msg);
+void HMI_SetStage(const char *stage);
+void HMI_UpdateDebug(void);
+```
+
+示例：
+
+```c
+HMI_SetStage("GREEN_RING");
+HMI_Log("start");
+
+Circle_Position_Center_SPEED(GREEN_CIRCLE);
+
+HMI_Log("done");
+```
+
+`HMI_UpdateDebug()` 由低频任务或主循环手动调用，建议 200ms~500ms 刷新一次，不要放在 20ms 底盘控制环里。
+
+### 11.5 TJC 页面建议
+
+屏幕上预留几个文本控件：
+
+| 控件 | 内容 |
+|------|------|
+| `t0` | 当前阶段/大状态 |
+| `t1` | 最近一条 log |
+| `t2` | `MOTOR_ACTIONFALG` + `flag_finish` |
+| `t3` | `target_y/x/w` |
+| `t4` | `actual_y/x/w` |
+| `t5` | `change_x/change_y` |
+| `t6` | 任务心跳或 CPU 信息 |
+
+发送示例：
+
+```c
+tjc_send_txt("t0", "txt", "GREEN_RING");
+tjc_send_txt("t1", "txt", "vision ok");
+tjc_send_txt("t2", "txt", "flag=0x0F act=0");
+```
+
+### 11.6 最小落地步骤
+
+1. 保留 `__io_putchar` 现状不动，避免牵一发而动全身；板上调试信息先通过 HMI 状态层输出。
+2. 新增 `HMI_Log()`，内部只调用 `tjc_send_txt("t1", "txt", msg)`。
+3. 在 `Main_Task` 关键节点手动打 log：
+   - 扫码开始/结束
+   - 圆盘机抓取开始/结束
+   - 绿色圆环定位开始/结束
+   - 去粗加工区开始/结束
+4. 新增 `HMI_UpdateDebug()`，低频刷新关键变量。
+5. 如果后面确实想让 `printf` 也能上屏，单独提供一个受控接口，例如 `hmi_printf()`，内部做限频、截断和固定目标控件映射，不要直接替换全局 `printf`。
+6. 等基础日志稳定后，再考虑 FreeRTOS 任务列表和 CPU 占用率。
+
+### 11.7 风险与规则
+
+- 不要在 ISR 中直接刷新串口屏。
+- 不要在 `chassis_control()` 20ms 控制环里高频刷新屏幕。
+- 不要把所有 `printf` 直接重定向到 UART5；UART5 是屏幕协议通道，不是普通调试终端。
+- 日志字符串要短，避免 TJC 控件显示不下或 UART5 占用时间太长。
+- 如果后续接入 FreeRTOS 统计，先只在静止调试时打开，确认不会影响控制周期。
+- 如果必须做“类似 printf 的屏上输出”，也要走受控 `hmi_printf()`，限制频率、长度和目标控件，不能让任意模块直接往 UART5 灌原始文本。

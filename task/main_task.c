@@ -345,17 +345,22 @@ void yuan_pan_catch(void)
 		Z_SetHeight(0);
 		vTaskDelay(pdMS_TO_TICKS(500));
 
+		// 前两个物料抓完回抓取姿态
+		if(i < 2)
+		{
+			Y_SetLength(YUAN_PAN_LENGHT);
+			M8010_SetAngle(PUT_AND_CATCH_ANGLE);
+			claw_move_2(open);
+			vTaskDelay(pdMS_TO_TICKS(800));
+			Z_SetHeight(YUAN_PAN_DETECT_HEIGHT);
+			vTaskDelay(pdMS_TO_TICKS(300));
+		}
 
-		// 回抓取姿态
-		Y_SetLength(YUAN_PAN_LENGHT);
-		M8010_SetAngle(PUT_AND_CATCH_ANGLE);
-		claw_move_2(open);
-		vTaskDelay(pdMS_TO_TICKS(800));
-		Z_SetHeight(YUAN_PAN_DETECT_HEIGHT);
-		vTaskDelay(pdMS_TO_TICKS(300));
 	}
 
-	while(1) vTaskDelay(pdMS_TO_TICKS(1000));
+	M8010_SetAngle(0);
+	claw_move_2(open);
+	vTaskDelay(pdMS_TO_TICKS(800));
 }
 
 void Scan_Catch(void)
@@ -370,9 +375,18 @@ void Scan_Catch(void)
 
 	Move_To_Target_area(140, 1450, 0, enable, Absolute_Position);
 
-	Set_chassis_able(unable);
 	yuan_pan_catch();
-	
+
+	vTaskDelay(pdMS_TO_TICKS(500));
+
+	Move_To_Target_area(140, 1100, 0, enable, Absolute_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+	Move_To_Target_area(140, 1100, 90, enable, Absolute_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+	Move_To_Target_area(140, 2850, 90, enable, Absolute_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+	Move_To_Target_area(140, 2850, 180, enable, Absolute_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
 }
 
 void Main_Task(void *pvParameters)

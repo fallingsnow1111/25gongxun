@@ -5,7 +5,7 @@
 #define green 2
 #define blue 3
 //tode:
-#define LOW_Z_HEIGHT   	    168.2	 //1 round height
+#define LOW_Z_HEIGHT   	    170	 //1 round height
 #define HIGH_Z_HEIGHT	 	100      //2 round height 
 
 #define YUAN_PAN_HEIGHT     100
@@ -19,13 +19,13 @@
 #define	SECOND_WAREHOUSE		0		 //the angle of the M8010 to 2 warehouse
 #define	THIRD_WAREHOUSE		    32       //the angle of the M8010 to 3 warehouse
 //the angle of the M8010 to put the material
-#define RED_PUT_AREA_ANGLE      -217
+#define RED_PUT_AREA_ANGLE      -227
 #define GREEN_PUT_AREA_ANGLE 	-180
-#define BLUE_PUT_AREA_ANGLE 	-141
+#define BLUE_PUT_AREA_ANGLE 	-144
 //it's the length of telescopic for put the material
-#define RED_PUT_AREA_HEIGHT     115
+#define RED_PUT_AREA_HEIGHT     140
 #define GREEN_PUT_AREA_HEIGHT   50
-#define BLUE_PUT_AREA_HEIGHT    105
+#define BLUE_PUT_AREA_HEIGHT    125
 
 #define open  1
 #define close  2

@@ -1,4 +1,4 @@
-#include "catch.h"
+﻿#include "catch.h"
 #include "QR_code.h"
 #include "tim.h"
 #include "postion_control.h"
@@ -349,13 +349,13 @@ void catch_half_stage(int color)
 		Y_SetLength(car_lift.length);
 		claw_move_2(open);
 		Z_SetHeight(170);//识别完成，下降到决赛抓取高度
-		claw_move(close);
+		claw_move_2(close);
 		Delay_ms(120);
-		Z_SetHeight(50);//抓取完成，上升到安全高度
+		Z_SetHeight(0);//抓取完成，上升到安全高度
 		Y_SetLength(Y_LENGHT_WAREHOUSE);
 		M8010_SetAngle(car_lift.lift_angle);
-		Z_SetHeight(65);
-		claw_move_1(open);
+		Z_SetHeight(80);
+		claw_move_2(open);
 		Delay_ms(100);
 		Z_SetHeight(40);
 		//M8010_SetAngle(PUT_AND_CATCH_ANGLE);
@@ -408,7 +408,7 @@ void Put_Layer(int layer,int color, int mode)//layer(1 or 2)，color(red,green,b
 		M8010_SetAngle(car_lift.lift_angle);//There are 3 angles here, corresponding to the red, green and blue warehouses
 		claw_move_2(open);
 		Delay_ms(80);
-		Z_SetHeight(60);//decline to the height of the warehouse
+		Z_SetHeight(80);//decline to the height of the warehouse
 		claw_move_2(close);
 		Delay_ms(80);
 		Z_SetHeight(0);

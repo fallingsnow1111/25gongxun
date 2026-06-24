@@ -13,10 +13,10 @@ TaskHandle_t Chassis_Control_Task_Handle;
 #define ORIENTATION_THRESHOLD 0.3f  // 姿态角到位判定阈值
 
 #define MIN_SPEED 2.0f    //电机响应到达最小速度
-#define MAX_DELTA 5.0f     //每周期最大速度变化量
+#define MAX_DELTA 3.0f     //每周期最大速度变化量
 #define MAX_W_DELTA_TURN 20.0f   //纯转向每周期最大航向变化量
 #define MAX_W_DELTA_TRANS 4.0f   //平移每周期最大航向变化量
-#define DECEL_K 0.35f
+#define DECEL_K 0.3f
 
 
 volatile CARDATA_T   car;
@@ -35,8 +35,8 @@ static inline float clamp(float val, float low, float high){
 
 void chassis_control_init(void)
 {
-	PID_Init(&chassis_pid_y, 0.280f, 0.005f, 0, 350.0f, -350.0f);
-	PID_Init(&chassis_pid_x, 0.280f, 0.005f, 0, 350.0f, -350.0f);
+	PID_Init(&chassis_pid_y, 0.280f, 0.005f, 0, 250.0f, -250.0f);
+	PID_Init(&chassis_pid_x, 0.280f, 0.005f, 0, 250.0f, -250.0f);
 	car.target_y = 0.0f;
 	car.target_x = 0.0f;
 	car.target_w = 0.0f;

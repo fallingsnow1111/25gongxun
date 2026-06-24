@@ -374,7 +374,7 @@ int ring_y_average;
 float ring_step_x;
 float ring_step_y;
 
-static void Green_Ring_Move_Adjust_Test(void)
+static void Ring_Move_Adjust_Test(float base_x, float base_y, float base_yaw)
 {
     const uint32_t timeout_ms = 15000;
     const float K_X = 1.0f;        // 每 1 像素偏差修正多少 mm，先小一点
@@ -382,9 +382,9 @@ static void Green_Ring_Move_Adjust_Test(void)
     const float MIN_STEP = 12.0f;
     const float MAX_STEP = 15.0f;  // 单次最大修正距离，避免跳太猛
 
-    float target_x = 140.0f;
-    float target_y = 2850.0f;
-    const float target_yaw = 180.0f;
+    float target_x = base_x;
+    float target_y = base_y;
+    const float target_yaw = base_yaw;
     uint32_t start_tick;
 
     Set_chassis_able(enable);
@@ -396,7 +396,7 @@ static void Green_Ring_Move_Adjust_Test(void)
     vTaskDelay(pdMS_TO_TICKS(500));
 
     USART6_readdata_SeetZero();
-    Set_Circle_Center(118, 106);
+    Set_Circle_Center(122, 114);
     send_NX(GREEN_CIRCLE);
     vTaskDelay(pdMS_TO_TICKS(300));
 
@@ -420,23 +420,12 @@ static void Green_Ring_Move_Adjust_Test(void)
             continue;
         }
 
-		if (__fabs(ring_x_average) <= 5 && __fabs(ring_y_average) <= 5)
+		if (__fabs(ring_x_average) <= 3 && __fabs(ring_y_average) <= 3)
 		{
 			Motor_setspeed(0, 0, 0);
 			vTaskDelay(pdMS_TO_TICKS(100));
 
-			Set_chassis_able(unable);
-
-			for (uint8_t i = 0; i < 20; i++)
-			{
-				float yaw = normalize_angle(imu.yaw);
-				if (__fabs(yaw) <= 0.5f)
-				{
-					break;
-				}
-
-				vTaskDelay(pdMS_TO_TICKS(20));
-			}
+			Move_To_Target_area(target_x, target_y, target_yaw, enable, Absolute_Position);
 
 			Motor_setspeed(0, 0, 0);
 			break;
@@ -480,31 +469,6 @@ static void Green_Ring_Move_Adjust_Test(void)
     vTaskDelay(pdMS_TO_TICKS(300));
 }
 
-static void Scan_Adjust_And_Put_Yuanpanji_Test(void)
-{
-	if (!Scan_QR(150, 750))
-	{
-		while(1)
-		{
-			Motor_setspeed(0, 0, 0);
-			vTaskDelay(pdMS_TO_TICKS(1000));
-		}
-	}
-	Init_Warehouse(1);
-	HMI_SEND();
-
-	Green_Ring_Move_Adjust_Test();
-	vTaskDelay(pdMS_TO_TICKS(300));
-
-	PUT_material_on_yuanpanji(1);
-
-	while(1)
-	{
-		Motor_setspeed(0, 0, 0);
-		vTaskDelay(pdMS_TO_TICKS(1000));
-	}
-}
-
 void Scan_Catch(void)
 {
 	Set_chassis_able(enable);
@@ -515,7 +479,7 @@ void Scan_Catch(void)
 	Init_Warehouse(1);
 	HMI_SEND();
 
-	Move_To_Target_area(125, 1450, 0, enable, Absolute_Position);
+	Move_To_Target_area(122, 1450, 0, enable, Absolute_Position);
 
 	yuan_pan_catch();
 
@@ -534,18 +498,61 @@ void Scan_Catch(void)
 }
 
 void Main_Task(void *pvParameters)
-{	
-	Scan_Catch();
-	Green_Ring_Move_Adjust_Test();
+{
+    Scan_Catch();
+
+    Ring_Move_Adjust_Test(140.0f, 2850.0f, 180.0f);
+    vTaskDelay(pdMS_TO_TICKS(100));
+
+    // 仓库 -> 粗加工区
+    Put_Material_Processing_Area(1, 1, P_round, cu_area);
+    vTaskDelay(pdMS_TO_TICKS(300));
+
+    // 粗加工区 -> 仓库
+    Take_Material_Processing_Area(1);
+    vTaskDelay(pdMS_TO_TICKS(300));
+
+    // 移动前抬臂，避免打物料
+    Z_SetHeight(0);
+    Y_SetLength(0);
+    vTaskDelay(pdMS_TO_TICKS(300));
+
+    // 开到暂存区
+    Move_To_Target_area(140, 2050, 180, enable, Absolute_Position);
+    vTaskDelay(pdMS_TO_TICKS(200));
+    Move_To_Target_area(140, 2050, 90, enable, Absolute_Position);
+    vTaskDelay(pdMS_TO_TICKS(200));
+    Move_To_Target_area(140, 1250, 90, enable, Absolute_Position);
+    vTaskDelay(pdMS_TO_TICKS(200));
+
+	Ring_Move_Adjust_Test(140.0f, 1250.0f, 90.0f);
+    vTaskDelay(pdMS_TO_TICKS(100));
+
+    // 仓库 -> 暂存区，第一层
+    Put_Material_Processing_Area(1, 1, P_round, cu_area);
+
+	// 放完暂存区，机械臂回安全位置
+	Z_SetHeight(0);
+	Y_SetLength(0);
+	claw_move_2(open);
 	vTaskDelay(pdMS_TO_TICKS(300));
-	Put_Material_Processing_Area(1, 1, P_round, cu_area);
-	while(1) vTaskDelay(pdMS_TO_TICKS(1000));
-	// QR_sense_init();
-	// Route_Test_ABS();
-	//	Full_Arm_Test();
-	// OpenMV_Test();
 
+	// 回家
+	Move_To_Target_area(140, 1250, 180, enable, Absolute_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+	Move_To_Target_area(140, 2950, 180, enable, Absolute_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+	Move_To_Target_area(140, 2950, 270, enable, Absolute_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+	Move_To_Target_area(140, 3900, 270, enable, Absolute_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+	Move_To_Target_area(-85, 4020, 270, enable, Absolute_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
 
+    while (1)
+    {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
 }
 
 void Main_Task_create(void)

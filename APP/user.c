@@ -50,10 +50,6 @@ void Put_Material_Processing_Area(char times,char layer,char mode,char area)//�
 		temp++;
 		}             
 	Y_SetLength(0);//将伸缩臂收回
-	// if(area==jing_area && times==1)
-	// {
-	// 	M8010_SetAngle(0);
-	// }
 }
 
 void Take_Material_Processing_Area(char times)
@@ -105,9 +101,7 @@ void Take_Material_Processing_Area(char times)
 		catch_half_stage(color);
 		temp++;
 	}	
-		claw_move_1(1);
-		//Delay_ms(100);
-		//M8010_SetAngle(0);//旋转电机
+		claw_move_2(1);
 }
 
 

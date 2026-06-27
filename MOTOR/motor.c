@@ -32,6 +32,16 @@ uint8_t u3_Txdata;
 
 void uart3WriteBuf(uint8_t *buf, uint8_t len)
 {
+	uint32_t start = HAL_GetTick();
+
+	while(huart3.gState != HAL_UART_STATE_READY)
+	{
+		if((HAL_GetTick() - start) > 5)
+		{
+			return;
+		}
+	}
+
 	HAL_UART_Transmit_DMA(&huart3,buf,len);
 }
 

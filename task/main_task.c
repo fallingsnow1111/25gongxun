@@ -25,54 +25,6 @@ void Wait_other_task_finish(uint32_t tar_TaskNotify)
 	vTaskDelay(pdMS_TO_TICKS(1));               // 让出CPU，确保调度器切换
 }
 
-static void Chassis_Test_Stop(uint32_t stop_time_ms)
-{
-	Motor_setspeed(0, 0, 0);
-	vTaskDelay(pdMS_TO_TICKS(stop_time_ms));
-}
-
-static void Chassis_Test_Run_With_Imu(float vy, float vx, float target_angle, uint32_t run_time_ms)
-{
-	uint32_t start_tick = HAL_GetTick();
-
-	Imu_setZero();
-	vTaskDelay(pdMS_TO_TICKS(100));
-
-	while ((HAL_GetTick() - start_tick) < run_time_ms)
-	{
-		float vw = Direction_Calibration_turn(target_angle);
-		Motor_setspeed(vy, vx, vw);
-		vTaskDelay(pdMS_TO_TICKS(20));
-	}
-
-	Chassis_Test_Stop(400);
-}
-
-static void Chassis_Test_Rotate_With_Imu(float target_angle, uint32_t timeout_ms)
-{
-	uint32_t start_tick = HAL_GetTick();
-
-	Imu_setZero();
-	vTaskDelay(pdMS_TO_TICKS(100));
-
-	while ((HAL_GetTick() - start_tick) < timeout_ms)
-	{
-		float current_angle = normalize_angle(imu.yaw);
-		float angle_error = getAngleZ(current_angle, target_angle);
-
-		if (fabsf(angle_error) <= 2.0f)
-		{
-			break;
-		}
-
-		Motor_setspeed(0, 0, Direction_Calibration_turn(target_angle));
-		vTaskDelay(pdMS_TO_TICKS(20));
-	}
-
-	Chassis_Test_Stop(500);
-}
-
-
 void User_function_final()
 {	
 	vTaskDelay(pdMS_TO_TICKS(10));
@@ -497,62 +449,42 @@ void Scan_Catch(void)
 	vTaskDelay(pdMS_TO_TICKS(200));
 }
 
-void Main_Task(void *pvParameters)
+static void OpenLoop_Chassis_Test(void)
 {
-    Scan_Catch();
+    Set_chassis_able(unable);
 
-    Ring_Move_Adjust_Test(140.0f, 2850.0f, 180.0f);
-    vTaskDelay(pdMS_TO_TICKS(100));
+    Motor_setspeed(0, 0, 0);
+    Delay_ms(100);
 
-    // 仓库 -> 粗加工区
-    Put_Material_Processing_Area(1, 1, P_round, cu_area);
-    vTaskDelay(pdMS_TO_TICKS(300));
+    Imu_setZero();
+    Delay_ms(200);
 
-    // 粗加工区 -> 仓库
-    Take_Material_Processing_Area(1);
-    vTaskDelay(pdMS_TO_TICKS(300));
+	// 入弯直线
+	Chassis_BlendSpeedAngle(0, 0, 0, 0, 140, 0, 30);
+	Chassis_HoldSpeedAngle(0, 140, 0, 210);
 
-    // 移动前抬臂，避免打物料
-    Z_SetHeight(0);
-    Y_SetLength(0);
-    vTaskDelay(pdMS_TO_TICKS(300));
+	// 右转拐角：不要在拐角内直接打满 -90，先只转到 -75
+	Chassis_BlendSpeedAngle(0, 140, 0, 60, 45, -75, 90);
+	Chassis_HoldSpeedAngle(60, 45, -75, 10);
 
-    // 开到暂存区
-    Move_To_Target_area(140, 2050, 180, enable, Absolute_Position);
-    vTaskDelay(pdMS_TO_TICKS(200));
-    Move_To_Target_area(140, 2050, 90, enable, Absolute_Position);
-    vTaskDelay(pdMS_TO_TICKS(200));
-    Move_To_Target_area(140, 1250, 90, enable, Absolute_Position);
-    vTaskDelay(pdMS_TO_TICKS(200));
+	// 出弯：先保持左避让，同时把角度补到 -90
+	Chassis_BlendSpeedAngle(60, 45, -75, 35, 100, -90, 70);
 
-	Ring_Move_Adjust_Test(140.0f, 1250.0f, 90.0f);
-    vTaskDelay(pdMS_TO_TICKS(100));
+	// 完全出弯后再正常前进
+	Chassis_BlendSpeedAngle(35, 100, -90, 0, 140, -90, 50);
+	Chassis_HoldSpeedAngle(0, 140, -90, 210);
 
-    // 仓库 -> 暂存区，第一层
-    Put_Material_Processing_Area(1, 1, P_round, cu_area);
-
-	// 放完暂存区，机械臂回安全位置
-	Z_SetHeight(0);
-	Y_SetLength(0);
-	claw_move_2(open);
-	vTaskDelay(pdMS_TO_TICKS(300));
-
-	// 回家
-	Move_To_Target_area(140, 1250, 180, enable, Absolute_Position);
-	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(140, 2950, 180, enable, Absolute_Position);
-	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(140, 2950, 270, enable, Absolute_Position);
-	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(140, 3900, 270, enable, Absolute_Position);
-	vTaskDelay(pdMS_TO_TICKS(200));
-	Move_To_Target_area(-85, 4020, 270, enable, Absolute_Position);
-	vTaskDelay(pdMS_TO_TICKS(200));
+    Motor_setspeed(0, 0, 0);
 
     while (1)
     {
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
+}
+
+void Main_Task(void *pvParameters)
+{
+	OpenLoop_Chassis_Test();
 }
 
 void Main_Task_create(void)

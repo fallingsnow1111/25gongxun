@@ -1,664 +1,328 @@
-# 底盘控制系统改进方案
+# 底盘重构状态与后续计划
 
-## 现状
+## 当前结论
 
-- 位置式 PID + 开环速度：外环位置 PID 输出直接作为速度命令发给电机，无速度反馈
-- 电机位置数据靠轮询（motor_read_coordination_all），每次占用约 8ms，UART3 负担重
-- IMU 仅解析偏航角（yaw），角速率未使用
-- 航向控制为单环比例，抗扰能力弱
+底盘控制方案的核心重构已经基本完成：当前位置闭环跑图已经被新的“开环速度 + 时间标定 + IMU 航向保持 + 连续速度/角度过渡”方案替代。
 
----
+接下来主要工作不是继续大改底盘控制框架，而是：
 
-## 改进目标
+1. 把整张图的每一段路径按当前开环方案标定完。
+2. 把扫码、视觉定位、圆环识别等视觉修正点接回路径流程。
+3. 把原来的机械臂动作按路径节点接回，并确认动作期间底盘不会抢 UART3 总线。
+4. 把当前 `OpenLoop_Chassis_Test()` 测试流程整理成正式跑图函数。
 
-1. 电机数据获取：轮询 → 定时推送，释放 UART3 总线
-2. 底盘控制：单环位置 PID → 串级双环（位置外环 + 速度内环）
-3. 航向控制：角度单环 → 角度/角速率串级双环
-4. IMU：增加 angular_rate 解析，独立任务定时更新
+完成以上工作后，底盘控制方案就可以认为重构完成。后续如果还要提升速度，属于调参优化，不是框架重构。
 
 ---
 
-## 一、电机数据获取改造（UART3 定时返回）
+## 当前代码状态
 
-### 原理
+### 已实现
 
-X42S 支持"定时返回信息命令"（功能码 0x11 辅助码 0x18），配置后电机按设定周期自动推送位置数据，不需要主控轮询。
+- 电机使用速度模式 `Motor_setspeed()`，底层通过 `send_speed_data_all()` 打包 4 个电机速度命令。
+- 当前 `Motor_setspeed()` 每次发送：
+  - 37 字节 0xAA 多电机速度包
+  - 4 字节同步触发包
+- `Chassis_OpenLoop_SetSpeed(vx_world, vy_world, target_angle)` 已实现：
+  - `vx_world > 0`：左移
+  - `vy_world > 0`：前进
+  - 根据当前 `imu.yaw` 做世界坐标系到车体坐标系变换
+  - 使用 `Direction_Calibration_turn(target_angle)` 做航向保持
+- `Chassis_MoveOnce()` 已实现开环单段移动：
+  - 正弦加速
+  - 匀速保持
+  - 正弦减速
+  - 末尾停车
+- `Chassis_TurnToAngle()` 已实现原地转向测试：
+  - 当前角度阈值为 `0.2°`
+  - 实测误差约 `0.25°~0.35°`
+- `Chassis_HoldSpeedAngle()` 已实现连续保持速度/航向。
+- `Chassis_BlendSpeedAngle()` 已实现速度和目标角度平滑过渡，是当前漂移过弯的核心函数。
+- `OpenLoop_Chassis_Test()` 当前用于验证连续漂移过弯，效果已接近需求。
 
-命令格式：
-```
-[Addr] [0x11] [0x18] [0x36] [time_hi] [time_lo] [0x6B]
-```
-- 0x36：返回实时位置
-- time：定时间隔（毫秒），0x0000 表示停止
-
-### 配置方案（4 个电机，10ms 推送，错开 2ms）
-
-```c
-void Motor_TimedReturn_Init(void)
-{
-    static uint8_t cmd[7] = {0, 0x11, 0x18, 0x36, 0x00, 0x0A, 0x6B}; // 10ms
-
-    cmd[0] = 0x01;  uart3WriteBuf(cmd, 7);  Delay_ms(2);
-    cmd[0] = 0x02;  uart3WriteBuf(cmd, 7);  Delay_ms(2);
-    cmd[0] = 0x03;  uart3WriteBuf(cmd, 7);  Delay_ms(2);
-    cmd[0] = 0x04;  uart3WriteBuf(cmd, 7);
-}
-
-void Motor_TimedReturn_Stop(void)
-{
-    static uint8_t cmd[7] = {0, 0x11, 0x18, 0x36, 0x00, 0x00, 0x6B}; // 停止
-    for (uint8_t id = 1; id <= 4; id++) {
-        cmd[0] = id;
-        uart3WriteBuf(cmd, 7);
-        Delay_ms(2);
-    }
-}
-```
-
-发送命令时间间隔 2ms → 四个电机从不同时刻开始计时 → 回包自然错开 2ms，115200 波特率下单帧 0.69ms，不碰撞。
-
-### 接收处理改动（motor.c）
-
-在现有帧解析后增加速度差分计算：
+### 当前测试中的右转漂移参数
 
 ```c
-// 在 U3_process_single_frame 解析 actual_angle 之后
-static uint32_t last_tick[5] = {0};
-static float prev_angle[5] = {0};
+// 入弯直线
+Chassis_BlendSpeedAngle(0, 0, 0, 0, 140, 0, 15);
+Chassis_HoldSpeedAngle(0, 140, 0, 105);
 
-uint32_t now = HAL_GetTick();
-uint32_t dt_ms = now - last_tick[id];
-if (dt_ms > 0) {
-    motorX.actual_speed = (motorX.actual_angle - prev_angle[id]) / (float)dt_ms;
-}
-prev_angle[id] = motorX.actual_angle;
-last_tick[id] = now;
+// 右转拐角：不要在拐角内直接打满 -90，先只转到 -75
+Chassis_BlendSpeedAngle(0, 140, 0, 60, 45, -75, 45);
+Chassis_HoldSpeedAngle(60, 45, -75, 5);
+
+// 出弯：先保持左避让，同时把角度补到 -90
+Chassis_BlendSpeedAngle(60, 45, -75, 35, 100, -90, 35);
+
+// 完全出弯后再正常前进
+Chassis_BlendSpeedAngle(35, 100, -90, 0, 140, -90, 25);
+Chassis_HoldSpeedAngle(0, 140, -90, 105);
 ```
 
-### chassis_control 改动
+这组参数的核心思路：
 
-删除 `motor_read_coordination_all()`，改为检查数据新鲜度：
-
-```c
-// 原来
-motor_read_coordination_all();
-if (motor_check.flag_finish < 0x0F) { ... return; }
-
-// 改后
-if (HAL_GetTick() - last_motor_update_tick > 30) {
-    Motor_setspeed(0, 0, 0);
-    return;
-}
-```
-
-### Relative_Position 模式与定时返回的冲突处理（motor_control.c）
-
-底盘任务挂起期间电机硬件定时器仍在推送，会覆盖刚清零的 actual_angle。需在复位前后停止/恢复定时返回：
-
-```c
-if(mode == Relative_Position)
-{
-    Set_chassis_able(unable);
-    Motor_TimedReturn_Stop();    // 停止推送，避免覆盖清零值
-    Motor_SetZero();
-    Imu_setZero();
-    Delay_ms(200);
-    Motor_TimedReturn_Init();    // 重新配置定时返回（含 2ms 错开）
-    Set_chassis_able(enable);
-}
-```
+- 拐角内不直接打满 `-90°`，先到 `-75°`，防止车头先转过头导致踩右边界。
+- 出弯阶段保留一点左移速度，把车身从右边界拉开。
+- 完全出弯后再切回新方向直线前进。
 
 ---
 
-## 二、IMU 任务独立化 + 角速率解析
+## 已标定参数记录
 
-### 新增 IMU 任务（5ms，优先级 7）
+### 方向约定
 
-```c
-void IMU_Task(void *pvParameters)
-{
-    TickType_t last_wake = xTaskGetTickCount();
-    while (1) {
-        vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(5));
-        // 从 DMA buffer 解析 yaw 和 angular_rate
-        IMU_Parse();
-    }
-}
-```
+| 参数 | 正方向 |
+|------|--------|
+| `vx > 0` | 左移 |
+| `vx < 0` | 右移 |
+| `vy > 0` | 前进 |
+| `vy < 0` | 后退 |
 
-### 新增 angular_rate 字段
+### 平移距离标定
 
-在 `IMU.h` 中扩展结构体：
-```c
-struct Imu {
-    float yaw;
-    float roll;
-    float pitch;
-    float angular_rate;   // 新增：Z 轴角速率（deg/s 或 rad/s，按 IMU 协议）
-};
-```
+当前标定基于：
 
-### IMU_Parse 函数
+- `OPEN_LOOP_PERIOD_MS = 10ms`
+- 平移速度约 `120`
+- `ramp_ticks = 30`
 
-在现有 yaw 解析基础上增加角速率解析（具体偏移量参照 IMU 协议文档）。
+| 方向 | 采用值 | 换算公式 |
+|------|--------|----------|
+| 前后 | `6.30 mm/tick` | `hold_ticks = 目标距离(mm) / 6.30 - ramp_ticks` |
+| 横移 | `6.23 mm/tick` | `hold_ticks = 目标距离(mm) / 6.23 - ramp_ticks` |
+
+注意：前后和横移标定值不同是正常的。麦轮横移效率、底盘几何、重心、轮子压紧程度都会影响横移距离。
 
 ---
 
-## 三、串级控制架构
+## 跑图接入方案
 
-### 控制流（chassis_control，20ms）
+正式跑图建议不要直接把所有路径写成 `MoveOnce()`，否则每段都会停车。推荐按路径类型拆：
 
-```
-// 平移轴
-target_y - actual_y → chassis_pid_y（外环，位置）→ desired_vy
-desired_vy - actual_vy → chassis_pid_vy_inner（内环，速度）→ y_cmd
+### 普通直线段
 
-target_x - actual_x → chassis_pid_x（外环，位置）→ desired_vx
-desired_vx - actual_vx → chassis_pid_vx_inner（内环，速度）→ x_cmd
-
-// 旋转轴
-target_w - actual_w → Gyro_Pid（外环，角度）→ desired_w_rate
-desired_w_rate - imu.angular_rate → chassis_pid_w_inner（内环，角速率）→ w_cmd
-
-Motor_setspeed(y_cmd, x_cmd, w_cmd)
-```
-
-### 新增 PID 结构体（chassis_control_task.c）
+如果这段允许停车，用：
 
 ```c
-struct PIDstruct chassis_pid_vy_inner;   // y 速度内环
-struct PIDstruct chassis_pid_vx_inner;   // x 速度内环
-struct PIDstruct chassis_pid_w_inner;    // 角速率内环
+Chassis_MoveOnce(vx, vy, target_angle, hold_ticks, ramp_ticks);
 ```
 
-### 初始化参数（待调）
+如果这段需要和下一段连续衔接，用：
 
 ```c
-PID_Init(&chassis_pid_vy_inner, 0.5f, 0.01f, 0, 350.0f, -350.0f);
-PID_Init(&chassis_pid_vx_inner, 0.5f, 0.01f, 0, 350.0f, -350.0f);
-PID_Init(&chassis_pid_w_inner,  1.0f, 0.0f,  0, 150.0f, -150.0f);
+Chassis_BlendSpeedAngle(...);
+Chassis_HoldSpeedAngle(...);
 ```
+
+### 漂移拐角
+
+使用当前已验证的模式：
+
+```c
+Chassis_BlendSpeedAngle(入弯速度, 拐角速度, 拐角中间角度, blend_ticks);
+Chassis_HoldSpeedAngle(拐角速度, 拐角中间角度, hold_ticks);
+Chassis_BlendSpeedAngle(拐角速度, 出弯速度, 最终角度, blend_ticks);
+Chassis_HoldSpeedAngle(出弯速度, 最终角度, hold_ticks);
+```
+
+右转时如果踩右边界，优先调：
+
+1. 拐角中间角度少打一点，例如 `-75 -> -70`。
+2. 出弯阶段增加左移速度，例如 `35 -> 45`。
+3. 最后一段直线速度稍降，例如 `140 -> 130`。
+
+不要优先加拐角 hold 时间。hold 时间加多通常会扩大车身扫过范围。
+
+### 视觉定位辅助
+
+开环时间标定适合保证大路径速度和连续性，但最终点位仍建议使用视觉辅助：
+
+- 扫码前：用视觉微调二维码位置。
+- 圆环抓取前：用视觉中心微调。
+- 放料前：根据实际识别点做小范围补偿。
+
+这和参考工程思路一致：底盘大段靠开环路径，关键节点靠视觉/传感器修正。
+
+### 机械臂动作接入
+
+机械臂动作接回时注意：
+
+- 动作前底盘必须明确停车：
+  ```c
+  Motor_setspeed(0, 0, 0);
+  ```
+- 机械臂动作期间如果不需要底盘控制，保持底盘任务不抢 UART3。
+- 需要视觉识别时，先停稳，再识别，再小范围修正。
+- 每个机械臂动作节点后，给一个短延时确认机构到位，再进入下一段底盘路径。
 
 ---
 
-## 四、涉及文件修改清单
+## 控制频率评估
 
-| 文件 | 改动内容 |
-|------|---------|
-| `MOTOR/motor.h` | MOTO_DATA 增加 `actual_speed` 字段 |
-| `MOTOR/motor.c` | 增加 Motor_TimedReturn_Init/Stop；接收回调增加 actual_speed 差分计算 |
-| `MOTOR/motor_control.c` | Relative_Position 分支加 Motor_TimedReturn_Stop/Init 对 |
-| `task/chassis_control_task.c` | 删 motor_read_coordination_all；增加内环 PID 结构体和计算；数据新鲜度检查；世界坐标累积和反变换 |
-| `SENSOR/IMU.C` | 增加 angular_rate 解析（待查协议文档确认字节偏移） |
-| `SENSOR/IMU.h` | 扩展 Imu 结构体增加 `angular_rate` 字段 |
-| `task/start_task.c` | START_TASK_STACK 128 → 256；增加 Motor_TimedReturn_Init 调用；增加 IMU_Task 创建 |
-| `mydefinition/Struct_encapsulation.h` | CARDATA_T 可选扩展 world_x/world_y（或放文件作用域） |
+### 当前频率
 
-> **注意**：angular_rate 字节偏移需对照实际 IMU 型号协议文档，实现前确认。
+当前开环函数使用：
+
+```c
+#define OPEN_LOOP_PERIOD_MS 10
+```
+
+也就是每 `10ms` 更新一次底盘速度和航向修正。FreeRTOS tick 是 `1000Hz`，系统本身支持 `1ms` 级调度。
+
+### 是否可以加快
+
+可以尝试加快，但不建议直接改到参考工程的 `2ms`。
+
+当前 UART3 波特率是 `115200`，而每次 `Motor_setspeed()` 至少发送约 41 字节数据：
+
+- 37 字节速度包
+- 4 字节同步触发包
+
+按 115200bps 粗略估算，41 字节实际串口占用时间约 `3.6ms`，还没有算 DMA 状态等待、函数开销和任务调度。因此：
+
+- `10ms`：安全，当前已验证。
+- `5ms`：可以试，是下一步比较合理的提频目标。
+- `2ms`：当前 UART3 115200 下不建议，物理发送时间已经超过周期，容易堆积或丢帧。
+
+### 如果要试 5ms
+
+不要只改 `OPEN_LOOP_PERIOD_MS`。所有基于 tick 标定的时间都要重新换算：
+
+| 项目 | 10ms 当前值 | 5ms 等效值 |
+|------|-------------|------------|
+| 同样实际时间的 `hold_ticks` | `N` | `2N` |
+| 同样实际时间的 `blend_ticks` | `N` | `2N` |
+| 同样实际时间的 `ramp_ticks` | `N` | `2N` |
+
+例如当前：
+
+```c
+Chassis_HoldSpeedAngle(0, 140, 0, 105);
+```
+
+如果周期改成 5ms，保持同样时间应改成：
+
+```c
+Chassis_HoldSpeedAngle(0, 140, 0, 210);
+```
+
+建议提频步骤：
+
+1. 先只把 `OPEN_LOOP_PERIOD_MS` 从 `10` 改为 `5`。
+2. 所有 `hold_ticks / blend_ticks / ramp_ticks` 乘 2。
+3. 不改速度，先跑直线和当前漂移测试。
+4. 如果稳定，再逐步提高速度。
+
+如果要追 `2ms`，建议先把 UART3 波特率提高，并实测电机驱动是否稳定接收高波特率，再改控制周期。
 
 ---
 
-## 五、改造收益
+## 明日继续清单
 
-| 指标 | 当前 | 改后 |
-|------|------|------|
-| UART3 读占用时间 | ~8ms/20ms (40%) | 0ms（定时推送）|
-| 底盘控制有效时间 | ~12ms/20ms | ~20ms |
-| 底盘控制周期 | 20ms | 10ms |
-| 航向控制 | 角度单环，易震荡 | 角度+角速率串级，阻尼好 |
-| 加减速 | slew rate 开环限速 | 速度内环闭环跟踪 |
-| 数据更新率 | 20ms（轮询） | 10ms（推送） |
-| 路径规划 | 体坐标，先转再走 | 世界坐标，直接给路点 |
+### 当前停在这里
+
+- 已把开环控制周期从 `10ms` 改到 `5ms`。
+- 已按 5ms 周期把当前漂移测试里的 `hold_ticks / blend_ticks` 翻倍。
+- 实测结果：5ms 控制周期下底盘控制依旧正常，UART3 当前发送频率暂时可接受。
+
+### 明天第一步：重新标定 5ms 距离参数
+
+先不要继续加速度，先用 5ms 作为新基准重新标定距离。
+
+建议顺序：
+
+1. 前进 800mm 标定
+   - `vy = 120`
+   - `vx = 0`
+   - `target_angle = 0`
+   - `ramp_ticks` 用正式跑图准备采用的值
+2. 前进 1100mm 左右复测线性
+3. 后退同参数复测
+4. 左移 800mm 标定
+   - `vx = 120`
+   - `vy = 0`
+   - `target_angle = 0`
+5. 右移同参数复测
+
+理论初值：
+
+| 方向 | 5ms 理论值 | 公式 |
+|------|------------|------|
+| 前后 | `3.15 mm/tick` | `hold_ticks = 目标距离(mm) / 3.15 - ramp_ticks` |
+| 横移 | `3.115 mm/tick` | `hold_ticks = 目标距离(mm) / 3.115 - ramp_ticks` |
+
+最终以实测为准。如果 800mm 和 1100mm 线性一致，就记录成 5ms 正式标定参数。
+
+### 明天第二步：复测转向和漂移
+
+距离参数确认后再测：
+
+1. 原地 `90°` 转向误差是否仍稳定。
+2. 当前右转漂移参数是否仍不踩线。
+3. 如果漂移又踩右边界，优先调：
+   - 拐角中间角度少打一点，例如 `-75 -> -70`
+   - 出弯左移增加，例如 `35 -> 45`
+   - 不优先增加拐角 hold 时间
+
+### 明天第三步：开始正式跑图拆段
+
+把整张图拆成三类段：
+
+- 普通直线段：用 5ms 新标定公式算 `hold_ticks`
+- 需要连续过渡的段：用 `Chassis_BlendSpeedAngle()` + `Chassis_HoldSpeedAngle()`
+- 关键视觉点：停车后接扫码、圆环识别、放料修正
+
+机械臂动作先后接回，但每个动作前先明确停车：
+
+```c
+Motor_setspeed(0, 0, 0);
+```
+
+### 明天重点 Watch
+
+- `imu.yaw`：看 5ms 下直线是否更稳，是否有高频抖动。
+- `Gyro_Pid.output`：看航向输出是否频繁打满。
+- `huart3.gState`：如果出现抽动，优先怀疑 UART3 发送太紧。
+- `motor1.actual_angle` 到 `motor4.actual_angle`：如果某个轮明显不动或慢，查发包/总线。
 
 ---
 
-## 六、调参顺序建议
+## 重构完成判据
 
-1. 先完成定时返回改造，验证 actual_speed 数据是否正确
-2. 接入 angular_rate，验证 IMU 任务数据稳定
-3. 先调角速率内环（w 轴），参数简单效果明显
-4. 再调速度内环（x/y 轴），参考角速率内环经验
-5. 外环参数基本不用大改（位置 PID 逻辑不变）
-6. 接入世界坐标变换后，验证 Route_Test_ABS 坐标是否等效
-7. 验证 L 型运动（边走边转）效果
+底盘重构可以按以下标准验收：
 
----
+- 前后、横移、原地转向、右转漂移均有稳定参数记录。
+- 正式跑图不再依赖旧的位置闭环路径作为主控制方式。
+- 每个关键节点都有视觉或人工标定补偿方案。
+- 机械臂动作接入后，底盘不会在动作期间误发速度或抢占总线。
+- 连续跑完整张图 3 次以上，路径误差不持续累积到踩线或撞边。
 
-## 七、世界坐标系变换
-
-### 为什么需要
-
-当前底盘编码器积分在**车体坐标系**，转弯后 `actual_y` 的物理方向随朝向变化。路径规划必须手动拆分"先转再走"，且同一坐标在不同朝向下物理含义不同。
-
-加入世界坐标变换后，控制器统一在**世界坐标系**工作，路径规划只需给路点坐标，无需关心当前朝向。
-
-### 实现（chassis_control_task.c）
-
-**1. 扩展状态变量（CARDATA_T 结构体或文件作用域）**
-
-```c
-// 累积世界坐标（以出发原点为 (0,0)）
-static float world_x = 0.0f;
-static float world_y = 0.0f;
-static float prev_body_y = 0.0f;
-static float prev_body_x = 0.0f;
-```
-
-**2. 每帧更新世界坐标（在 Motor_Action_Calculate_actual 之后）**
-
-```c
-float delta_body_y = car.actual_y - prev_body_y;
-float delta_body_x = car.actual_x - prev_body_x;
-prev_body_y = car.actual_y;
-prev_body_x = car.actual_x;
-
-float yaw_rad = imu.yaw * (float)M_PI / 180.0f;
-world_y += delta_body_y * cosf(yaw_rad) + delta_body_x * sinf(yaw_rad);
-world_x += -delta_body_y * sinf(yaw_rad) + delta_body_x * cosf(yaw_rad);
-```
-
-**3. 误差计算改为世界系，再反变换到体系给 PID**
-
-```c
-float err_wy = car.target_y - world_y;   // target_y 改为世界坐标
-float err_wx = car.target_x - world_x;
-
-// 旋转回体坐标系
-float err_body_y =  err_wy * cosf(yaw_rad) + err_wx * sinf(yaw_rad);
-float err_body_x = -err_wy * sinf(yaw_rad) + err_wx * cosf(yaw_rad);
-
-// 用体坐标误差做 PID（控制律不变）
-y_c_output = PID_Compute(&chassis_pid_y, err_body_y, 0);
-x_c_output = PID_Compute(&chassis_pid_x, err_body_x, 0);
-```
-
-**4. 到位判定改用世界系误差**
-
-```c
-float err_y = fabsf(err_wy);
-float err_x = fabsf(err_wx);
-```
-
-**5. 清零时同步清世界坐标**
-
-在 `Obimeter_SetZero` 里加：
-
-```c
-world_x = 0.0f;
-world_y = 0.0f;
-prev_body_y = 0.0f;
-prev_body_x = 0.0f;
-```
-
-### 对路径规划的影响
-
-改完后 `Move_To_Target_area` 的 x/y 参数变为世界坐标，不再依赖朝向：
-
-```c
-// 改前：必须先转再走，y=1600 含义随朝向变化
-Move_To_Target_area(0, 0, 90°);       // 纯转
-Move_To_Target_area(0, 1750, 0°);     // 纯平移
-
-// 改后：直接给世界坐标，可以同时转和走
-Move_To_Target_area(1750, 1100, 90°); // 控制器自动处理坐标变换
-```
-
-### 计算开销
-
-每周期新增：2 次 `sinf/cosf`（STM32F7 FPU 硬件，~14 周期/次）+ 6 次乘加 ≈ 200ns，完全可忽略。
-
-### 误差累积
-
-纯世界坐标积分会随时间漂移，但 IMU 航向实时修正旋转矩阵，主要误差来源是轮子打滑。比赛全程约 2-3 分钟，估计漂移 < 2cm，可接受。
+达到这些条件后，底盘控制方案就算重构完成。之后的工作主要是跑图时间优化和动作并行优化。
 
 ---
 
-## 八、L 型运动（田字形地图专项优化）
+## 现场待处理记录（与底盘改进无关，保留备查）
 
-### 场景描述
+### 圆盘机抓完后底盘不继续走
 
-比赛地图为田字形，可行路径为田字的笔画，转弯点均为 90° 直角。当前方案在每个转角处必须先停车，再转向，再加速，耗时约 1-2 秒/个转角。
+**现象**：`yuan_pan_catch()` 抓完 3 个物料后，后续路线不执行。
 
-L 型运动目标：机器人在接近转角时，边减速边转向，完成角度对齐后直接加速驶入下一条直线，全程不停车。
+**定位**：问题在 `Set_chassis_able(unable/enable)` 挂起/恢复后的状态链。临时方案是去掉挂起底盘，正式方案需补齐恢复后的状态重同步。
 
-### 实现思路
+**排查**：Watch `MOTOR_ACTIONFALG`、`motor_check.flag_finish`、`car.target_y/x/w`、`car.actual_y/x/w`。
 
-在路径规划层加混合逻辑，不需要修改底盘控制器本身（世界坐标变换上线后，控制器已支持同时走 x/y + 转向）。
+### 树莓派视觉偶发启动失败
 
-**触发条件**：剩余距离 < 混合起始阈值 `BLEND_DIST`（建议 200-300mm）
+**现象**：`can't open camera by index`
 
-```c
-// Route_Test_ABS 中替换原来的 "先转再走" 为 L 型路点
-// 例：从 (0,1600,0°) 走 L 型到 (1750,1100,90°)
+**定位**：软件侧启动时序或重复打开摄像头，不是硬件问题（`fuser /dev/video0` 显示进程在用）。
 
-// 原来（两步）：
-Move_To_Target_area(0, 1100, 0°);      // 先退到拐角
-Move_To_Target_area(0, 1100, 90°);     // 再转向
-Move_To_Target_area(1750, 1100, 90°);  // 再平移
+**方案**：加 3~5 次重试，每次间隔 0.5s。
 
-// 改后（一步，控制器自动处理）：
-Move_To_Target_area(1750, 1100, 90°);  // 世界坐标直给，同时走完 y 方向剩余 + 转向 + 走 x 方向
-```
+### 绿色圆环识别与光照
 
-世界坐标控制器在接到 `(1750, 1100, 90°)` 目标后，会同时输出 y 方向减速、旋转加速、x 方向加速的合成命令，自然形成 L 型轨迹。
+打光时识别率低，关灯后识别率高。调绿环时固定光照条件，或重新标定 HSV 阈值。
 
-### 减速区混合参数（chassis_control_task.c）
+### 圆盘机 debug 与直接上电时序差异
 
-现有 `spd_cap = err * DECEL_K` 已经处理了减速，世界坐标下两个轴同时参与减速：
-
-```c
-float spd_cap_y = fabsf(err_wy) * DECEL_K;
-float spd_cap_x = fabsf(err_wx) * DECEL_K;
-```
-
-两轴独立减速，各自收敛，自然实现 L 型轨迹而不需要额外逻辑。
-
-### 预期效果
-
-| 指标 | 当前（停车转弯） | L 型运动 |
-|------|--------------|---------|
-| 单个转角耗时 | ~1.5s | ~0.5s |
-| 田字一圈（4 个转角） | 节省约 4s | - |
-| 路径平滑度 | 有停顿 | 连续 |
-
-### 注意事项
-
-- L 型运动依赖世界坐标变换（第七节）上线后才有效
-- 旋转和平移同时进行时，角速度内环（第三节）是保证走直的关键
-- 建议先在直线和单个 L 型转角上验证，再应用到完整路线
-
----
-
-## 九、2026-06-23 现场待处理记录
-
-### 9.1 圆盘机抓完后底盘不继续走
-
-**现象**：`yuan_pan_catch()` 抓完 3 个物料后，后续粗加工区路线不执行，车停住。
-
-**已验证定位**：
-- 原流程在进入圆盘机抓取前调用 `Set_chassis_able(unable)`。
-- 抓取结束后即使补了 `Set_chassis_able(enable)`，现场仍出现不继续走。
-- 临时去掉挂起底盘后，抓完 3 个物料可以继续执行后续路线。
-- 因此问题集中在“挂起/恢复底盘任务后的状态链”，不是路线坐标本身。
-
-**明日优先排查**：
-1. `Set_chassis_able(enable)` 后 `Chassis_Control_Task` 是否真的恢复运行。
-2. 第一条后续 `Move_To_Target_area(...)` 执行时，Watch：`MOTOR_ACTIONFALG`、`motor_check.flag_finish`、`car.target_y/x/w`、`car.actual_y/x/w`。
-3. 如果 `target` 更新但 `actual` 不变，优先查底盘任务是否恢复、UART3 电机反馈是否回来。
-4. 如果 `motor_check.flag_finish` 长期不是 `0x0F`，底盘控制会持续停车返回，需要先恢复反馈链。
-
-**临时试验代码**：
-```c
-// 只用于定位，不作为最终方案
-// Set_chassis_able(unable);
-yuan_pan_catch();
-// Set_chassis_able(enable);
-```
-
-**最终方向**：不要长期靠“不挂起底盘”规避问题。最终应恢复“抓取/复位时隔离底盘任务”的设计，但恢复后需要补齐底盘任务、反馈标志、状态机的重同步。
-
-### 9.2 树莓派视觉偶发启动失败
-
-**现象**：
-```text
-VIDEOIO(V4L2:/dev/video0): can't open camera by index
-Camera error
-System shutdown
-```
-
-**已验证定位**：
-- `/dev/video0` 存在，`v4l2-ctl --list-devices` 能识别 USB 摄像头。
-- `v4l2-ctl -d /dev/video0 --all` 能正常读取参数，摄像头节点可用。
-- `fuser /dev/video0` 显示占用进程是自己的 Python 视觉程序。
-- `strace -p <pid>` 能看到持续 `VIDIOC_DQBUF/QBUF`，说明进程实际在持续取帧。
-- `xclock` 能弹窗，X11 显示链正常。
-- 因此优先按软件问题处理：启动时序、重复打开摄像头、失败分支误判、GUI 显示路径，而不是优先怀疑线松。
-
-**明日优先排查**：
-1. 搜索树莓派实际运行脚本：
-   ```bash
-   grep -n "VideoCapture\|isOpened\|Camera error\|System shutdown\|imshow\|waitKey" /home/swae/Desktop/robot/color_line_det.py
-   ```
-2. 检查是否有多个 `cv.VideoCapture(0)` 或多个线程重复打开 `/dev/video0`。
-3. 摄像头打开失败不要立即退出，先加 3~5 次重试，每次间隔 0.5s。
-4. 主循环中加低频打印确认是否跑到 `imshow`。
-
-**复现时必须抓取**：
-```bash
-fuser /dev/video0
-v4l2-ctl -d /dev/video0 --all
-strace -p <pid>
-echo $DISPLAY
-```
-
----
-
-## 十、下一步视觉定位调试计划
-
-### 10.1 原 `User_function_final()` 的绿色圆环定位思路
-
-原流程在 `task/main_task.c` 的 `User_function_final()` 中，整体结构是：
-
-1. 底盘先走到目标区域附近。
-2. 到达视觉定位点后，临时 `Set_chassis_able(unable)`，避免底盘任务和视觉/机械臂动作互相干扰。
-3. 调用视觉定位或抓放函数。
-4. 定位/抓放完成后 `Set_chassis_able(enable)`，继续后续路线。
-
-绿色圆环定位原来预留的调用是：
-```c
-Set_chassis_able(unable);
-Circle_Position_Center_SPEED(GREEN_CIRCLE);
-Set_chassis_able(enable);
-```
-
-注意：现在已经验证 `Set_chassis_able(unable/enable)` 这条链存在恢复风险，调绿色圆环时可以先不挂起底盘做定位试验；等定位逻辑稳定后，再回头修挂起恢复问题。
-
-### 10.2 `Circle_Position_Center_SPEED(GREEN_CIRCLE)` 的工作方式
-
-代码位置：`MOTOR/circle_control.c`
-
-核心逻辑：
-1. `Set_Circle_Center(113, 123)` 设置绿色圆环图像中心。
-2. `send_NX(GREEN_CIRCLE)` 通过 USART6 通知视觉端切到绿色圆环识别模式。
-3. 视觉端回传偏差，STM32 侧通过 `change_x / change_y` 获取。
-4. `PID_Compute(&Pid_Circle_Positioning, change, 0)` 把视觉偏差转成底盘速度。
-5. `Motor_setspeed(x_valspeed, y_valspeed, 0)` 直接让底盘微调。
-6. 当 `change_x == 0 && change_y == 0` 时连续停车并退出。
-
-最小测试调用建议：
-```c
-static void Green_Ring_Position_Test(void)
-{
-    Set_chassis_able(enable);
-    vTaskDelay(pdMS_TO_TICKS(500));
-
-    Circle_Position_Center_SPEED(GREEN_CIRCLE);
-
-    Motor_setspeed(0, 0, 0);
-    while (1) vTaskDelay(pdMS_TO_TICKS(1000));
-}
-```
-
-调试时 Watch：
-- `change_x`
-- `change_y`
-- `Pid_Circle_Positioning`
-- `car.actual_x`
-- `car.actual_y`
-- `motor_check.flag_finish`
-
-### 10.3 圆盘机定位追踪调试顺序
-
-不要一开始就调动态物料。按两步走：
-
-1. **机械臂追踪静态物料**
-   - 圆盘机不转或物料静止。
-   - 视觉只需要稳定输出静态物料偏差。
-   - 先验证机械臂能根据视觉偏差正确调整 `Y_SetLength`、`Z_SetHeight`、`M8010_SetAngle` 或夹爪位置。
-   - 成功标准：同一静态物料多次识别，机械臂最终位置稳定，夹取成功率稳定。
-
-2. **机械臂追踪动态物料**
-   - 静态追踪稳定后，再让圆盘机运动。
-   - 先低速动态，再逐步提高速度。
-   - 重点看视觉延迟、串口回传延迟、机械臂动作延迟三者叠加后的跟随误差。
-   - 成功标准：物料运动时偏差能收敛，不出现机械臂追过头或来回摆。
-
-阶段切换原则：静态物料没有调稳之前，不进入动态追踪。否则动态误差会把视觉阈值、串口延迟、机械臂控制三个问题混在一起，难以定位。
-
----
-
-## 十一、串口屏系统信息与主任务日志方案
-
-目标：在 TJC 串口屏上显示机器人运行状态，例如当前阶段、主任务 log、关键 Watch 变量、任务状态、CPU/任务占用率等。
-
-### 11.1 现有条件
-
-- UART5 已用于串口屏 TX，接口在 `SENSOR/tjc_usart_hmi.c`：
-  - `tjc_send_txt(obj, "txt", text)`
-  - `tjc_send_val(obj, "val", val)`
-- UART5 RX 同时接二维码模块，`SENSOR/QR_code.c` 中使用 UART5 RXNE 中断解析扫码数据。
-- 当前 `printf` 重定向在 `Core/Src/usart.c`，目标是 `huart1`，但本板没有把 USART1 实际拉出接口，现场基本不可用。
-- `FreeRTOSConfig.h` 当前只确认开启了 `INCLUDE_uxTaskPriorityGet`；任务列表、运行时间统计还没确认开启。
-
-### 11.2 不建议直接把所有 printf 重定向到 UART5
-
-原因：
-- TJC 串口屏不是普通终端，发送格式必须是 `控件.属性=值 + 0xFF 0xFF 0xFF`。
-- 直接把 printf 原样发到 UART5，串口屏不一定能显示，还可能把屏幕指令流打乱。
-- UART5 RX 还承担二维码数据，日志刷太快会增加串口中断和主任务负担。
-- 主任务 log 如果在控制环里高频发送，会影响实时性。
-
-结论：对这块板子来说，串口屏几乎就是唯一外部文本出口；但仍不建议把所有 `printf` 直接生硬重定向到 UART5。更稳的做法是新增一个“串口屏日志/状态层”，只把筛选后的关键信息低频发送到 TJC。
-
-### 11.3 推荐显示内容分层
-
-**第一阶段：低风险状态显示**
-- 当前阶段：扫码、去原料区、圆盘机抓取、去粗加工区、绿色圆环定位等。
-- 关键变量：
-  - `MOTOR_ACTIONFALG`
-  - `motor_check.flag_finish`
-  - `car.target_y / car.target_x / car.target_w`
-  - `car.actual_y / car.actual_x / car.actual_w`
-  - `change_x / change_y`
-- 最近一条主任务 log，例如 `"yuan catch done"`、`"green ring start"`。
-
-**第二阶段：任务状态**
-- 显示已知任务是否运行：
-  - `Main_Task`
-  - `Chassis_Control_Task`
-  - `Imu_Task`
-  - `Action_sets_Task`
-- 可先只显示任务阶段和心跳计数，不急着上完整 FreeRTOS 任务列表。
-
-**第三阶段：CPU/任务占用率**
-- 需要开启 FreeRTOS 运行时统计：
-  - `configUSE_TRACE_FACILITY`
-  - `configUSE_STATS_FORMATTING_FUNCTIONS`
-  - `configGENERATE_RUN_TIME_STATS`
-- 这一步改动较大，后做。
-- 不建议直接用 `vTaskList()` / `vTaskGetRunTimeStats()` 高频刷屏，因为 `sprintf` 和统计遍历开销较大。
-
-### 11.4 建议接口设计
-
-新增轻量接口，优先走 HMI 状态层，而不是让业务代码到处直接 `printf`：
-
-```c
-void HMI_Log(const char *msg);
-void HMI_SetStage(const char *stage);
-void HMI_UpdateDebug(void);
-```
-
-示例：
-
-```c
-HMI_SetStage("GREEN_RING");
-HMI_Log("start");
-
-Circle_Position_Center_SPEED(GREEN_CIRCLE);
-
-HMI_Log("done");
-```
-
-`HMI_UpdateDebug()` 由低频任务或主循环手动调用，建议 200ms~500ms 刷新一次，不要放在 20ms 底盘控制环里。
-
-### 11.5 TJC 页面建议
-
-屏幕上预留几个文本控件：
-
-| 控件 | 内容 |
-|------|------|
-| `t0` | 当前阶段/大状态 |
-| `t1` | 最近一条 log |
-| `t2` | `MOTOR_ACTIONFALG` + `flag_finish` |
-| `t3` | `target_y/x/w` |
-| `t4` | `actual_y/x/w` |
-| `t5` | `change_x/change_y` |
-| `t6` | 任务心跳或 CPU 信息 |
-
-发送示例：
-
-```c
-tjc_send_txt("t0", "txt", "GREEN_RING");
-tjc_send_txt("t1", "txt", "vision ok");
-tjc_send_txt("t2", "txt", "flag=0x0F act=0");
-```
-
-### 11.6 最小落地步骤
-
-1. 保留 `__io_putchar` 现状不动，避免牵一发而动全身；板上调试信息先通过 HMI 状态层输出。
-2. 新增 `HMI_Log()`，内部只调用 `tjc_send_txt("t1", "txt", msg)`。
-3. 在 `Main_Task` 关键节点手动打 log：
-   - 扫码开始/结束
-   - 圆盘机抓取开始/结束
-   - 绿色圆环定位开始/结束
-   - 去粗加工区开始/结束
-4. 新增 `HMI_UpdateDebug()`，低频刷新关键变量。
-5. 如果后面确实想让 `printf` 也能上屏，单独提供一个受控接口，例如 `hmi_printf()`，内部做限频、截断和固定目标控件映射，不要直接替换全局 `printf`。
-6. 等基础日志稳定后，再考虑 FreeRTOS 任务列表和 CPU 占用率。
-
-### 11.7 风险与规则
-
-- 不要在 ISR 中直接刷新串口屏。
-- 不要在 `chassis_control()` 20ms 控制环里高频刷新屏幕。
-- 不要把所有 `printf` 直接重定向到 UART5；UART5 是屏幕协议通道，不是普通调试终端。
-- 日志字符串要短，避免 TJC 控件显示不下或 UART5 占用时间太长。
-- 如果后续接入 FreeRTOS 统计，先只在静止调试时打开，确认不会影响控制周期。
-- 如果必须做“类似 printf 的屏上输出”，也要走受控 `hmi_printf()`，限制频率、长度和目标控件，不能让任意模块直接往 UART5 灌原始文本。
-
-## 十二、2026-06-23 现场现象补充
-
-### 12.1 绿色圆环识别与光照
-
-已观察到的现象：
-
-- 打光时绿色圆环难以稳定识别。
-- 关掉灯光后，绿色圆环识别率明显提高，识别成功率很高。
-
-当前判断：
-
-- 先按视觉侧光照/曝光/颜色阈值问题处理，不优先怀疑串口或 STM32 侧解析。
-- 后续调绿环定位时，先固定光照条件；如果必须开灯，需要重新标定绿色阈值或调整摄像头曝光/白平衡。
-
-后续检查项：
-
-- 在树莓派/Nano 端记录开灯、关灯时的 HSV/二值化效果。
-- 确认 `send_NX(GREEN_CIRCLE)` 后视觉端确实进入绿环模式。
-- STM32 侧 Watch `COLOR_DATA`、`change_x`、`change_y`，区分“未识别”和“识别后坐标抖动”。
-
-### 12.2 圆盘机夹取：debug 与直接上电差异
-
-已观察到的现象：
-
-- debug 模式下圆盘机夹取动作很快。
-- 直接上电跑完整流程时，夹取前后停顿比较久，导致圆盘机物料可能已经转走。
-
-当前判断：
-
-- 先按软件时序差异排查，不优先怀疑机械硬件。
-- 重点检查 `yuan_pan_catch()` 中的固定延时，以及 `Z_SetHeight()` / `Y_SetLength()` 等阻塞等待是否在直接上电时等到超时。
-
-后续检查项：
-
-- Watch `Z_POSTION.BIT`、`Z_POSTION.NOW`、`Z_POSTION.TARGE`，确认 Z 轴动作是否已经到位但 `BIT` 没变 `finish`。
-- 对比 debug 与直接上电时，`Z_SetHeight(YUAN_PAN_HEIGHT)`、`Z_SetHeight(0)` 的实际返回时间。
-- 如果 Z 轴完成反馈不稳定，先修完成标志或缩短抓取阶段超时，再调动态圆盘机追踪。
+debug 模式夹取快，直接上电夹取前后停顿久导致物料转走。排查 `Z_SetHeight` 阻塞等待是否超时。

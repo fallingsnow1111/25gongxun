@@ -449,6 +449,56 @@ void Scan_Catch(void)
 	vTaskDelay(pdMS_TO_TICKS(200));
 }
 
+void first_round(void)
+{
+	Scan_Catch();
+
+	Ring_Move_Adjust_Test(140.0f, 2850.0f, 180.0f);
+	vTaskDelay(pdMS_TO_TICKS(100));
+
+	// Warehouse -> processing area.
+	Put_Material_Processing_Area(1, 1, P_round, cu_area);
+	vTaskDelay(pdMS_TO_TICKS(300));
+
+	// Processing area -> warehouse.
+	Take_Material_Processing_Area(1);
+	vTaskDelay(pdMS_TO_TICKS(300));
+
+	// Raise arm before moving.
+	Z_SetHeight(0);
+	Y_SetLength(0);
+	vTaskDelay(pdMS_TO_TICKS(300));
+
+	Move_To_Target_area(140, 2050, 180, enable, Absolute_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+	Move_To_Target_area(140, 2050, 90, enable, Absolute_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+	Move_To_Target_area(140, 1250, 90, enable, Absolute_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+
+	Ring_Move_Adjust_Test(140.0f, 1250.0f, 90.0f);
+	vTaskDelay(pdMS_TO_TICKS(100));
+
+	// Warehouse -> temporary storage, first layer.
+	Put_Material_Processing_Area(1, 1, P_round, cu_area);
+
+	Z_SetHeight(0);
+	Y_SetLength(0);
+	claw_move_2(open);
+	vTaskDelay(pdMS_TO_TICKS(300));
+
+	Move_To_Target_area(140, 1250, 180, enable, Absolute_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+	Move_To_Target_area(140, 2950, 180, enable, Absolute_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+	Move_To_Target_area(140, 2950, 270, enable, Absolute_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+	Move_To_Target_area(140, 3900, 270, enable, Absolute_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+	Move_To_Target_area(-85, 4020, 270, enable, Absolute_Position);
+	vTaskDelay(pdMS_TO_TICKS(200));
+}
+
 static void OpenLoop_Chassis_Test(void)
 {
     Set_chassis_able(unable);
@@ -482,9 +532,49 @@ static void OpenLoop_Chassis_Test(void)
     }
 }
 
+static void Arm_Catch_Action_Test(void)
+{
+	Set_chassis_able(unable);
+	Motor_setspeed(0, 0, 0);
+	vTaskDelay(pdMS_TO_TICKS(500));
+
+	claw_move_2(open);
+	vTaskDelay(pdMS_TO_TICKS(300));
+
+	M8010_SetAngle(PUT_AND_CATCH_ANGLE);
+	vTaskDelay(pdMS_TO_TICKS(300));
+
+	Y_SetLength(30);
+	vTaskDelay(pdMS_TO_TICKS(300));
+
+	Z_SetHeight(60);
+	vTaskDelay(pdMS_TO_TICKS(300));
+
+	claw_move_2(close);
+	vTaskDelay(pdMS_TO_TICKS(300));
+
+	Z_SetHeight(0);
+	vTaskDelay(pdMS_TO_TICKS(300));
+
+	Y_SetLength(0);
+	vTaskDelay(pdMS_TO_TICKS(300));
+
+	M8010_SetAngle(0);
+
+	while (1)
+	{
+		vTaskDelay(pdMS_TO_TICKS(1000));
+	}
+}
+
 void Main_Task(void *pvParameters)
 {
-	OpenLoop_Chassis_Test();
+	first_round();
+
+	while (1)
+	{
+		vTaskDelay(pdMS_TO_TICKS(1000));
+	}
 }
 
 void Main_Task_create(void)

@@ -2,7 +2,22 @@
 #include "pid.h"
 #include "usart.h"
 #include "main.h"
+
+#define U7_RX_BUF_LEN 8
+#define Z_MAX_TIMEOUT_MS 7000U
+static uint8_t u7RXdat[U7_RX_BUF_LEN];
 static uint8_t USART7_senddata[128];
+static uint8_t u7_stream_frame[U7_RX_BUF_LEN];
+
+volatile uint8_t u7_debug_buf[U7_RX_BUF_LEN];
+volatile uint16_t u7_debug_size = 0;
+volatile uint32_t u7_debug_count = 0;
+volatile uint32_t u7_debug_z_finish_count = 0;
+volatile uint32_t u7_debug_y_finish_count = 0;
+volatile uint32_t u7_debug_error_count = 0;
+volatile uint32_t u7_debug_last_error = 0;
+volatile uint32_t u7_debug_rx_restart_count = 0;
+volatile uint32_t u7_debug_rx_restart_fail = 0;
 
 struct POSTION Z_POSTION;
 extern struct POSTION Telescopic_POSTION;
@@ -13,17 +28,38 @@ int postion_redstage = 0;
 void uart7WriteBuf(uint8_t *buf, uint8_t len)
 {
 	HAL_UART_Transmit(&huart7, (uint8_t*)buf, len, HAL_MAX_DELAY);
-
 }
-static uint8_t u7RXdat[8];
+
+void UART7_RxRestart(void)
+{
+	HAL_StatusTypeDef status;
+
+	u7_debug_rx_restart_count++;
+	HAL_UART_DMAStop(&huart7);
+	__HAL_UART_CLEAR_FLAG(&huart7, UART_CLEAR_OREF | UART_CLEAR_NEF | UART_CLEAR_PEF | UART_CLEAR_FEF);
+	__HAL_UART_SEND_REQ(&huart7, UART_RXDATA_FLUSH_REQUEST);
+	huart7.ErrorCode = HAL_UART_ERROR_NONE;
+	huart7.RxState = HAL_UART_STATE_READY;
+	huart7.ReceptionType = HAL_UART_RECEPTION_STANDARD;
+
+	status = HAL_UARTEx_ReceiveToIdle_DMA(&huart7, u7RXdat, U7_RX_BUF_LEN);
+	if(status == HAL_OK)
+	{
+		__HAL_DMA_DISABLE_IT(huart7.hdmarx, DMA_IT_HT);
+	}
+	else
+	{
+		u7_debug_rx_restart_fail++;
+	}
+}
+
 void POSTION_init(void)
 {
     Z_POSTION.NOW = 0;
     Z_POSTION.TARGE = 0;
     Z_POSTION.CHANGE = 0;
 	Z_POSTION.BIT = FINISH_MOVE;	// 1 运动完成  0 运动中
-    __HAL_UART_ENABLE_IT(&huart7, UART_IT_RXNE);
-	HAL_UARTEx_ReceiveToIdle_DMA(&huart7, u7RXdat, 8);
+	UART7_RxRestart();
 }
 
 void u7_speed_send(uint8_t id,int speed)
@@ -102,15 +138,14 @@ void postion_send(uint8_t id,int position)
 	{
 		return;
 	}
-	postion_send(0x01,Z_POSTION.TARGE);
 	Z_POSTION.BIT=Incomplete;
-	while(Z_POSTION.BIT != finish && t < 1500) 
+	postion_send(0x01,Z_POSTION.TARGE);
+	while(Z_POSTION.BIT != finish && t < Z_MAX_TIMEOUT_MS)
 	{
 		vTaskDelay(pdMS_TO_TICKS(1));
 		t++;
 	}
 
-	Z_POSTION.BIT=Incomplete;
 	Z_POSTION.NOW=Z_POSTION.TARGE;
 }
 
@@ -137,15 +172,14 @@ void Y_SetLength(int position)
     // if (__fabs(Telescopic_POSTION.NOW - Telescopic_POSTION.TARGE) <= POSITION_TOLERANCE) {
     //     return ;
     // }
-    postion_send(0x02,Telescopic_POSTION.TARGE);
 	Telescopic_POSTION.BIT=Incomplete;
+    postion_send(0x02,Telescopic_POSTION.TARGE);
     // 等待运动完成，带超时保护
     uint32_t timeout = 0;
     while ((Telescopic_POSTION.BIT != finish) && (timeout < MAX_TIMEOUT_MS)) {
         vTaskDelay(pdMS_TO_TICKS(1));
         timeout++;
     }
-    Telescopic_POSTION.BIT=Incomplete;	
     // 更新当前位置
     Telescopic_POSTION.NOW = Telescopic_POSTION.TARGE;
 }
@@ -195,6 +229,7 @@ void u7RXdat_dispose(uint8_t* data)
 						if(data[2]==0x9F)
 						{
 							Z_POSTION.BIT=finish;// 到位完成
+							u7_debug_z_finish_count++;
 							Z_POSTION.NOW = Z_POSTION.TARGE;
 						}
 					}
@@ -208,6 +243,7 @@ void u7RXdat_dispose(uint8_t* data)
 					if(data[2]==0x9F)
 					{
 						Telescopic_POSTION.BIT=finish;// 到位完成
+						u7_debug_y_finish_count++;
 						Telescopic_POSTION.NOW=Telescopic_POSTION.TARGE;
 					}
 				}
@@ -244,8 +280,55 @@ void u7RXdat_dispose_1(uint8_t* data)
 	}
 }
 
-void MY_UART7_IRQHandler(uint8_t size)
-{	
+static void U7_Process_8Byte_Frame(uint8_t* data)
+{
+	if(data[7] != 0x6B)
+	{
+		return;
+	}
+
+	u7RXdat_dispose_1(data);
+}
+
+static void U7_Parse_Stream_Byte(uint8_t byte)
+{
+	for(uint8_t i = 0; i < U7_RX_BUF_LEN - 1; i++)
+	{
+		u7_stream_frame[i] = u7_stream_frame[i + 1];
+	}
+	u7_stream_frame[U7_RX_BUF_LEN - 1] = byte;
+
+	if((u7_stream_frame[0] == 0x01 || u7_stream_frame[0] == 0x02) &&
+	   u7_stream_frame[1] == 0x36 &&
+	   u7_stream_frame[7] == 0x6B)
+	{
+		U7_Process_8Byte_Frame(u7_stream_frame);
+	}
+
+	if((u7_stream_frame[4] == 0x01 || u7_stream_frame[4] == 0x02) &&
+	   u7_stream_frame[5] == 0xFD &&
+	   u7_stream_frame[6] == 0x9F &&
+	   u7_stream_frame[7] == 0x6B)
+	{
+		u7RXdat_dispose(&u7_stream_frame[4]);
+	}
+}
+
+void MY_UART7_IRQHandler(uint16_t size)
+{
+	uint16_t rx_len = size;
+	if(rx_len > U7_RX_BUF_LEN)
+	{
+		rx_len = U7_RX_BUF_LEN;
+	}
+
+	u7_debug_size = size;
+	u7_debug_count++;
+	for(uint8_t i = 0; i < U7_RX_BUF_LEN; i++)
+	{
+		u7_debug_buf[i] = u7RXdat[i];
+	}
+
 	if(size == 4)// 到位反馈(4字节)
 	{	
 		//vofa_printf("u7RXdat:%02X %02X %02X %02X\n", u7RXdat[0], u7RXdat[1], u7RXdat[2], u7RXdat[3]);
@@ -256,7 +339,12 @@ void MY_UART7_IRQHandler(uint8_t size)
 		//vofa_printf("u7RXdat:%02X %02X %02X %02X %02X %02X %02X %02X\n", u7RXdat[0], u7RXdat[1], u7RXdat[2], u7RXdat[3], u7RXdat[4], u7RXdat[5], u7RXdat[6], u7RXdat[7]);
 		u7RXdat_dispose_1(u7RXdat);
 	}
-	HAL_UARTEx_ReceiveToIdle_DMA(&huart7, u7RXdat, 128);
+	for(uint16_t i = 0; i < rx_len; i++)
+	{
+		U7_Parse_Stream_Byte(u7RXdat[i]);
+	}
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart7, u7RXdat, U7_RX_BUF_LEN);
+	__HAL_DMA_DISABLE_IT(huart7.hdmarx, DMA_IT_HT);
 }
 
 

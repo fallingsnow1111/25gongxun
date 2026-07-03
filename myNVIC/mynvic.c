@@ -23,8 +23,6 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
 	if(huart->Instance == UART7)
 	{
-		u7_debug_error_count++;
-		u7_debug_last_error = huart->ErrorCode;
 		UART7_RxRestart();
 	}
 }

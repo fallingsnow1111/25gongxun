@@ -569,7 +569,7 @@ static void Arm_Catch_Action_Test(void)
 
 void Main_Task(void *pvParameters)
 {
-	first_round();
+	Arm_Catch_Action_Test();
 
 	while (1)
 	{

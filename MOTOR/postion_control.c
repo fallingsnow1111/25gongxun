@@ -11,13 +11,6 @@ static uint8_t u7_stream_frame[U7_RX_BUF_LEN];
 
 volatile uint8_t u7_debug_buf[U7_RX_BUF_LEN];
 volatile uint16_t u7_debug_size = 0;
-volatile uint32_t u7_debug_count = 0;
-volatile uint32_t u7_debug_z_finish_count = 0;
-volatile uint32_t u7_debug_y_finish_count = 0;
-volatile uint32_t u7_debug_error_count = 0;
-volatile uint32_t u7_debug_last_error = 0;
-volatile uint32_t u7_debug_rx_restart_count = 0;
-volatile uint32_t u7_debug_rx_restart_fail = 0;
 
 struct POSTION Z_POSTION;
 extern struct POSTION Telescopic_POSTION;
@@ -32,9 +25,6 @@ void uart7WriteBuf(uint8_t *buf, uint8_t len)
 
 void UART7_RxRestart(void)
 {
-	HAL_StatusTypeDef status;
-
-	u7_debug_rx_restart_count++;
 	HAL_UART_DMAStop(&huart7);
 	__HAL_UART_CLEAR_FLAG(&huart7, UART_CLEAR_OREF | UART_CLEAR_NEF | UART_CLEAR_PEF | UART_CLEAR_FEF);
 	__HAL_UART_SEND_REQ(&huart7, UART_RXDATA_FLUSH_REQUEST);
@@ -42,14 +32,9 @@ void UART7_RxRestart(void)
 	huart7.RxState = HAL_UART_STATE_READY;
 	huart7.ReceptionType = HAL_UART_RECEPTION_STANDARD;
 
-	status = HAL_UARTEx_ReceiveToIdle_DMA(&huart7, u7RXdat, U7_RX_BUF_LEN);
-	if(status == HAL_OK)
+	if(HAL_UARTEx_ReceiveToIdle_DMA(&huart7, u7RXdat, U7_RX_BUF_LEN) == HAL_OK)
 	{
 		__HAL_DMA_DISABLE_IT(huart7.hdmarx, DMA_IT_HT);
-	}
-	else
-	{
-		u7_debug_rx_restart_fail++;
 	}
 }
 
@@ -229,7 +214,6 @@ void u7RXdat_dispose(uint8_t* data)
 						if(data[2]==0x9F)
 						{
 							Z_POSTION.BIT=finish;// 到位完成
-							u7_debug_z_finish_count++;
 							Z_POSTION.NOW = Z_POSTION.TARGE;
 						}
 					}
@@ -243,7 +227,6 @@ void u7RXdat_dispose(uint8_t* data)
 					if(data[2]==0x9F)
 					{
 						Telescopic_POSTION.BIT=finish;// 到位完成
-						u7_debug_y_finish_count++;
 						Telescopic_POSTION.NOW=Telescopic_POSTION.TARGE;
 					}
 				}
@@ -323,7 +306,6 @@ void MY_UART7_IRQHandler(uint16_t size)
 	}
 
 	u7_debug_size = size;
-	u7_debug_count++;
 	for(uint8_t i = 0; i < U7_RX_BUF_LEN; i++)
 	{
 		u7_debug_buf[i] = u7RXdat[i];

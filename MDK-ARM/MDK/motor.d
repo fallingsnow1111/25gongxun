@@ -1,6 +1,6 @@
 mdk\motor.o: ..\MOTOR\motor.c
 mdk\motor.o: ..\MOTOR\motor.h
-mdk\motor.o: ../USMART/sys.h
+mdk\motor.o: ../mydefinition/sys.h
 mdk\motor.o: ../Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h
 mdk\motor.o: ../Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f750xx.h
 mdk\motor.o: ../Drivers/CMSIS/Include/core_cm7.h
@@ -57,17 +57,14 @@ mdk\motor.o: ../MOTOR/motor.h
 mdk\motor.o: ../MOTOR/motor_control.h
 mdk\motor.o: ../Core/Inc/main.h
 mdk\motor.o: ../MOTOR/imu_control.h
-mdk\motor.o: ../USMART/struct_typedef.h
+mdk\motor.o: ../mydefinition/struct_typedef.h
 mdk\motor.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\string.h
 mdk\motor.o: ../MOTOR/pid.h
 mdk\motor.o: ../SENSOR/IMU.h
 mdk\motor.o: ../Core/Inc/usart.h
 mdk\motor.o: ../SENSOR/QR_code.h
-mdk\motor.o: ../USMART/usmart.h
-mdk\motor.o: ../USMART/usmart_str.h
 mdk\motor.o: ../MOTOR/postion_control.h
 mdk\motor.o: ../Core/Inc/tim.h
-mdk\motor.o: ../USMART/usmart_rec.h
 mdk\motor.o: ../APP/catch.h
 mdk\motor.o: ../SENSOR/circe.h
 mdk\motor.o: ../MOTOR/circle_control.h

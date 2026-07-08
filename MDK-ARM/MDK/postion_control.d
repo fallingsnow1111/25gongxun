@@ -1,6 +1,6 @@
 mdk\postion_control.o: ..\MOTOR\postion_control.c
 mdk\postion_control.o: ..\MOTOR\postion_control.h
-mdk\postion_control.o: ../USMART/sys.h
+mdk\postion_control.o: ../mydefinition/sys.h
 mdk\postion_control.o: ../Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h
 mdk\postion_control.o: ../Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f750xx.h
 mdk\postion_control.o: ../Drivers/CMSIS/Include/core_cm7.h
@@ -58,16 +58,13 @@ mdk\postion_control.o: ../Core/Inc/tim.h
 mdk\postion_control.o: ../MOTOR/motor_control.h
 mdk\postion_control.o: ../Core/Inc/main.h
 mdk\postion_control.o: ../MOTOR/imu_control.h
-mdk\postion_control.o: ../USMART/struct_typedef.h
+mdk\postion_control.o: ../mydefinition/struct_typedef.h
 mdk\postion_control.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\string.h
 mdk\postion_control.o: ../MOTOR/pid.h
 mdk\postion_control.o: ../SENSOR/IMU.h
 mdk\postion_control.o: ../Core/Inc/usart.h
 mdk\postion_control.o: ../SENSOR/QR_code.h
-mdk\postion_control.o: ../USMART/usmart.h
-mdk\postion_control.o: ../USMART/usmart_str.h
 mdk\postion_control.o: ../MOTOR/postion_control.h
-mdk\postion_control.o: ../USMART/usmart_rec.h
 mdk\postion_control.o: ../APP/catch.h
 mdk\postion_control.o: ../SENSOR/circe.h
 mdk\postion_control.o: ../MOTOR/circle_control.h

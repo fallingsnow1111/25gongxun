@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="980" viewBox="0 0 1440 980">
+  <defs>
+    <style>
+      .bg { fill: #f6f8fb; }
+      .panel { fill: #ffffff; stroke: #d8e0ea; stroke-width: 1.5; }
+      .panel-head { fill: #eef3f8; }
+      .title { font-family: "Microsoft YaHei", "SimHei", sans-serif; font-size: 42px; font-weight: 700; fill: #1f2a37; text-anchor: middle; }
+      .subtitle { font-family: "Microsoft YaHei", "SimHei", sans-serif; font-size: 21px; fill: #627184; text-anchor: middle; }
+      .phase { font-family: "Microsoft YaHei", "SimHei", sans-serif; font-size: 25px; font-weight: 700; fill: #2f3b4a; text-anchor: middle; dominant-baseline: middle; }
+      .node { fill: #ffffff; stroke: #64748b; stroke-width: 1.7; }
+      .start { fill: #e8f6ef; stroke: #27845d; }
+      .motion { fill: #fff6df; stroke: #bd7a16; }
+      .sense { fill: #e7f5ff; stroke: #2877b8; }
+      .arm { fill: #f2edff; stroke: #6d55bd; }
+      .end { fill: #fdeaea; stroke: #bf4b4b; }
+      .diamond { fill: #ffffff; stroke: #526274; stroke-width: 1.7; }
+      .text { font-family: "Microsoft YaHei", "SimHei", sans-serif; font-size: 22px; fill: #263241; text-anchor: middle; dominant-baseline: middle; }
+      .small { font-size: 17px; fill: #617084; }
+      .label { font-family: "Microsoft YaHei", "SimHei", sans-serif; font-size: 18px; fill: #526274; }
+      .arrow { fill: none; stroke: #526274; stroke-width: 2.2; marker-end: url(#arrow); }
+      .loop { fill: none; stroke: #8a98aa; stroke-width: 2; stroke-dasharray: 7 7; marker-end: url(#arrow-muted); }
+      .index { font-family: Arial, sans-serif; font-size: 18px; font-weight: 700; fill: #ffffff; text-anchor: middle; dominant-baseline: middle; }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#526274"/>
+    </marker>
+    <marker id="arrow-muted" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#8a98aa"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1440" height="980"/>
+  <text class="title" x="720" y="70">机器人自动运行程序流程图</text>
+  <text class="subtitle" x="720" y="108">启动初始化、路径执行、视觉修正与机械臂作业的闭环流程</text>
+
+  <g id="panels">
+    <rect class="panel" x="70" y="150" width="410" height="790" rx="16"/>
+    <rect class="panel-head" x="70" y="150" width="410" height="62" rx="16"/>
+    <rect class="panel" x="515" y="150" width="410" height="790" rx="16"/>
+    <rect class="panel-head" x="515" y="150" width="410" height="62" rx="16"/>
+    <rect class="panel" x="960" y="150" width="410" height="790" rx="16"/>
+    <rect class="panel-head" x="960" y="150" width="410" height="62" rx="16"/>
+
+    <text class="phase" x="275" y="181">系统启动</text>
+    <text class="phase" x="720" y="181">底盘与感知</text>
+    <text class="phase" x="1165" y="181">作业循环</text>
+  </g>
+
+  <g id="start-flow">
+    <rect class="node start" x="155" y="255" width="240" height="72" rx="36"/>
+    <text class="text" x="275" y="291">开启主控开关</text>
+
+    <rect class="node" x="125" y="385" width="300" height="88" rx="12"/>
+    <circle cx="155" cy="415" r="15" fill="#27845d"/>
+    <text class="index" x="155" y="415">1</text>
+    <text class="text" x="275" y="412">硬件与系统初始化</text>
+    <text class="text small" x="275" y="444">时钟、DMA、串口、定时器</text>
+
+    <rect class="node" x="125" y="540" width="300" height="96" rx="12"/>
+    <circle cx="155" cy="572" r="15" fill="#27845d"/>
+    <text class="index" x="155" y="572">2</text>
+    <text class="text" x="275" y="568">初始化外设通信</text>
+    <text class="text small" x="275" y="600">底盘、IMU、机械臂、显示屏</text>
+
+    <rect class="node" x="125" y="705" width="300" height="88" rx="12"/>
+    <circle cx="155" cy="735" r="15" fill="#27845d"/>
+    <text class="index" x="155" y="735">3</text>
+    <text class="text" x="275" y="733">创建实时任务</text>
+    <text class="text small" x="275" y="765">进入自动运行流程</text>
+  </g>
+
+  <g id="motion-flow" transform="translate(-80 0)">
+    <rect class="node sense" x="650" y="245" width="300" height="88" rx="12"/>
+    <text class="text" x="800" y="275">读取任务码</text>
+    <text class="text small" x="800" y="306">二维码识别并解析顺序</text>
+
+    <rect class="node sense" x="650" y="390" width="300" height="88" rx="12"/>
+    <text class="text" x="800" y="420">建立物料映射</text>
+    <text class="text small" x="800" y="451">显示任务信息</text>
+
+    <rect class="node motion" x="650" y="535" width="300" height="96" rx="12"/>
+    <text class="text" x="800" y="564">执行标定路径</text>
+    <text class="text small" x="800" y="596">直线、横移、航向保持</text>
+
+    <rect class="node motion" x="650" y="690" width="300" height="96" rx="12"/>
+    <text class="text" x="800" y="719">转向或连续过弯</text>
+    <text class="text small" x="800" y="751">原地转向、漂移过弯</text>
+  </g>
+
+  <g id="work-flow" transform="translate(-160 0)">
+    <polygon class="diamond" points="1325,240 1462,326 1325,412 1188,326"/>
+    <text class="text" x="1325" y="315">到达作业点？</text>
+    <text class="text small" x="1325" y="347">扫码 / 取料 / 放料</text>
+
+    <rect class="node sense" x="1175" y="455" width="300" height="88" rx="12"/>
+    <text class="text" x="1325" y="485">关键点识别修正</text>
+    <text class="text small" x="1325" y="516">视觉定位或二维码确认</text>
+
+    <rect class="node arm" x="1175" y="595" width="300" height="98" rx="12"/>
+    <text class="text" x="1325" y="622">机械臂取放物料</text>
+    <text class="text small" x="1325" y="654">伸出、升降、夹取、回收</text>
+
+    <polygon class="diamond" points="1325,730 1462,816 1325,902 1188,816"/>
+    <text class="text" x="1325" y="805">全部任务完成？</text>
+    <text class="text small" x="1325" y="837">两轮取放与圆盘作业</text>
+  </g>
+
+  <g id="end-flow">
+    <rect class="node end" x="590" y="850" width="260" height="74" rx="37"/>
+    <text class="text" x="720" y="887">返回启停区并结束</text>
+  </g>
+
+  <g id="arrows">
+    <path class="arrow" d="M275 327 L275 385"/>
+    <path class="arrow" d="M275 473 L275 540"/>
+    <path class="arrow" d="M275 636 L275 705"/>
+    <path class="arrow" d="M425 749 C490 749 510 289 570 289"/>
+
+    <path class="arrow" d="M720 333 L720 390"/>
+    <path class="arrow" d="M720 478 L720 535"/>
+    <path class="arrow" d="M720 631 L720 690"/>
+    <path class="arrow" d="M870 738 C960 738 985 326 1028 326"/>
+
+    <path class="arrow" d="M1165 412 L1165 455"/>
+    <text class="label" x="1182" y="440">是</text>
+    <path class="arrow" d="M1165 543 L1165 595"/>
+    <path class="arrow" d="M1165 693 L1165 730"/>
+    <path class="arrow" d="M1028 816 C960 816 930 887 850 887"/>
+    <text class="label" x="970" y="796">是</text>
+
+    <path class="loop" d="M1028 326 C970 326 945 583 870 583"/>
+    <text class="label" x="770" y="512">否：继续路径段</text>
+    <path class="loop" d="M1302 816 C1342 816 1342 583 1315 498"/>
+    <text class="label" x="1060" y="922">否：进入下一作业点</text>
+  </g>
+</svg>

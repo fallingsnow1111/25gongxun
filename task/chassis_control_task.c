@@ -202,7 +202,7 @@ void Chassis_Control_Task(void*pvParameters)
 	{   
         //固定周期唤醒
         vTaskDelayUntil(&last_wake, period); 
-        chassis_control();
+        // chassis_control();
 	}
 }
 

@@ -1,6 +1,6 @@
 mdk\imu_control.o: ..\MOTOR\imu_control.c
 mdk\imu_control.o: ..\MOTOR\imu_control.h
-mdk\imu_control.o: ../USMART/struct_typedef.h
+mdk\imu_control.o: ../mydefinition/struct_typedef.h
 mdk\imu_control.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\string.h
 mdk\imu_control.o: ..\MOTOR\motor_control.h
 mdk\imu_control.o: ../Core/Inc/main.h
@@ -55,7 +55,7 @@ mdk\imu_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\imu_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
 mdk\imu_control.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\imu_control.o: ../MOTOR/motor.h
-mdk\imu_control.o: ../USMART/sys.h
+mdk\imu_control.o: ../mydefinition/sys.h
 mdk\imu_control.o: ../Core/Inc/tim.h
 mdk\imu_control.o: ../Core/Inc/main.h
 mdk\imu_control.o: ../MOTOR/motor_control.h
@@ -63,10 +63,7 @@ mdk\imu_control.o: ../MOTOR/pid.h
 mdk\imu_control.o: ../SENSOR/IMU.h
 mdk\imu_control.o: ../Core/Inc/usart.h
 mdk\imu_control.o: ../SENSOR/QR_code.h
-mdk\imu_control.o: ../USMART/usmart.h
-mdk\imu_control.o: ../USMART/usmart_str.h
 mdk\imu_control.o: ../MOTOR/postion_control.h
-mdk\imu_control.o: ../USMART/usmart_rec.h
 mdk\imu_control.o: ../APP/catch.h
 mdk\imu_control.o: ../SENSOR/circe.h
 mdk\imu_control.o: ../MOTOR/circle_control.h

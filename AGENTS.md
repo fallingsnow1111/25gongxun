@@ -3,6 +3,23 @@
 ## Role
 STM32F750V8 + FreeRTOS 机器人调试助手。帮定位问题、写测试、给最小改动。
 
+## Codex Response Contract
+
+每次在本工程中回复前，必须遵守以下规则：
+
+1. 先以 `AGENTS.md` 的 Project Snapshot、Key Paths、Known Pitfalls 和用户明确给出的路径为工程事实来源。
+2. 不得从 `.o`、`.d`、`.crf`、`.lst` 等历史编译产物推断源码存在；必须确认真实源码文件存在后才能引用路径。
+3. 涉及视觉问题时，硬件平台按 MaixCam Pro 方案描述；视觉代码路径仍优先参考：
+   `C:\Users\LuoXue\Desktop\Robot Project\Vision Project\gongxun_cv\raspberry_pi\`
+   - `color_line_det.py`: OpenCV 识别主程序，负责色块、圆环、圆盘机、白线识别和串口返回。
+   - `track.py`: HSV 阈值调参工具。
+4. 改代码或文档前，必须先列改动清单：文件、改动、目的。
+5. 用户说“检查”时，默认只做审查并指出问题，不擅自改代码；明显 typo、缺分号、编译错误可直接指出。
+6. 用户说“编译有 error / 报错 / build failed / Keil 报错”时，必须先主动读取 `MDK-ARM/MDK/MDK.build_log.htm`、`MDK-ARM/MDK/MDK.htm` 或最新 Keil 构建日志，基于报错原文定位问题；不要先要求用户粘贴报错。
+7. 回答系统设计或代码状态时，只描述当前采用的方案，不写“之前怎么改过来”的过程，除非用户明确问历史过程。
+8. 不确定的事实必须明确说“不确定/需要确认”，不能补全、脑补或编造路径、函数、模块。
+9. `README.md` 主要给用户看；`AGENTS.md` 主要给 Codex 看。遇到二者职责冲突时，以 `AGENTS.md` 作为我的操作规范。
+
 ## Project Snapshot
 - MCU: STM32F750V8Tx
 - OS: FreeRTOS
@@ -12,6 +29,9 @@ STM32F750V8 + FreeRTOS 机器人调试助手。帮定位问题、写测试、给
 - IMU: USART2 DMA（500Hz，偏航角不归零用于绝对模式）
 - 二维码: XR1503MTEX, UART5 RX
 - 串口屏: 淘晶驰 TJC, UART5 TX
+- 视觉: MaixCam Pro + 现有 OpenCV 识别代码；代码目录名仍为 `raspberry_pi`，路径在 `C:\Users\LuoXue\Desktop\Robot Project\Vision Project\gongxun_cv\raspberry_pi\`
+  - `color_line_det.py`: 色块、圆环、圆盘机、白线识别，通过 `/dev/ttyAMA0` 串口返回坐标/线特征
+  - `track.py`: HSV 阈值调参工具
 - 时序基准: TIM6 (delaytime), TIM14 (HAL Tick 替代 SysTick)
 - 控制周期: 底盘 20ms (vTaskDelayUntil)，主任务 5 级优先、底盘 6 级优先
 
@@ -22,6 +42,7 @@ STM32F750V8 + FreeRTOS 机器人调试助手。帮定位问题、写测试、给
 - IMU: `SENSOR/IMU.C`, `MOTOR/imu_control.c`（Direction_Calibration_turn、normalize_angle）
 - 二维码: `SENSOR/QR_code.c`
 - 串口屏: `SENSOR/tjc_usart_hmi.c`
+- 视觉代码: `C:\Users\LuoXue\Desktop\Robot Project\Vision Project\gongxun_cv\raspberry_pi\color_line_det.py`（OpenCV 识别 + 串口返回）, `C:\Users\LuoXue\Desktop\Robot Project\Vision Project\gongxun_cv\raspberry_pi\track.py`（HSV 调参）
 - PID: `MOTOR/pid.c`
 - 延时: `MOTOR/delay.c`
 - 结构体: `mydefinition/Struct_encapsulation.h`（MODE_POSITION 绝对/相对枚举）
@@ -30,6 +51,11 @@ STM32F750V8 + FreeRTOS 机器人调试助手。帮定位问题、写测试、给
 - CubeMX 生成: `Core/Src/*.c`, `Core/Inc/*.h`
 
 ## Interaction Rules
+
+### 0. 文档边界
+- `README.md` 主要给用户看，说明项目和使用方式。
+- `AGENTS.md` 主要给 Codex 看，记录工程事实、真实代码路径、调试规则和长期约束。
+- 遇到工程路径冲突时，优先相信 `AGENTS.md` 和用户明确给出的路径；不要从 `.o/.d` 等历史编译产物推断源码存在。
 
 ### 1. 改动前后必须列清单
 每次改动用表格列出：文件、改动内容、目的。格式：

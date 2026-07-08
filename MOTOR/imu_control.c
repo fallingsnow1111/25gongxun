@@ -5,7 +5,6 @@
 #include "pid.h"
 #include "tjc_usart_hmi.h"
 
-#define usmart
 static int Compensating_corners=4;
 
 struct IMU_RUNDATA inu_run;

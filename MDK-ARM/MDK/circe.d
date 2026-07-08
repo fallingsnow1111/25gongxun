@@ -1,6 +1,6 @@
 mdk\circe.o: ..\SENSOR\circe.c
 mdk\circe.o: ..\SENSOR\circe.h
-mdk\circe.o: ../USMART/struct_typedef.h
+mdk\circe.o: ../mydefinition/struct_typedef.h
 mdk\circe.o: ../Core/Inc/usart.h
 mdk\circe.o: ../Core/Inc/main.h
 mdk\circe.o: ../Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal.h
@@ -54,7 +54,7 @@ mdk\circe.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\circe.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
 mdk\circe.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\circe.o: ../MOTOR/motor.h
-mdk\circe.o: ../USMART/sys.h
+mdk\circe.o: ../mydefinition/sys.h
 mdk\circe.o: ../Core/Inc/tim.h
 mdk\circe.o: ../Core/Inc/main.h
 mdk\circe.o: ../MOTOR/motor_control.h
@@ -64,10 +64,7 @@ mdk\circe.o: ../MOTOR/pid.h
 mdk\circe.o: ../SENSOR/IMU.h
 mdk\circe.o: ../Core/Inc/usart.h
 mdk\circe.o: ../SENSOR/QR_code.h
-mdk\circe.o: ../USMART/usmart.h
-mdk\circe.o: ../USMART/usmart_str.h
 mdk\circe.o: ../MOTOR/postion_control.h
-mdk\circe.o: ../USMART/usmart_rec.h
 mdk\circe.o: ../APP/catch.h
 mdk\circe.o: ../MOTOR/circle_control.h
 mdk\circe.o: ../SENSOR/GO-M8010-6.h

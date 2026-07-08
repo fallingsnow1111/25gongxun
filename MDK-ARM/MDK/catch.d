@@ -1,7 +1,7 @@
 mdk\catch.o: ..\APP\catch.c
 mdk\catch.o: ..\APP\catch.h
 mdk\catch.o: ../SENSOR/QR_code.h
-mdk\catch.o: ../USMART/struct_typedef.h
+mdk\catch.o: ../mydefinition/struct_typedef.h
 mdk\catch.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\string.h
 mdk\catch.o: ../Core/Inc/tim.h
 mdk\catch.o: ../Core/Inc/main.h
@@ -56,7 +56,7 @@ mdk\catch.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\catch.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
 mdk\catch.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\catch.o: ../MOTOR/motor.h
-mdk\catch.o: ../USMART/sys.h
+mdk\catch.o: ../mydefinition/sys.h
 mdk\catch.o: ../Core/Inc/tim.h
 mdk\catch.o: ../MOTOR/motor_control.h
 mdk\catch.o: ../Core/Inc/main.h
@@ -64,10 +64,7 @@ mdk\catch.o: ../MOTOR/imu_control.h
 mdk\catch.o: ../MOTOR/pid.h
 mdk\catch.o: ../SENSOR/IMU.h
 mdk\catch.o: ../Core/Inc/usart.h
-mdk\catch.o: ../USMART/usmart.h
-mdk\catch.o: ../USMART/usmart_str.h
 mdk\catch.o: ../MOTOR/postion_control.h
-mdk\catch.o: ../USMART/usmart_rec.h
 mdk\catch.o: ../SENSOR/circe.h
 mdk\catch.o: ../MOTOR/circle_control.h
 mdk\catch.o: ../SENSOR/GO-M8010-6.h

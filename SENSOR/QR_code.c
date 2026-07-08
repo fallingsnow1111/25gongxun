@@ -14,8 +14,8 @@ volatile int TheNumber = 0;
 
 struct COLOR_ID one;
 struct COLOR_ID two;
-int first_code = 0;
-int	second_code = 0;
+volatile int first_code = 0;
+volatile int second_code = 0;
 
 void U5_send(unsigned char data)
 {
@@ -72,8 +72,13 @@ void UART5_IRQHandler(void)
             RxBuffer1[i++] = res;
             if(i >= 7)
             {
-                // 验证第4位是'+'
-                if(RxBuffer1[3] == '+')
+                // 中间字节只作为分隔符, 只校验前后三位是否为数字
+                if((RxBuffer1[0] >= '0' && RxBuffer1[0] <= '9') &&
+                   (RxBuffer1[1] >= '0' && RxBuffer1[1] <= '9') &&
+                   (RxBuffer1[2] >= '0' && RxBuffer1[2] <= '9') &&
+                   (RxBuffer1[4] >= '0' && RxBuffer1[4] <= '9') &&
+                   (RxBuffer1[5] >= '0' && RxBuffer1[5] <= '9') &&
+                   (RxBuffer1[6] >= '0' && RxBuffer1[6] <= '9'))
                 {
                     one.firse = RxBuffer1[0] - 0x30;
                     one.second = RxBuffer1[1] - 0x30;
@@ -94,11 +99,8 @@ void UART5_IRQHandler(void)
 }
 
 void HMI_SEND(void)
-{		
-		char str[30];
-    	sprintf(str,"%d%d%d+%d%d%d",one.firse,one.second,one.thrid,two.firse,two.second,two.thrid);
-		tjc_send_txt("t0", "txt", str);
-
+{
+	HMI_SetQR(first_code, second_code);
 }
 
 #include <stdarg.h>

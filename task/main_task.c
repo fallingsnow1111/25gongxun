@@ -98,26 +98,52 @@ void User_function_final()
 // 二维码识别 + 串口屏显示测试
 static void QR_Code_Test(void)
 {
+	uint32_t wait_count = 0;
+	uint32_t scan_count = 0;
+	uint32_t last_log_tick = 0;
+
 	vTaskDelay(pdMS_TO_TICKS(500));
 
-	// 初始化 HMI 显示
-	tjc_send_txt("t0", "txt", "WAIT QR...");
+	HMI_InitScreen();
+	HMI_SetSys("QRTEST", "NONE");
+	HMI_SetVisionText("WAIT QR");
+	HMI_SetChassisText("IDLE");
+	HMI_SetArmText("IDLE");
 	vTaskDelay(pdMS_TO_TICKS(200));
+	HMI_LogInfo("qr hmi test start");
+	last_log_tick = HAL_GetTick();
 
 	while (1)
 	{
-		// 检查是否扫到了二维码
 		if (first_code != 0 || second_code != 0)
 		{
-			// 处理数据并发送到串口屏
+			int code_a = first_code;
+			int code_b = second_code;
+
 			HMI_SEND();
 
-			// 复位，等待下一次扫码
+			scan_count++;
+			HMI_SetSys("SCAN", "NONE");
+			HMI_SetVisionText("QR OK");
+			HMI_LogInfo("scan %lu:%03d+%03d",
+			            (unsigned long)scan_count,
+			            code_a,
+			            code_b);
+
 			first_code = 0;
 			second_code = 0;
+			last_log_tick = HAL_GetTick();
+		}
+		else if((HAL_GetTick() - last_log_tick) >= 200)
+		{
+			wait_count++;
+			HMI_SetSys("QRWAIT", "NONE");
+			HMI_SetVisionText("WAIT QR");
+			HMI_LogInfo("wait qr %lu", (unsigned long)wait_count);
+			last_log_tick = HAL_GetTick();
 		}
 
-		vTaskDelay(pdMS_TO_TICKS(100));
+		vTaskDelay(pdMS_TO_TICKS(50));
 	}
 }
 
@@ -569,12 +595,7 @@ static void Arm_Catch_Action_Test(void)
 
 void Main_Task(void *pvParameters)
 {
-	Arm_Catch_Action_Test();
-
-	while (1)
-	{
-		vTaskDelay(pdMS_TO_TICKS(1000));
-	}
+	QR_Code_Test();
 }
 
 void Main_Task_create(void)

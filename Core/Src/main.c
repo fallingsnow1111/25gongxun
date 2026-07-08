@@ -102,7 +102,6 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-//    usmart_init(108);
 //    ///////��ʼ��////////
 //		Delay_Init();
 //		//HAL_TIM_Base_Start_IT(&htim6);//��ʼ

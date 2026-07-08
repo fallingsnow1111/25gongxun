@@ -1,6 +1,6 @@
 mdk\circle_control.o: ..\MOTOR\circle_control.c
 mdk\circle_control.o: ..\MOTOR\circle_control.h
-mdk\circle_control.o: ../USMART/struct_typedef.h
+mdk\circle_control.o: ../mydefinition/struct_typedef.h
 mdk\circle_control.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\string.h
 mdk\circle_control.o: ..\MOTOR\motor_control.h
 mdk\circle_control.o: ../Core/Inc/main.h
@@ -55,7 +55,7 @@ mdk\circle_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.
 mdk\circle_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
 mdk\circle_control.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\circle_control.o: ../MOTOR/motor.h
-mdk\circle_control.o: ../USMART/sys.h
+mdk\circle_control.o: ../mydefinition/sys.h
 mdk\circle_control.o: ../Core/Inc/tim.h
 mdk\circle_control.o: ../Core/Inc/main.h
 mdk\circle_control.o: ../MOTOR/motor_control.h
@@ -64,10 +64,7 @@ mdk\circle_control.o: ../MOTOR/pid.h
 mdk\circle_control.o: ../SENSOR/IMU.h
 mdk\circle_control.o: ../Core/Inc/usart.h
 mdk\circle_control.o: ../SENSOR/QR_code.h
-mdk\circle_control.o: ../USMART/usmart.h
-mdk\circle_control.o: ../USMART/usmart_str.h
 mdk\circle_control.o: ../MOTOR/postion_control.h
-mdk\circle_control.o: ../USMART/usmart_rec.h
 mdk\circle_control.o: ../APP/catch.h
 mdk\circle_control.o: ../SENSOR/circe.h
 mdk\circle_control.o: ../SENSOR/GO-M8010-6.h

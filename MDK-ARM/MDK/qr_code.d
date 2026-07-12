@@ -73,5 +73,5 @@ mdk\qr_code.o: ../APP/user.h
 mdk\qr_code.o: ../MOTOR/delay.h
 mdk\qr_code.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\qr_code.o: ../MOTOR/telescopic_boom.h
-mdk\qr_code.o: ..\SENSOR\tjc_usart_hmi.h
+mdk\qr_code.o: ../task/hmi_task.h
 mdk\qr_code.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdarg.h

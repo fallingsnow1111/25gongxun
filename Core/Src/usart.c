@@ -22,7 +22,7 @@
 
 /* USER CODE BEGIN 0 */
 #include <stdio.h>
-#include "tjc_usart_hmi.h"
+#include "hmi_task.h"
 
 /* USER CODE END 0 */
 

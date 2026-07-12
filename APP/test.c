@@ -1,4 +1,5 @@
 #include "test.h"
+#include "hmi_task.h"
 #include "tjc_usart_hmi.h"
 #include "warehouse_app.h"
 #include "action_control.h"
@@ -7,107 +8,37 @@
 #include "imu_control.h"
 #include "IMU.h"
 #include "QR_code.h"
+#include "circe.h"
 #include "user.h"
 #include "chassis_control_task.h"
+#include "GO-M8010-6.h"
+#include "catch.h"
+#include "postion_control.h"
 #include <math.h>
 
-static void Chassis_Test_Stop(uint32_t stop_time_ms)
+#define TEST_CHASSIS_SPEED_FINE  5.0f
+#define TEST_CHASSIS_SPEED_LOW   80.0f
+
+#define RING_CENTER_X            122
+#define RING_CENTER_Y            133
+#define RING_LOCATE_DEADZONE     5
+#define RING_LOCATE_STABLE_COUNT 5
+#define RING_LOCATE_TIMEOUT_MS   6000
+
+#define RING_SWITCH_RAMP_TICKS   30
+#define RING_SWITCH_10CM_TICKS   34
+#define RING_SWITCH_20CM_TICKS   68
+
+static int Test_AbsInt(int value)
 {
-	Motor_setspeed(0, 0, 0);
-	vTaskDelay(pdMS_TO_TICKS(stop_time_ms));
+	return (value < 0) ? -value : value;
 }
 
-void Chassis_Test_Run_With_Imu(float vy, float vx, float target_angle, uint32_t run_time_ms)
+static float Test_SignSpeed(int value, float speed)
 {
-	uint32_t start_tick = HAL_GetTick();
-
-	Imu_setZero();
-	vTaskDelay(pdMS_TO_TICKS(100));
-
-	while ((HAL_GetTick() - start_tick) < run_time_ms)
-	{
-		float vw = Direction_Calibration_turn(target_angle);
-		Motor_setspeed(vy, vx, vw);
-		vTaskDelay(pdMS_TO_TICKS(20));
-	}
-
-	Chassis_Test_Stop(400);
-}
-
-void Chassis_Test_Rotate_With_Imu(float target_angle, uint32_t timeout_ms)
-{
-	uint32_t start_tick = HAL_GetTick();
-
-	Imu_setZero();
-	vTaskDelay(pdMS_TO_TICKS(100));
-
-	while ((HAL_GetTick() - start_tick) < timeout_ms)
-	{
-		float current_angle = normalize_angle(imu.yaw);
-		float angle_error = getAngleZ(current_angle, target_angle);
-
-		if (fabsf(angle_error) <= 2.0f)
-		{
-			break;
-		}
-
-		Motor_setspeed(0, 0, Direction_Calibration_turn(target_angle));
-		vTaskDelay(pdMS_TO_TICKS(20));
-	}
-
-	Chassis_Test_Stop(500);
-}
-
-void User_function_final(void)
-{
-	vTaskDelay(pdMS_TO_TICKS(10));
-	Set_chassis_able(enable);
-	Move_To_Target_area(-110,1400,0,enable,Relative_Position);
-	while(first_code == 0 && second_code == 0)
-	{
-		Move_To_Target_area(0,0,0,enable,Relative_Position);
-	}
-	Init_Warehouse(1);
-	HMI_SEND();
-
-	Move_To_Target_area(0,-400,0,enable,Relative_Position);
-	Move_To_Target_area(-1810,0,0,enable,Relative_Position);
-	Move_To_Target_area(0,0,180,enable,Relative_Position);
-
-	Set_chassis_able(unable);
-	Set_chassis_able(enable);
-
-	Move_To_Target_area(-30,-850,0,enable,Relative_Position);
-	Move_To_Target_area(-850,0,0,enable,Relative_Position);
-	action_set_in_user(CIRCLE_ACTION);
-	Move_To_Target_area(0,0,-90,enable,Relative_Position);
-
-	Set_chassis_able(unable);
-	Set_chassis_able(enable);
-
-	Move_To_Target_area(-1790,0,0,enable,Relative_Position);
-	Move_To_Target_area(0,0,180,enable,Relative_Position);
-
-	Init_Warehouse(2);
-	Move_To_Target_area(0,-900,0,enable,Relative_Position);
-	Move_To_Target_area(-950,0,0,enable,Relative_Position);
-	Move_To_Target_area(0,0,-90,enable,Relative_Position);
-
-	Set_chassis_able(unable);
-	Set_chassis_able(enable);
-
-	Move_To_Target_area(-30,-850,0,enable,Relative_Position);
-	Move_To_Target_area(-900,0,0,enable,Relative_Position);
-	Move_To_Target_area(0,0,-90,enable,Relative_Position);
-
-	Set_chassis_able(unable);
-	Set_chassis_able(enable);
-
-	Move_To_Target_area(-1790,0,0,enable,Relative_Position);
-	Move_To_Target_area(0,0,180,enable,Relative_Position);
-
-	Move_To_Target_area(0,1100,0,enable,Relative_Position);
-	Move_To_Target_area(70,0,0,enable,Relative_Position);
+	if(value > 0) return speed;
+	if(value < 0) return -speed;
+	return 0.0f;
 }
 
 void QR_Code_Test(void)
@@ -130,21 +61,264 @@ void QR_Code_Test(void)
 	}
 }
 
-void Motor_Periodic_Feedback_Test(void)
+void Vision_Parse_Test(void)
 {
-	Set_chassis_able(unable);
-	Motor_TimedReturn_Stop();
-	vTaskDelay(pdMS_TO_TICKS(30));
-	Motor_setspeed(0, 0, 0);
-	vTaskDelay(pdMS_TO_TICKS(50));
+	VISION_TARGET_T target;
+	uint32_t last_tick = 0;
 
-	Motor_Rxdata_SetSero();
-	Motor_FeedbackState_Reset();
-	Motor_TimedReturn_Init();
+	vTaskDelay(pdMS_TO_TICKS(500));
 
-	while (1)
+	HMI_InitScreen();
+	HMI_SetSys("VISTEST", "NONE");
+	HMI_SetVisionText("MATERIAL");
+	HMI_SetChassisText("IDLE");
+	HMI_SetArmText("IDLE");
+	HMI_LogInfo("vision parse test");
+
+	USART6_readdata_SeetZero();
+	Vision_LED_On();
+	vTaskDelay(pdMS_TO_TICKS(300));
+
+	Vision_StartMaterial();
+
+	while(1)
 	{
-		vTaskDelay(pdMS_TO_TICKS(100));
+		if((HAL_GetTick() - last_tick) >= 200)
+		{
+			last_tick = HAL_GetTick();
+
+			HMI_LogInfo("mode=%d cnt=%d", vision_last_mode, vision_last_count);
+
+			if(Vision_GetMaterialTarget(RED, &target))
+			{
+				HMI_LogInfo("M R %03d,%03d", target.x, target.y);
+			}
+
+			if(Vision_GetMaterialTarget(GREEN, &target))
+			{
+				HMI_LogInfo("M G %03d,%03d", target.x, target.y);
+			}
+
+			if(Vision_GetMaterialTarget(BLUE, &target))
+			{
+				HMI_LogInfo("M B %03d,%03d", target.x, target.y);
+			}
+
+			HMI_LogInfo("old %d dx=%d dy=%d",
+			            Get_data_action_flag(),
+			            Get_X_Change(),
+			            Get_Y_Change());
+		}
+
+		vTaskDelay(pdMS_TO_TICKS(20));
+	}
+}
+
+void Joint_Chassis_Feedback_Test(void)
+{
+	uint32_t start_tick;
+	uint32_t last_log_tick = 0;
+
+	vTaskDelay(pdMS_TO_TICKS(500));
+
+	HMI_InitScreen();
+	HMI_SetSys("JCTEST", "NONE");
+	HMI_SetVisionText("IDLE");
+	HMI_SetChassisText("IDLE");
+	HMI_SetArmText("INIT");
+	HMI_LogInfo("joint chassis test");
+
+	Set_chassis_able(unable);
+	Motor_setspeed(0, 0, 0);
+	vTaskDelay(pdMS_TO_TICKS(200));
+
+	HMI_SetArmText("M -30");
+	HMI_LogInfo("m8010 to -30");
+	M8010_SetAngle(-30);
+	HMI_LogInfo("m8010 pos %lu", (unsigned long)M8010_ShowRealPostion());
+	vTaskDelay(pdMS_TO_TICKS(300));
+
+	HMI_SetArmText("M 0");
+	HMI_LogInfo("m8010 to 0");
+	M8010_SetAngle(0);
+	HMI_LogInfo("m8010 pos %lu", (unsigned long)M8010_ShowRealPostion());
+	vTaskDelay(pdMS_TO_TICKS(300));
+
+	motor1.actual_angle = 0;
+	motor2.actual_angle = 0;
+	motor3.actual_angle = 0;
+	motor4.actual_angle = 0;
+	car.actual_y = 0;
+	car.actual_x = 0;
+	car.actual_w = 0;
+	Motor_Rxdata_SetSero();
+
+	HMI_SetArmText("DONE");
+	HMI_SetChassisText("RUN");
+	HMI_LogInfo("chassis run");
+
+	start_tick = HAL_GetTick();
+	while((HAL_GetTick() - start_tick) < 1200)
+	{
+		Motor_setspeed(20, 0, 0);
+		Motor_Action_Calculate_actual(&car.actual_y, &car.actual_x, &car.actual_w);
+
+		if((HAL_GetTick() - last_log_tick) >= 200)
+		{
+			last_log_tick = HAL_GetTick();
+			HMI_LogInfo("m12 %d,%d", (int)motor1.actual_angle, (int)motor2.actual_angle);
+			HMI_LogInfo("m34 %d,%d", (int)motor3.actual_angle, (int)motor4.actual_angle);
+			HMI_LogInfo("car y%d x%d w%d", (int)car.actual_y, (int)car.actual_x, (int)car.actual_w);
+		}
+
+		vTaskDelay(pdMS_TO_TICKS(20));
+	}
+
+	Motor_setspeed(0, 0, 0);
+	HMI_SetChassisText("STOP");
+	HMI_LogInfo("chassis stop");
+
+	while(1)
+	{
+		Motor_Action_Calculate_actual(&car.actual_y, &car.actual_x, &car.actual_w);
+		vTaskDelay(pdMS_TO_TICKS(500));
+	}
+}
+
+static uint8_t Ring_LocateOne(uint8_t cls, char *name)
+{
+	VISION_TARGET_T target;
+	uint32_t start_tick = HAL_GetTick();
+	uint32_t last_log_tick = 0;
+	uint8_t stable_count = 0;
+
+	HMI_SetVisionText(name);
+	HMI_LogInfo("loc %s", name);
+
+	while((HAL_GetTick() - start_tick) < RING_LOCATE_TIMEOUT_MS)
+	{
+		int err_x;
+		int err_y;
+		float vx = 0.0f;
+		float vy = 0.0f;
+
+		if(Vision_GetRingTarget(cls, &target) == 0)
+		{
+			Motor_setspeed(0, 0, 0);
+			stable_count = 0;
+
+			if((HAL_GetTick() - last_log_tick) >= 300)
+			{
+				last_log_tick = HAL_GetTick();
+				HMI_LogWarn("%s lost", name);
+			}
+
+			vTaskDelay(pdMS_TO_TICKS(20));
+			continue;
+		}
+
+		err_x = RING_CENTER_X - (int)target.x;
+		err_y = RING_CENTER_Y - (int)target.y;
+
+		if(Test_AbsInt(err_x) <= RING_LOCATE_DEADZONE &&
+		   Test_AbsInt(err_y) <= RING_LOCATE_DEADZONE)
+		{
+			Motor_setspeed(0, 0, 0);
+			stable_count++;
+
+			if(stable_count >= RING_LOCATE_STABLE_COUNT)
+			{
+				HMI_LogInfo("%s ok %03d,%03d", name, target.x, target.y);
+				return 1;
+			}
+		}
+		else
+		{
+			stable_count = 0;
+
+			/* Camera Y error maps to chassis X; camera X error maps to chassis Y. */
+			if(Test_AbsInt(err_y) > RING_LOCATE_DEADZONE)
+			{
+				vx = Test_SignSpeed(-err_y, TEST_CHASSIS_SPEED_FINE);
+			}
+
+			if(Test_AbsInt(err_x) > RING_LOCATE_DEADZONE)
+			{
+				vy = Test_SignSpeed(err_x, TEST_CHASSIS_SPEED_FINE);
+			}
+
+			Chassis_OpenLoop_SetSpeed(vx, vy, 0);
+		}
+
+		if((HAL_GetTick() - last_log_tick) >= 300)
+		{
+			last_log_tick = HAL_GetTick();
+			HMI_LogInfo("%s e%d,%d", name, err_x, err_y);
+		}
+
+		vTaskDelay(pdMS_TO_TICKS(20));
+	}
+
+	Motor_setspeed(0, 0, 0);
+	HMI_LogError("%s timeout", name);
+	return 0;
+}
+
+static void Ring_SwitchY(float vy, uint16_t hold_ticks)
+{
+	HMI_SetChassisText("SWITCH");
+	Chassis_MoveOnce(0, vy, 0, hold_ticks, RING_SWITCH_RAMP_TICKS);
+	HMI_SetChassisText("STOP");
+	vTaskDelay(pdMS_TO_TICKS(200));
+}
+
+void Ring_Location_Test(void)
+{
+	vTaskDelay(pdMS_TO_TICKS(500));
+
+	HMI_InitScreen();
+	HMI_SetSys("RING", "TEST");
+	HMI_SetVisionText("INIT");
+	HMI_SetChassisText("STOP");
+	HMI_SetArmText("INIT");
+	HMI_LogInfo("ring locate test");
+
+	Set_chassis_able(unable);
+	Motor_setspeed(0, 0, 0);
+	vTaskDelay(pdMS_TO_TICKS(100));
+
+	Imu_setZero();
+	vTaskDelay(pdMS_TO_TICKS(200));
+
+	USART6_readdata_SeetZero();
+	Set_Circle_Center(RING_CENTER_X, RING_CENTER_Y);
+	Vision_LED_On();
+	Vision_StartRing();
+	vTaskDelay(pdMS_TO_TICKS(300));
+
+	claw_move_2(open);
+	vTaskDelay(pdMS_TO_TICKS(200));
+	M8010_SetAngle(PUT_AND_CATCH_ANGLE);
+	vTaskDelay(pdMS_TO_TICKS(300));
+	Z_SetHeight(60);
+	vTaskDelay(pdMS_TO_TICKS(300));
+	HMI_SetArmText("READY");
+
+	while(1)
+	{
+		Ring_LocateOne(GREEN, "GREEN");
+		Ring_SwitchY(TEST_CHASSIS_SPEED_LOW, RING_SWITCH_10CM_TICKS);
+
+		Ring_LocateOne(BLUE, "BLUE");
+		Ring_SwitchY(-TEST_CHASSIS_SPEED_LOW, RING_SWITCH_20CM_TICKS);
+
+		Ring_LocateOne(RED, "RED");
+		Ring_SwitchY(TEST_CHASSIS_SPEED_LOW, RING_SWITCH_10CM_TICKS);
+
+		Motor_setspeed(0, 0, 0);
+		HMI_SetVisionText("WAIT");
+		HMI_LogInfo("round done");
+		vTaskDelay(pdMS_TO_TICKS(2000));
 	}
 }
 

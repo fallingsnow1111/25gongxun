@@ -84,6 +84,7 @@ mdk\main_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.
 mdk\main_task.o: ..\task\catch_yuanpanji_task.h
 mdk\main_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\main_task.o: ../APP/action_control.h
-mdk\main_task.o: ../SENSOR/tjc_usart_hmi.h
+mdk\main_task.o: ..\task\hmi_task.h
 mdk\main_task.o: ../APP/warehouse_app.h
+mdk\main_task.o: ../APP/test.h
 mdk\main_task.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\math.h

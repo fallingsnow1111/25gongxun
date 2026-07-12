@@ -22,38 +22,16 @@ Dialog DLL:      TCM.DLL V1.56.4.0
  
 <h2>Project:</h2>
 C:\Users\LuoXue\Desktop\Robot Project\2024gongxun - 5ci\MDK-ARM\MDK.uvprojx
-Project File Date:  07/08/2026
+Project File Date:  07/12/2026
 
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 6 (build 750)', folder: 'D:\Keil5_MDK\ARM\ARMCC\Bin'
 Build target 'MDK'
-compiling start_task.c...
-compiling QR_code.c...
-compiling imu_control.c...
-..\MOTOR\imu_control.c(51): warning:  #177-D: variable "str"  was declared but never referenced
-  	char str[20];
-..\MOTOR\imu_control.c(8): warning:  #177-D: variable "Compensating_corners"  was declared but never referenced
-  static int Compensating_corners=4;
-..\MOTOR\imu_control.c: 2 warnings, 0 errors
-compiling motor.c...
-compiling tjc_usart_hmi.c...
-compiling main_task.c...
-..\task\main_task.c(151): warning:  #177-D: function "Route_Test"  was declared but never referenced
-  static void Route_Test(void)
-..\task\main_task.c(225): warning:  #177-D: function "Route_Test_ABS"  was declared but never referenced
-  static void Route_Test_ABS(void)
-..\task\main_task.c(343): warning:  #177-D: function "Circle_Test_MinSpeed"  was declared but never referenced
-  static float Circle_Test_MinSpeed(float speed, float min_speed)
-..\task\main_task.c(528): warning:  #177-D: function "OpenLoop_Chassis_Test"  was declared but never referenced
-  static void OpenLoop_Chassis_Test(void)
-..\task\main_task.c(561): warning:  #177-D: function "Arm_Catch_Action_Test"  was declared but never referenced
-  static void Arm_Catch_Action_Test(void)
-..\task\main_task.c: 5 warnings, 0 errors
-compiling usart.c...
+compiling test.c...
 linking...
-Program Size: Code=32256 RO-data=1072 RW-data=508 ZI-data=21332  
+Program Size: Code=40108 RO-data=1104 RW-data=512 ZI-data=20880  
 FromELF: creating hex file...
-"MDK\MDK.axf" - 0 Error(s), 7 Warning(s).
+"MDK\MDK.axf" - 0 Error(s), 0 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -76,7 +54,7 @@ Package Vendor: Keil
 
    * Component: ARM::CMSIS:CORE@6.1.0
       Include file:  CMSIS/Core/Include/tz_context.h
-Build Time Elapsed:  00:00:05
+Build Time Elapsed:  00:00:08
 </pre>
 </body>
 </html>

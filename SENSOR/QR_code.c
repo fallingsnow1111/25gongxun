@@ -1,6 +1,6 @@
 #include "QR_code.h"
 #include "usart.h"
-#include "tjc_usart_hmi.h"
+#include "hmi_task.h"
 
 int length,i = 0;
 static uint8_t RxBuffer1[128] = {0};//接收数组

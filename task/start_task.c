@@ -1,6 +1,6 @@
 #include "start_task.h"
 #include "imu_task.h"
-#include "tjc_usart_hmi.h"
+#include "hmi_task.h"
 
 TaskHandle_t Start_Task_Handle;
 
@@ -11,20 +11,19 @@ void Init_Task_Create(void)
 {
     ///////初始化////////
 	Delay_Init();
-	//HAL_TIM_Base_Start_IT(&htim6);//开始
 	QR_sense_init();		// 扫码模块初始化
 	HMI_InitScreen();		// 串口屏内容初始化
-//	MOTOR_Init();
+	MOTOR_Init();
 	Gyro_Init();
-//	POSTION_init();			// 机械臂Z轴升降Y轴伸缩初始化
+	POSTION_init();			// 机械臂Z轴升降Y轴伸缩初始化
 	openmv_Init();			// 树莓派初始化
-	// M8010_init();
+	M8010_init();
     HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_3);
     HAL_TIM_PWM_Start(&htim4,TIM_CHANNEL_3);
-//	Telescopic_Init();		// 伸缩臂PID初始化
+	Telescopic_Init();		// 伸缩臂PID初始化
     //////初始化完成//////
     Delay_ms(2);
-	// read_init_postion();
+	read_init_postion();
 	chassis_control_init();
 }
 

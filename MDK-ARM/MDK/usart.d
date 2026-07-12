@@ -73,4 +73,4 @@ mdk\usart.o: ../APP/user.h
 mdk\usart.o: ../MOTOR/delay.h
 mdk\usart.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\usart.o: ../MOTOR/telescopic_boom.h
-mdk\usart.o: ../SENSOR/tjc_usart_hmi.h
+mdk\usart.o: ../task/hmi_task.h

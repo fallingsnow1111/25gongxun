@@ -4,7 +4,7 @@
 #include "main.h"
 
 #define U7_RX_BUF_LEN 8
-#define Z_MAX_TIMEOUT_MS 7000U
+#define Z_MAX_TIMEOUT_MS 4000U
 static uint8_t u7RXdat[U7_RX_BUF_LEN];
 static uint8_t USART7_senddata[128];
 static uint8_t u7_stream_frame[U7_RX_BUF_LEN];

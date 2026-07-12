@@ -86,4 +86,4 @@ mdk\start_task.o: ..\task\catch_yuanpanji_task.h
 mdk\start_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\start_task.o: ..\task\imu_task.h
 mdk\start_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\start_task.o: ../SENSOR/tjc_usart_hmi.h
+mdk\start_task.o: ..\task\hmi_task.h

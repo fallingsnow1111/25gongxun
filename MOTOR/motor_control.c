@@ -31,10 +31,12 @@ unsigned char W_Gray_openmv = 1;
  *备注: 同时使用IMU航向PID计算旋转速度, 用于行进中保持目标航向
  *备注: 本函数只按速度控制底盘, 不读取编码器位置
  */
-void Chassis_OpenLoop_SetSpeed(float vx_world, float vy_world, float target_angle)
+/* speed_frame_angle locks the translation frame; target_angle controls yaw. */
+void Chassis_OpenLoop_SetSpeedFrame(float vx_world, float vy_world,
+                                    float speed_frame_angle, float target_angle)
 {
 	float yaw = normalize_angle(imu.yaw);
-	float yaw_err = yaw - target_angle;
+	float yaw_err = speed_frame_angle - yaw;
 
 	while(yaw_err > 180.0f) yaw_err -= 360.0f;
 	while(yaw_err < -180.0f) yaw_err += 360.0f;
@@ -47,6 +49,11 @@ void Chassis_OpenLoop_SetSpeed(float vx_world, float vy_world, float target_angl
 	float vw = Direction_Calibration_turn(target_angle);
 
 	Motor_setspeed(-vy_body, vx_body, vw);
+}
+
+void Chassis_OpenLoop_SetSpeed(float vx_world, float vy_world, float target_angle)
+{
+	Chassis_OpenLoop_SetSpeedFrame(vx_world, vy_world, target_angle, target_angle);
 }
 
 /*
@@ -255,6 +262,31 @@ void Chassis_BlendSpeedAngle(float vx1, float vy1, float angle1,
         float target_angle = angle1 + angle_delta * k;
 
         Chassis_OpenLoop_SetSpeed(vx, vy, target_angle);
+        vTaskDelay(pdMS_TO_TICKS(OPEN_LOOP_PERIOD_MS));
+    }
+}
+
+void Chassis_DriftStraightTurn(float vx_world, float vy_world,
+                               float speed_frame_angle,
+                               float start_angle, float end_angle,
+                               uint16_t turn_ticks)
+{
+    if (turn_ticks == 0) return;
+
+    float angle_delta = end_angle - start_angle;
+
+    while (angle_delta > 180.0f) angle_delta -= 360.0f;
+    while (angle_delta < -180.0f) angle_delta += 360.0f;
+
+    for (uint16_t i = 0; i < turn_ticks; i++)
+    {
+        float t = (float)(i + 1) / (float)turn_ticks;
+        float k = 0.5f - 0.5f * cosf(PI_F * t);
+        float target_angle = start_angle + angle_delta * k;
+
+        Chassis_OpenLoop_SetSpeedFrame(vx_world, vy_world,
+                                       speed_frame_angle,
+                                       target_angle);
         vTaskDelay(pdMS_TO_TICKS(OPEN_LOOP_PERIOD_MS));
     }
 }

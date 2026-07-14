@@ -76,3 +76,4 @@ mdk\motor.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\motor.o: ../MOTOR/telescopic_boom.h
 mdk\motor.o: ../Core/Inc/dma.h
 mdk\motor.o: ../SENSOR/tjc_usart_hmi.h
+mdk\motor.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\math.h

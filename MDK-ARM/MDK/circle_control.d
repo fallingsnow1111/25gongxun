@@ -75,13 +75,3 @@ mdk\circle_control.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\circle_control.o: ../MOTOR/telescopic_boom.h
 mdk\circle_control.o: ../task/main_task.h
 mdk\circle_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\circle_control.o: ../task/start_task.h
-mdk\circle_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\circle_control.o: ../task/main_task.h
-mdk\circle_control.o: ../task/chassis_control_task.h
-mdk\circle_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\circle_control.o: ../task/action_sets.h
-mdk\circle_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\circle_control.o: ../task/catch_yuanpanji_task.h
-mdk\circle_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\circle_control.o: ../APP/action_control.h

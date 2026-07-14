@@ -77,6 +77,4 @@ mdk\test.o: ../task/hmi_task.h
 mdk\test.o: ../SENSOR/tjc_usart_hmi.h
 mdk\test.o: ..\APP\warehouse_app.h
 mdk\test.o: ..\APP\action_control.h
-mdk\test.o: ../task/chassis_control_task.h
-mdk\test.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\test.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\math.h

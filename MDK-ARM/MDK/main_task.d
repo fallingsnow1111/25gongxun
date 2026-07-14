@@ -74,17 +74,4 @@ mdk\main_task.o: ../MOTOR/delay.h
 mdk\main_task.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\main_task.o: ../MOTOR/telescopic_boom.h
 mdk\main_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\main_task.o: ..\task\start_task.h
-mdk\main_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\main_task.o: ..\task\main_task.h
-mdk\main_task.o: ..\task\chassis_control_task.h
-mdk\main_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\main_task.o: ..\task\action_sets.h
-mdk\main_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\main_task.o: ..\task\catch_yuanpanji_task.h
-mdk\main_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\main_task.o: ../APP/action_control.h
-mdk\main_task.o: ..\task\hmi_task.h
-mdk\main_task.o: ../APP/warehouse_app.h
 mdk\main_task.o: ../APP/test.h
-mdk\main_task.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\math.h

@@ -37,6 +37,7 @@ volatile VISION_TARGET_T vision_material[4];
 volatile VISION_TARGET_T vision_ring[4];
 volatile uint8_t vision_last_mode = 0;
 volatile uint8_t vision_last_count = 0;
+volatile uint32_t vision_frame_count = 0;
 volatile uint8_t vision_request_mode = 0;
 volatile uint8_t vision_request_cls = 0;
 
@@ -294,6 +295,7 @@ static void u6_multi_target_process(uint8_t *data)
 	vision_clear_table(table);
 	vision_last_mode = mode;
 	vision_last_count = count;
+	vision_frame_count++;
 
 	for(i = 0; i < count; i++)
 	{
@@ -520,5 +522,4 @@ void USART6_readdata_SeetZero(void)
 	vision_last_count = 0;
 	Vision_ClearSelected();
 }
-
 

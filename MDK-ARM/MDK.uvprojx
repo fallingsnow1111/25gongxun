@@ -2520,16 +2520,6 @@
               <FilePath>..\task\start_task.h</FilePath>
             </File>
             <File>
-              <FileName>chassis_control_task.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\task\chassis_control_task.c</FilePath>
-            </File>
-            <File>
-              <FileName>chassis_control_task.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\task\chassis_control_task.h</FilePath>
-            </File>
-            <File>
               <FileName>main_task.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\task\main_task.c</FilePath>

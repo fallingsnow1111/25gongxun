@@ -57,7 +57,6 @@
 "mdk\heap_4.o"
 "mdk\port.o"
 "mdk\start_task.o"
-"mdk\chassis_control_task.o"
 "mdk\main_task.o"
 "mdk\action_sets.o"
 "mdk\catch_yuanpanji_task.o"

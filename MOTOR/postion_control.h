@@ -12,6 +12,18 @@ void uart7WriteBuf(uint8_t *buf, uint8_t len);
 extern struct POSTION Z_POSTION;
 extern volatile uint8_t u7_debug_buf[8];
 extern volatile uint16_t u7_debug_size;
+extern volatile uint32_t u7_debug_rx_restart_count;
+extern volatile uint32_t u7_debug_rx_restart_fail;
+extern volatile uint32_t u7_debug_rx_event_count;
+extern volatile uint32_t u7_debug_error_count;
+extern volatile uint32_t u7_debug_last_error;
+extern volatile uint32_t u7_debug_tx_count;
+extern volatile uint8_t u7_debug_last_tx_status;
+extern volatile uint8_t u7_debug_last_tx_len;
+extern volatile uint8_t u7_debug_last_tx_buf[13];
+extern volatile uint32_t u7_debug_z_finish_count;
+extern volatile uint8_t z_debug_last_timeout;
+extern volatile uint32_t z_debug_last_wait_ms;
 struct POSTION
 {
 	int NOW;

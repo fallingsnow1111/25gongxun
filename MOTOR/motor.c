@@ -6,6 +6,8 @@
 #include "stm32f7xx_hal.h"
 #include "delay.h"
 #include "tjc_usart_hmi.h"
+#include "IMU.h"
+#include <math.h>
 
 volatile char MOTOR_ACTIONFALG=Incomplete;
 
@@ -22,6 +24,18 @@ struct MOTO_DATA motor2;
 struct MOTO_DATA motor3;
 struct MOTO_DATA motor4; 
 MOTOR_SPEED_t car_setspeed;
+volatile CARDATA_T car;
+volatile struct CHECK_FLAG_t motor_check;
+
+static int16_t odom_last_rpm[4];
+static int64_t odom_segment_wheel[4];
+static int64_t odom_total_wheel[4];
+static uint32_t odom_last_tick;
+static uint32_t odom_segment_move_time_ms;
+static uint32_t odom_total_move_time_ms;
+static uint8_t odom_started;
+volatile uint32_t chassis_odom_tx_fail_count = 0;
+volatile int32_t motor_actual_pulse[4];
 
 int motor_mode = speed_mode;
 int postion_bit = finish;
@@ -29,8 +43,15 @@ int postion_bit = finish;
 static uint8_t RXdat[RXdat_maxsize]={0};
 char RXdat_piont=0;
 uint8_t u3_Txdata;
+volatile uint16_t u3_debug_size = 0;
+volatile uint32_t u3_debug_rx_count = 0;
+volatile uint32_t u3_debug_rx_restart_count = 0;
+volatile uint32_t u3_debug_rx_restart_fail = 0;
+volatile uint32_t u3_debug_error_count = 0;
+volatile uint32_t u3_debug_last_error = 0;
+volatile uint8_t u3_debug_buf[8];
 
-void uart3WriteBuf(uint8_t *buf, uint8_t len)
+HAL_StatusTypeDef uart3WriteBuf(uint8_t *buf, uint8_t len)
 {
 	uint32_t start = HAL_GetTick();
 
@@ -38,15 +59,153 @@ void uart3WriteBuf(uint8_t *buf, uint8_t len)
 	{
 		if((HAL_GetTick() - start) > 5)
 		{
-			return;
+			return HAL_TIMEOUT;
 		}
 	}
 
-	HAL_UART_Transmit_DMA(&huart3,buf,len);
+	return HAL_UART_Transmit_DMA(&huart3,buf,len);
+}
+
+static uint8_t Chassis_OdomMoving(void)
+{
+	return odom_last_rpm[0] != 0 || odom_last_rpm[1] != 0 ||
+	       odom_last_rpm[2] != 0 || odom_last_rpm[3] != 0;
+}
+
+static void Chassis_OdomSettle(uint32_t now)
+{
+	uint32_t elapsed_ms;
+	int64_t delta_wheel[4];
+	float body_x;
+	float body_y;
+	float yaw_rad;
+
+	if(odom_started == 0)
+	{
+		odom_last_tick = now;
+		odom_started = 1;
+		return;
+	}
+
+	elapsed_ms = now - odom_last_tick;
+	odom_last_tick = now;
+	if(elapsed_ms == 0 || Chassis_OdomMoving() == 0)
+		return;
+
+	for(uint8_t i = 0; i < 4; i++)
+	{
+		int64_t delta = (int64_t)odom_last_rpm[i] * elapsed_ms;
+		delta_wheel[i] = delta;
+		odom_segment_wheel[i] += delta;
+		odom_total_wheel[i] += delta;
+	}
+	body_x = (float)(-delta_wheel[0] + delta_wheel[1] +
+					 delta_wheel[2] - delta_wheel[3]) * 0.25f;
+	body_y = (float)-(delta_wheel[0] + delta_wheel[1] -
+					  delta_wheel[2] - delta_wheel[3]) * 0.25f;
+	yaw_rad = imu.yaw * 3.1415926f / 180.0f;
+	car.actual_x += body_x * cosf(yaw_rad) + body_y * sinf(yaw_rad);
+	car.actual_y += -body_x * sinf(yaw_rad) + body_y * cosf(yaw_rad);
+	car.actual_w = imu.yaw;
+	odom_segment_move_time_ms += elapsed_ms;
+	odom_total_move_time_ms += elapsed_ms;
+}
+
+static void Chassis_OdomBuild(CHASSIS_ODOM_T *odom,
+							  const int64_t wheel[4], uint32_t move_time_ms)
+{
+	if(odom == NULL)
+		return;
+
+	for(uint8_t i = 0; i < 4; i++)
+		odom->wheel[i] = wheel[i];
+
+	/* Match the public chassis convention: x left+, y forward+. */
+	odom->x = (-wheel[0] + wheel[1] + wheel[2] - wheel[3]) / 4;
+	odom->y = -(wheel[0] + wheel[1] - wheel[2] - wheel[3]) / 4;
+	odom->w = (wheel[0] + wheel[1] + wheel[2] + wheel[3]) / 4;
+	odom->move_time_ms = move_time_ms;
+}
+
+void Chassis_OdomResetSegment(void)
+{
+	Chassis_OdomSettle(HAL_GetTick());
+	memset(odom_segment_wheel, 0, sizeof(odom_segment_wheel));
+	odom_segment_move_time_ms = 0;
+}
+
+void Chassis_OdomGetSegment(CHASSIS_ODOM_T *odom)
+{
+	Chassis_OdomSettle(HAL_GetTick());
+	Chassis_OdomBuild(odom, odom_segment_wheel, odom_segment_move_time_ms);
+}
+
+void Chassis_OdomGetTotal(CHASSIS_ODOM_T *odom)
+{
+	Chassis_OdomSettle(HAL_GetTick());
+	Chassis_OdomBuild(odom, odom_total_wheel, odom_total_move_time_ms);
+}
+
+void Chassis_OdomGetSegmentSnapshot(CHASSIS_ODOM_T *odom)
+{
+	taskENTER_CRITICAL();
+	Chassis_OdomBuild(odom, odom_segment_wheel, odom_segment_move_time_ms);
+	taskEXIT_CRITICAL();
+}
+
+uint8_t Motor_ReadPulseSnapshot(int32_t pulse[4])
+{
+	if(pulse == NULL)
+		return 0;
+
+	motor_check.flag_finish = 0;
+	for(uint8_t i = 1; i <= 4; i++)
+	{
+		motor_read_coordination(i);
+		Delay_ms(3);
+	}
+
+	if(motor_check.flag_finish != 0x0F)
+		return 0;
+
+	for(uint8_t i = 0; i < 4; i++)
+		pulse[i] = motor_actual_pulse[i];
+	return 1;
+}
+
+void UART3_RxRestart(void)
+{
+    HAL_UART_AbortReceive(&huart3);
+    __HAL_UART_DISABLE_IT(&huart3, UART_IT_RXNE);
+    __HAL_UART_CLEAR_FLAG(&huart3, UART_CLEAR_OREF | UART_CLEAR_NEF |
+                                  UART_CLEAR_PEF  | UART_CLEAR_FEF);
+    __HAL_UART_SEND_REQ(&huart3, UART_RXDATA_FLUSH_REQUEST);
+
+    huart3.ErrorCode = HAL_UART_ERROR_NONE;
+    huart3.RxState = HAL_UART_STATE_READY;
+    huart3.ReceptionType = HAL_UART_RECEPTION_STANDARD;
+
+    if (HAL_UARTEx_ReceiveToIdle_DMA(&huart3, RXdat, RXdat_maxsize) == HAL_OK) {
+        u3_debug_rx_restart_count++;
+        __HAL_DMA_DISABLE_IT(huart3.hdmarx, DMA_IT_HT);
+    }
+    else {
+        u3_debug_rx_restart_fail++;
+    }
 }
 
 void MOTOR_Init(void)// 电机初始化
 {
+	memset((void *)&car, 0, sizeof(car));
+	memset((void *)&motor_check, 0, sizeof(motor_check));
+	memset(odom_last_rpm, 0, sizeof(odom_last_rpm));
+	memset(odom_segment_wheel, 0, sizeof(odom_segment_wheel));
+	memset(odom_total_wheel, 0, sizeof(odom_total_wheel));
+	memset((void *)motor_actual_pulse, 0, sizeof(motor_actual_pulse));
+	odom_last_tick = HAL_GetTick();
+	odom_segment_move_time_ms = 0;
+	odom_total_move_time_ms = 0;
+	odom_started = 1;
 	car_setspeed.x_setpeed = 0.0f;
 	car_setspeed.y_setpeed = 0.0f;
 	car_setspeed.w_setpeed = 0.0f;
@@ -58,8 +217,7 @@ void MOTOR_Init(void)// 电机初始化
 	motor3.actual_angle = 0;
 	motor4.target_angle = 0;
 	motor4.actual_angle = 0;
-	__HAL_UART_ENABLE_IT(&huart3, UART_IT_RXNE);// 使能串口3接收中断
-	HAL_UARTEx_ReceiveToIdle_DMA(&huart3,RXdat,RXdat_maxsize);// 启动DMA传输
+	UART3_RxRestart();
 }
 
 /**********************************************************************************************************
@@ -115,20 +273,20 @@ void Motor_Send_Speed_together(float LB,float LF,float RF,float RB)
 						temp[i][3] = (tempspeed >>8) & 0xFF;
 						temp[i][4] = (tempspeed & 0x00FF);
 				}
-				temp[i][5] = 0xC8;
+				temp[i][5] = 0x00;
 				temp[i][6] = 0x01;
 				temp[i][7] = 0x6B;
     }
 }
 
-void Send_motor_together(void)// 多机同步触发
+HAL_StatusTypeDef Send_motor_together(void)// 多机同步触发
 {
 	static uint8_t data[4];
 	data[0]=0x00;
 	data[1]=0xFF;
 	data[2]=0x66;
 	data[3]=0x6B;
-	uart3WriteBuf((uint8_t*)data,4);
+	return uart3WriteBuf((uint8_t*)data,4);
 }
 
 //向电机发送命令：读取电机实时位置
@@ -202,7 +360,7 @@ void Motor_Send_Postion_together(int LB, int LF, int RF, int RB, char mode)
 }
 
 // 多电机命令，一条命令设置四个电机速度
-void send_speed_data_all(void)
+HAL_StatusTypeDef send_speed_data_all(void)
 {
 	static uint8_t all_send[37];
 	all_send[0] = 0x00;
@@ -214,7 +372,7 @@ void send_speed_data_all(void)
 	memcpy(&all_send[20],RF_send, 8);
 	memcpy(&all_send[28],RB_send, 8);
 	all_send[36] = 0x6B;
-	uart3WriteBuf(all_send, 37);
+	return uart3WriteBuf(all_send, 37);
 }
 
 void send_speed_data_switch(void)
@@ -273,10 +431,30 @@ void Motor_setposition(float vy,float vx,float vw,char mode)
 //多机同步
 void Motor_setspeed(float vy, float vx, float vw)
 {
+	int16_t next_rpm[4];
+	HAL_StatusTypeDef status;
+
     Motor_Action_Calculate_target(vy, vx, vw);
-	Motor_Send_Speed_together(motor1.target_angle, motor2.target_angle, motor3.target_angle, motor4.target_angle);
-	send_speed_data_all();
-	Send_motor_together();
+	next_rpm[0] = (int16_t)motor1.target_angle;
+	next_rpm[1] = (int16_t)motor2.target_angle;
+	next_rpm[2] = (int16_t)motor3.target_angle;
+	next_rpm[3] = (int16_t)motor4.target_angle;
+	Motor_Send_Speed_together(next_rpm[0], next_rpm[1], next_rpm[2], next_rpm[3]);
+	status = send_speed_data_all();
+	if(status == HAL_OK)
+		status = Send_motor_together();
+
+	if(status == HAL_OK)
+	{
+		Chassis_OdomSettle(HAL_GetTick());
+		for(uint8_t i = 0; i < 4; i++)
+			odom_last_rpm[i] = next_rpm[i];
+	}
+	else
+	{
+		Chassis_OdomSettle(HAL_GetTick());
+		chassis_odom_tx_fail_count++;
+	}
 }
 
 void motor_setspeed_chassis(float vy, float vx, float vw) // 普通通道设定电机速度
@@ -395,7 +573,6 @@ void Motor_Rxdata_SetSero(void)
 
 static uint8_t rxbuff1[128];
 static uint8_t rxbuff2[128];
-extern volatile struct  CHECK_FLAG_t  motor_check;
 volatile uint32_t motor3_rx_probe = 0;
 
 static void U3_process_single_frame(uint8_t* data, uint8_t len)
@@ -418,46 +595,27 @@ static void U3_process_single_frame(uint8_t* data, uint8_t len)
 
 	if (len == 8)
 	{
-		switch (data[0])
+		uint8_t index = data[0] - 1;
+		uint32_t raw = ((uint32_t)data[3] << 24) |
+					   ((uint32_t)data[4] << 16) |
+					   ((uint32_t)data[5] << 8) | data[6];
+		int32_t position;
+		float angle;
+
+		if(index >= 4)
+			return;
+		position = data[2] == 0x01 ? -(int32_t)raw : (int32_t)raw;
+		angle = (float)position * 360.0f / 65536.0f;
+		motor_actual_pulse[index] = position;
+		motor_check.flag_finish |= (uint8_t)(1U << index);
+
+		switch(index)
 		{
-		case 0x01:
-			motor1.actual_angle = (data[3] << 8*3) | (data[4] << 8*2) | (data[5] << 8) | data[6];
-			motor1.actual_angle = (motor1.actual_angle * 360) / 65536;
-			if (data[2] == 0x01)
-			{
-				motor1.actual_angle = -motor1.actual_angle;
-			}
-			motor_check.flag_finish = motor_check.flag_finish | (1 << 0);
-			break;
-		case 0x02:
-			motor2.actual_angle = (data[3] << 8*3) | (data[4] << 8*2) | (data[5] << 8) | data[6];
-			motor2.actual_angle = (motor2.actual_angle * 360) / 65536;
-			if (data[2] == 0x01)
-			{
-				motor2.actual_angle = -motor2.actual_angle;
-			}
-			motor_check.flag_finish = motor_check.flag_finish | (1 << 1);
-			break;
-		case 0x03:
-			motor3.actual_angle = (data[3] << 8*3) | (data[4] << 8*2) | (data[5] << 8) | data[6];
-			motor3.actual_angle = (motor3.actual_angle * 360) / 65536;
-			if (data[2] == 0x01)
-			{
-				motor3.actual_angle = -motor3.actual_angle;
-			}
-			motor_check.flag_finish = motor_check.flag_finish | (1 << 2);
-			break;
-		case 0x04:
-			motor4.actual_angle = (data[3] << 8*3) | (data[4] << 8*2) | (data[5] << 8) | data[6];
-			motor4.actual_angle = (motor4.actual_angle * 360) / 65536;
-			if (data[2] == 0x01)
-			{
-				motor4.actual_angle = -motor4.actual_angle;
-			}
-			motor_check.flag_finish = motor_check.flag_finish | (1 << 3);
-			break;
-		default:
-			break;
+			case 0: motor1.actual_angle = angle; break;
+			case 1: motor2.actual_angle = angle; break;
+			case 2: motor3.actual_angle = angle; break;
+			case 3: motor4.actual_angle = angle; break;
+			default: break;
 		}
 	}
 	else if (len == 4)
@@ -540,10 +698,35 @@ void MOTOR_FINISHFLAGEXAM(uint8_t *RXdat) // 接收完成标志检查
     }
 }
 
+void UART3_RxEventHandler(uint16_t size)
+{
+	uint16_t rx_len = size;
+	if(rx_len > RXdat_maxsize)
+	{
+		rx_len = RXdat_maxsize;
+	}
+
+	u3_debug_size = size;
+	u3_debug_rx_count++;
+	for(uint8_t i = 0; i < sizeof(u3_debug_buf); i++)
+	{
+		u3_debug_buf[i] = (i < rx_len) ? RXdat[i] : 0;
+	}
+
+	U3_data_processing(RXdat, (uint8_t)rx_len);
+	UART3_RxRestart();
+}
+
+void UART3_ErrorHandler(void)
+{
+	u3_debug_error_count++;
+	u3_debug_last_error = huart3.ErrorCode;
+	UART3_RxRestart();
+}
+
 void MY_UART3_IRQHandler(void)
 {
-	MOTOR_FINISHFLAGEXAM(RXdat);
-	HAL_UARTEx_ReceiveToIdle_DMA(&huart3, RXdat, RXdat_maxsize);
+	UART3_RxEventHandler(RXdat_maxsize - __HAL_DMA_GET_COUNTER(huart3.hdmarx));
 }
 
 

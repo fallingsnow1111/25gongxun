@@ -79,12 +79,5 @@ mdk\catch.o: ..\APP\action_control.h
 mdk\catch.o: ..\APP\warehouse_app.h
 mdk\catch.o: ../task/main_task.h
 mdk\catch.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\catch.o: ../task/start_task.h
-mdk\catch.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\catch.o: ../task/main_task.h
-mdk\catch.o: ../task/chassis_control_task.h
-mdk\catch.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\catch.o: ../task/action_sets.h
-mdk\catch.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\catch.o: ../task/catch_yuanpanji_task.h
 mdk\catch.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h

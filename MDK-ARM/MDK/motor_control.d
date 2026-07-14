@@ -74,5 +74,4 @@ mdk\motor_control.o: ../MOTOR/delay.h
 mdk\motor_control.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\motor_control.o: ../MOTOR/telescopic_boom.h
 mdk\motor_control.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\math.h
-mdk\motor_control.o: ../task/chassis_control_task.h
-mdk\motor_control.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
+mdk\motor_control.o: ../task/hmi_task.h

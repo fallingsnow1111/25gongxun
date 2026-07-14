@@ -77,10 +77,6 @@ mdk\freertos.o: ../task/start_task.h
 mdk\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\freertos.o: ../task/main_task.h
 mdk\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\freertos.o: ../task/start_task.h
-mdk\freertos.o: ../APP/action_control.h
-mdk\freertos.o: ../task/chassis_control_task.h
-mdk\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\freertos.o: ../task/action_sets.h
 mdk\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\freertos.o: ../task/catch_yuanpanji_task.h

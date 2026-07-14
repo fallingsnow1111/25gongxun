@@ -76,10 +76,6 @@ mdk\start_task.o: ../MOTOR/telescopic_boom.h
 mdk\start_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\start_task.o: ..\task\main_task.h
 mdk\start_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\start_task.o: ..\task\start_task.h
-mdk\start_task.o: ../APP/action_control.h
-mdk\start_task.o: ..\task\chassis_control_task.h
-mdk\start_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\start_task.o: ..\task\action_sets.h
 mdk\start_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\start_task.o: ..\task\catch_yuanpanji_task.h

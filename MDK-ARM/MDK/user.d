@@ -75,13 +75,5 @@ mdk\user.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\user.o: ../MOTOR/telescopic_boom.h
 mdk\user.o: ../task/main_task.h
 mdk\user.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\user.o: ../task/start_task.h
-mdk\user.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\user.o: ../task/main_task.h
-mdk\user.o: ../task/chassis_control_task.h
-mdk\user.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\user.o: ../task/action_sets.h
 mdk\user.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\user.o: ../task/catch_yuanpanji_task.h
-mdk\user.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\user.o: ../APP/action_control.h

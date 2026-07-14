@@ -1,4 +1,4 @@
-﻿#include "catch.h"
+#include "catch.h"
 #include "QR_code.h"
 #include "tim.h"
 #include "postion_control.h"
@@ -22,34 +22,24 @@
 struct User_parameter_t car_lift; 
 
 ///夹爪控制
-void claw_move(int action)//圆盘   下压到最低不用这个
-{   
+void claw_move_1(int action)
+{
     switch(action)
     {
         case 1:
-            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_4,120);//OPEN
+            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,80);
             break;
         case 2:
-            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_4,198);//初赛145，决赛157
+            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,130);
             break;
          default:
             break;
     }
 }
 
-void claw_move_1(int action_1)//放置   应对下压碰到物料
+void claw_move(int action)
 {
-    switch(action_1)
-    {
-        case 1:
-            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_4,170);//OPEN//120
-            break;
-        case 2:
-            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_4,198);//初赛145，决赛157
-            break;
-         default:
-            break;
-    }
+	claw_move_1(action);
 }
 
 void claw_move_2(int action_2)//应对爪子转圈碰到物料的问题//用这个张开
@@ -57,10 +47,10 @@ void claw_move_2(int action_2)//应对爪子转圈碰到物料的问题//用这�
     switch(action_2)
     {
         case 1:
-            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,100);//OPEN//120
+            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,85);//OPEN//120
             break;
         case 2:
-            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,120);//初赛145，决赛157
+            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,130);//初赛145，决赛157
             break;
          default:
             break;
@@ -75,35 +65,19 @@ void Put_on_house(int color)
 	uint8_t warehouse_index=Get_Warehouse_index_from_color(color);
 	int angle=Get_Warehouse_Angle(warehouse_index);
 	M8010_SetAngle(angle);
-	// switch (color)
-	// {
-	// 	case red:
-	// 	{
-	// 		M8010_SetAngle(RED_WAREHOUSE);
-	// 	}break;
-	// 	case green:
-	// 	{
-	// 		M8010_SetAngle(GREEN_WAREHOUSE);
-	// 	}break;
-	// 	case blue:
-	// 	{
-	// 		M8010_SetAngle(BLUE_WAREHOUSE);
-	// 	}break;
-	// }
 	//放置物料
-	Z_SetHeight(65);
+	Z_SetHeight(PUT_HOUSE_HEIGHT);
 	claw_move_2(open);
 	Delay_ms(75);
-	Z_SetHeight(10);
-	
+	Z_SetHeight(0);
 }
 
 ///圆盘机抓取
 void catch_yuan_pan_ji(int color)
-{	
+{
 	Z_SetHeight(10);//先拉高
 	claw_move(open);//张开爪子
-    Z_SetHeight(95);//下降到圆盘机的物料的高度,todo:下降为零（暂定为0）
+    Z_SetHeight(YUAN_PAN_HEIGHT);//下降到圆盘机物料高度
 	claw_move_2(close);
 	Delay_ms(170);//等待夹爪闭合
 	//while(car.action_set.finish_flag!=finish);
@@ -357,7 +331,7 @@ void catch_half_stage(int color)
 		Z_SetHeight(80);
 		claw_move_2(open);
 		Delay_ms(100);
-		Z_SetHeight(40);
+		Z_SetHeight(0);
 		//M8010_SetAngle(PUT_AND_CATCH_ANGLE);
 }
 
@@ -403,19 +377,17 @@ void Put_Layer(int layer,int color, int mode)//layer(1 or 2)，color(red,green,b
 				Z_H=HIGH_Z_HEIGHT;
 			}break;
 		}
+		Z_SetHeight(0);
 		Y_SetLength(Y_LENGHT_WAREHOUSE);//Unique length
 		// claw_move_2(open);
 		M8010_SetAngle(car_lift.lift_angle);//There are 3 angles here, corresponding to the red, green and blue warehouses
 		claw_move_2(open);
 		Delay_ms(80);
-		Z_SetHeight(80);//decline to the height of the warehouse
+		Z_SetHeight(PUT_HOUSE_HEIGHT);//decline to the height of the warehouse
 		claw_move_2(close);
 		Delay_ms(80);
 		Z_SetHeight(0);
-		if(layer==2)
-		{
-			Y_SetLength(2);
-		}
+		Y_SetLength(60);
 		M8010_SetAngle(car_lift.change_angle);
 		Y_SetLength(car_lift.length);
 		if (mode==P_round)
@@ -429,7 +401,7 @@ void Put_Layer(int layer,int color, int mode)//layer(1 or 2)，color(red,green,b
 		}
 		claw_move_2(open);
 		Delay_ms(80);
-		Z_SetHeight(40);
+		Z_SetHeight(0);
 		
 }
 
@@ -504,7 +476,7 @@ void put_yuan_pan_ji(int color)
 	} while (1);
 	M8010_SetAngle(175);
 	Delay_ms(100);
-	claw_move_1(open);
+	claw_move_2(open);
 	Delay_ms(80);
 	Z_SetHeight(40);
 }

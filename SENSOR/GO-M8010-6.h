@@ -6,8 +6,8 @@
 #include "ris_protocol.h"
 #pragma pack(1)
 
-#define PUT_HOUSE_ANGLE  -7
-#define PUT_AND_CATCH_ANGLE -180
+#define PUT_HOUSE_ANGLE       -7   /* 旧流程放入物料仓时使用的关节角。 */
+#define PUT_AND_CATCH_ANGLE -180   /* 圆盘机夹取、色环识别和放置使用的安全关节角。 */
 
 #ifndef _LIMIT_MIN
 #define _LIMIT_MIN(x, min) ((x) < (min) ? (min) : (x))

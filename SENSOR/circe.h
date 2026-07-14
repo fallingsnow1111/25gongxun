@@ -36,6 +36,7 @@ extern volatile VISION_TARGET_T vision_material[4];
 extern volatile VISION_TARGET_T vision_ring[4];
 extern volatile uint8_t vision_last_mode;
 extern volatile uint8_t vision_last_count;
+extern volatile uint32_t vision_frame_count;
 
 void U6_Init(void);
 void circle_color_data_deal(void);

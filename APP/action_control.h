@@ -9,5 +9,6 @@ void Yuanpanji_PrepareDetectPose(void);
 void Circle_PrepareDetectPose(void);
 void Circle_PrepareMaterialCatchPose(void);
 uint8_t Circle_PlaceFromWarehouse(uint8_t warehouse_index);
+uint8_t Circle_PlaceFromWarehouseAtHeight(uint8_t warehouse_index, uint16_t place_height);
 
 #endif

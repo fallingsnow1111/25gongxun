@@ -3,6 +3,11 @@
 
 #include "main.h"
 
+typedef enum {
+	RING_WORK_LAYER_FIRST = 1,
+	RING_WORK_LAYER_SECOND = 2
+} RING_WORK_LAYER_T;
+
 void QR_Code_Test(void);
 void Vision_Parse_Test(void);
 void Chassis_Odom_Calibration_Test(void);
@@ -17,6 +22,10 @@ void Route_Path2_QRToTurntable(void);
 void Flow_TurntableCatch(void);
 void Route_Path3_TurntableToProcessing(void);
 void Flow_ProcessingArea(void);
+void Route_Path4_ProcessingToNext(void);
+void Flow_StorageArea(RING_WORK_LAYER_T work_layer);
+void Route_Path5_StorageToTurntable(void);
+void Route_Path6_StorageToHome(void);
 void Flow_RunCurrent(void);
 extern volatile uint8_t ypj_debug_stage;
 extern volatile uint8_t ypj_debug_color;

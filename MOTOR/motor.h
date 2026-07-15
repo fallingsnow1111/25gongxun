@@ -94,6 +94,7 @@ void Chassis_OdomResetSegment(void);
 void Chassis_OdomGetSegment(CHASSIS_ODOM_T *odom);
 void Chassis_OdomGetTotal(CHASSIS_ODOM_T *odom);
 void Chassis_OdomGetSegmentSnapshot(CHASSIS_ODOM_T *odom);
+void Chassis_WorldPoseReset(float x_mm, float y_mm, float yaw_deg);
 uint8_t Motor_ReadPulseSnapshot(int32_t pulse[4]);
 void Motor_Rxdata_SetSero(void);
 void UART3_RxRestart(void);

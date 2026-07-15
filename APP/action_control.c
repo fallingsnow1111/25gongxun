@@ -39,8 +39,8 @@ void Circle_PrepareMaterialCatchPose(void)
 	Z_SetHeight(CIRCLE_MATERIAL_DETECT_HEIGHT);
 }
 
-// Take one material from the selected warehouse and place it at the ring station.
-uint8_t Circle_PlaceFromWarehouse(uint8_t warehouse_index)
+// Take one material from the selected warehouse and place it at the selected layer height.
+uint8_t Circle_PlaceFromWarehouseAtHeight(uint8_t warehouse_index, uint16_t place_height)
 {
 	if(warehouse_index > 2)
 		return 0;
@@ -61,12 +61,17 @@ uint8_t Circle_PlaceFromWarehouse(uint8_t warehouse_index)
 	}
 	M8010_SetAngle(CIRCLE_PLACE_ANGLE);
 	Y_SetLength(CIRCLE_PLACE_LENGTH);
-	Z_SetHeight(CIRCLE_PLACE_HEIGHT);
+	Z_SetHeight(place_height);
 	claw_move_2(open);
 	vTaskDelay(pdMS_TO_TICKS(100));
 	Z_SetHeight(CIRCLE_SAFE_HEIGHT);
 
 	return 1;
+}
+
+uint8_t Circle_PlaceFromWarehouse(uint8_t warehouse_index)
+{
+	return Circle_PlaceFromWarehouseAtHeight(warehouse_index, CIRCLE_PLACE_HEIGHT);
 }
 
 //准备定位圆盘机的动作组（决赛）；

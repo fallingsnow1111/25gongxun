@@ -18,8 +18,6 @@
 
 /* 底盘速度档位：修改速度后，所有对应距离都需要重新标定。 */
 #define TEST_CHASSIS_SPEED_FINE   5.0f   /* 视觉闭环微调速度。 */
-#define TEST_CHASSIS_SPEED_LOW   80.0f   /* 相邻色环之间固定移动的低速。 */
-#define TEST_CHASSIS_SPEED_MID  140.0f   /* 当前开环跑图使用的中速。 */
 
 /* 软件脉冲里程计标定：1 tick 等于 5ms，增大保持周期会走得更远。 */
 #define ODOM_TEST_SPEED          140.0f  /* 本次标定使用的前进速度。 */
@@ -33,12 +31,11 @@
 #define RING_LOCATE_STABLE_COUNT   3     /* 连续满足误差要求多少帧才算定位完成。 */
 #define RING_ROUTE_HEADING      -180.0f  /* 色环定位时底盘保持的航向角。 */
 
-/* 色环切换参数：1 tick 等于 5ms，增大保持周期会走得更远。 */
-#define RING_SWITCH_RAMP_TICKS    30     /* 每次切换的加速和减速周期数。 */
-#define RING_SWITCH_10CM_TICKS    37     /* 相邻两个色环之间的标定保持周期。 */
-#define RING_SWITCH_20CM_TICKS    81     /* 跨越两个色环间距的标定保持周期。 */
+/* 色环切换参数。 */
+#define RING_SWITCH_SPEED         50.0f  /* 色环之间固定移动的速度。 */
+#define RING_SWITCH_DISTANCE_CM   15.0f  /* 相邻两个色环的中心距离，单位 cm。 */
 #define RING_SWITCH_TURN_TIMEOUT 4000U   /* 移动前航向精调的最大时间，单位 ms。 */
-#define RING_SWITCH_YAW_ERROR      0.2f  /* 允许开始固定平移的航向误差，单位度。 */
+#define RING_SWITCH_YAW_ERROR      0.1f  /* 色环定位与切换允许的航向误差，单位度。 */
 
 static int Test_AbsInt(int value)
 {
@@ -224,13 +221,27 @@ static uint8_t Ring_LocateOne(uint8_t cls, char *name, float target_angle)
 	HMI_SetVisionText(name);
 	HMI_LogInfo("loc %s", name);
 	Test_FineTuneHeading(target_angle);
+	Chassis_WorldBeginSegment();
 
 	while(1)
 	{
 		int err_x;
 		int err_y;
+		float yaw_error;
 		float vx = 0.0f;
 		float vy = 0.0f;
+
+		yaw_error = fabsf(getAngleZ(normalize_angle(imu.yaw), target_angle));
+		if(yaw_error > RING_SWITCH_YAW_ERROR)
+		{
+			Motor_setspeed(0, 0, 0);
+			Chassis_WorldCommitSegment(target_angle);
+			HMI_SetChassisText("ALIGN");
+			Chassis_FineTuneAngle(target_angle, RING_SWITCH_TURN_TIMEOUT);
+			Chassis_WorldBeginSegment();
+			stable_count = 0;
+			continue;
+		}
 
 		if(Vision_GetRingTarget(cls, &target) == 0)
 		{
@@ -263,6 +274,7 @@ static uint8_t Ring_LocateOne(uint8_t cls, char *name, float target_angle)
 			{
 				Motor_setspeed(0, 0, 0);
 				vTaskDelay(pdMS_TO_TICKS(100));
+				Chassis_WorldCommitSegment(target_angle);
 				HMI_LogInfo("%s ok %03d,%03d", name, target.x, target.y);
 				return 1;
 			}
@@ -297,10 +309,10 @@ static uint8_t Ring_LocateOne(uint8_t cls, char *name, float target_angle)
 
 }
 
-static void Ring_SwitchY(float vy, float target_angle, uint16_t hold_ticks)
+static void Ring_SwitchY(float vy, float target_angle, float distance_cm)
 {
 	HMI_SetChassisText("SWITCH");
-	Chassis_MoveOnce(0, vy, target_angle, hold_ticks, RING_SWITCH_RAMP_TICKS);
+	Chassis_MoveByDistanceSmoothYaw(0, vy, target_angle, distance_cm);
 	HMI_SetChassisText("STOP");
 	vTaskDelay(pdMS_TO_TICKS(200));
 }
@@ -343,7 +355,7 @@ static uint8_t Ring_SwitchToTarget(uint8_t current_color, uint8_t target_color,
 	int8_t current_position = Ring_Position(current_color);
 	int8_t target_position = Ring_Position(target_color);
 	int8_t distance;
-	uint16_t hold_ticks;
+	float move_distance_cm;
 
 	if(current_position < 0 || target_position < 0)
 		return 0;
@@ -352,18 +364,18 @@ static uint8_t Ring_SwitchToTarget(uint8_t current_color, uint8_t target_color,
 	if(distance == 0)
 		return 1;
 
-	hold_ticks = Test_AbsInt(distance) == 1 ?
-				 RING_SWITCH_10CM_TICKS : RING_SWITCH_20CM_TICKS;
+	move_distance_cm = (float)Test_AbsInt(distance) * RING_SWITCH_DISTANCE_CM;
 	HMI_SetVisionText(Test_ColorName(target_color));
 	HMI_LogInfo("switch %s", Test_ColorName(target_color));
 	Ring_CorrectHeading(target_angle);
-	Ring_SwitchY(distance > 0 ? TEST_CHASSIS_SPEED_LOW : -TEST_CHASSIS_SPEED_LOW,
+	Ring_SwitchY(distance > 0 ? RING_SWITCH_SPEED : -RING_SWITCH_SPEED,
 				 target_angle,
-				 hold_ticks);
+				 move_distance_cm);
 	return 1;
 }
 
-static uint8_t Ring_PlaceFromWarehouseIndex(uint8_t warehouse_index, char *name)
+static uint8_t Ring_PlaceFromWarehouseIndex(uint8_t warehouse_index, char *name,
+											 uint16_t place_height)
 {
 	if(warehouse_index > 2)
 	{
@@ -375,18 +387,19 @@ static uint8_t Ring_PlaceFromWarehouseIndex(uint8_t warehouse_index, char *name)
 	HMI_LogInfo("take %s wh%d", name, warehouse_index + 1);
 
 	HMI_SetArmText("PUT RING");
-	if(Circle_PlaceFromWarehouse(warehouse_index) == 0)
+	if(Circle_PlaceFromWarehouseAtHeight(warehouse_index, place_height) == 0)
 		return 0;
 
 	HMI_LogInfo("put %s ok", name);
 	return 1;
 }
 
-static uint8_t Ring_PlaceFromWarehouse(uint8_t color)
+static uint8_t Ring_PlaceFromWarehouse(uint8_t color, uint16_t place_height)
 {
 	uint8_t warehouse_index = Get_Warehouse_index_from_color(color);
 
-	return Ring_PlaceFromWarehouseIndex(warehouse_index, Test_ColorName(color));
+	return Ring_PlaceFromWarehouseIndex(warehouse_index, Test_ColorName(color),
+										 place_height);
 }
 
 void Ring_Warehouse_Clearance_Test(void)
@@ -408,7 +421,8 @@ void Ring_Warehouse_Clearance_Test(void)
 		             warehouse_index == 1 ? "WH2" : "WH3";
 
 		HMI_SetArmText(name);
-		if(Ring_PlaceFromWarehouseIndex(warehouse_index, name) == 0)
+		if(Ring_PlaceFromWarehouseIndex(warehouse_index, name,
+										 CIRCLE_PLACE_HEIGHT) == 0)
 			break;
 
 		if(warehouse_index < 2)
@@ -463,13 +477,13 @@ void Ring_Location_Test(void)
 	while(1)
 	{
 		Ring_LocateOne(GREEN, "GREEN", 0);
-		Ring_SwitchY(TEST_CHASSIS_SPEED_LOW, 0, RING_SWITCH_10CM_TICKS);
+		Ring_SwitchY(RING_SWITCH_SPEED, 0, RING_SWITCH_DISTANCE_CM);
 
 		Ring_LocateOne(BLUE, "BLUE", 0);
-		Ring_SwitchY(-TEST_CHASSIS_SPEED_LOW, 0, RING_SWITCH_20CM_TICKS);
+		Ring_SwitchY(-RING_SWITCH_SPEED, 0, RING_SWITCH_DISTANCE_CM * 2.0f);
 
 		Ring_LocateOne(RED, "RED", 0);
-		Ring_SwitchY(TEST_CHASSIS_SPEED_LOW, 0, RING_SWITCH_10CM_TICKS);
+		Ring_SwitchY(RING_SWITCH_SPEED, 0, RING_SWITCH_DISTANCE_CM);
 
 		Motor_setspeed(0, 0, 0);
 		HMI_SetVisionText("WAIT");
@@ -485,26 +499,50 @@ void Ring_Location_Test(void)
 #define YPJ_LOCATE_DEADZONE         8     /* 物料中心允许的像素误差。 */
 #define YPJ_LOCATE_STABLE_COUNT     3     /* 连续满足误差要求多少帧才算定位完成。 */
 
-/* 二维码搜索和路径 3：1 tick 等于 5ms，增大保持周期会走得更远。 */
+/* 二维码小范围搜索：1 tick 等于 5ms。 */
 #define YPJ_QR_SCAN_2CM_TICKS     120     /* 每次二维码小范围搜索移动的保持周期。 */
-#define YPJ_BACK_20CM_TICKS        50     /* 圆盘机作业完成后第一段倒车的保持周期。 */
-#define YPJ_BACK_20CM_RAMP_TICKS   10     /* 第一段倒车的加速和减速周期。 */
-#define YPJ_BACK_LONG_TICKS       330     /* 圆盘机到粗加工区长距离倒车的保持周期。 */
-#define YPJ_BACK_LONG_RAMP_TICKS   30     /* 长距离倒车的加速和减速周期。 */
-#define YPJ_FIRST_TURN_ANGLE      -90.0f  /* 第一处顺时针转向的目标航向角。 */
-#define YPJ_FINAL_TURN_ANGLE     -180.0f  /* 到达粗加工区后的目标航向角。 */
 #define YPJ_TURN_TIMEOUT_MS      4000U    /* 每次常规转向的最大时间，单位 ms。 */
-#define YPJ_TURN_SETTLE_MS        200U    /* 最后一次角度校正前的稳定等待时间。 */
 
-/* 路径 1：启停区到二维码位置。1 tick 等于 5ms。 */
-#define PATH1_LEFT_HOLD_TICKS      20     /* 起步左移的匀速保持周期。 */
-#define PATH1_LEFT_RAMP_TICKS      10     /* 起步左移的加速和减速周期。 */
-#define PATH1_FORWARD_HOLD_TICKS  143     /* 前进到二维码位置的匀速保持周期。 */
-#define PATH1_FORWARD_RAMP_TICKS   30     /* 前进到二维码位置的加速和减速周期。 */
+/* 路径 1：启停区到二维码区域。 */
+#define PATH1_LEFT_SPEED          80.0f   /* 第一段左移速度。 */
+#define PATH1_LEFT_DISTANCE_CM    18.0f   /* 第一段左移距离，单位 cm。 */
+#define PATH1_FORWARD_SPEED      160.0f   /* 前进到二维码区域的速度。 */
+#define PATH1_FORWARD_DISTANCE_CM 63.0f   /* 前进到二维码区域的距离，单位 cm。 */
 
-/* 路径 2：二维码位置到圆盘机。1 tick 等于 5ms。 */
-#define PATH2_FORWARD_HOLD_TICKS  133     /* 前进到圆盘机的匀速保持周期。 */
-#define PATH2_FORWARD_RAMP_TICKS   30     /* 前进到圆盘机的加速和减速周期。 */
+/* 路径 2：二维码区域到圆盘机。 */
+#define PATH2_FORWARD_SPEED      160.0f   /* 扫码完成后的前进速度。 */
+#define PATH2_FORWARD_DISTANCE_CM 80.0f   /* 二维码区域到圆盘机的距离，单位 cm。 */
+
+/* 路径 3：圆盘机到粗加工区。 */
+#define PATH3_BACK_SPEED          80.0f   /* 圆盘机夹取完成后的倒车速度。 */
+#define PATH3_BACK_DISTANCE_CM    40.0f   /* 第一段倒车距离，单位 cm。 */
+#define PATH3_FIRST_ANGLE        -90.0f   /* 第一次顺时针转90°后的目标航向。 */
+#define PATH3_LONG_BACK_SPEED    200.0f   /* 到粗加工区的长距离倒车速度。 */
+#define PATH3_LONG_BACK_CM       180.0f   /* 到粗加工区的长距离倒车距离，单位 cm。 */
+#define PATH3_FINAL_ANGLE       -180.0f   /* 进入粗加工区后的目标航向。 */
+
+/* 路径 4：粗加工区物料全部回收后的路线。 */
+#define PATH4_BACK_SPEED         160.0f   /* 离开粗加工区的倒车速度。 */
+#define PATH4_BACK_DISTANCE_CM   90.0f   /* 离开粗加工区的倒车距离，单位 cm。 */
+#define PATH4_TURN_ANGLE        -270.0f   /* 从-180°继续顺时针90°后的连续世界航向。 */
+#define PATH4_FORWARD_SPEED      -160.0f   /* 最后一段前进速度。 */
+#define PATH4_FORWARD_DISTANCE_CM 95.0f  /* 最后一段前进距离，单位 cm。 */
+
+/* 路径 5：暂存区物料全部回收后返回圆盘机。 */
+#define PATH5_BACK_SPEED          160.0f  /* 离开暂存区的倒车速度。 */
+#define PATH5_BACK_DISTANCE_CM     90.0f  /* 离开暂存区的倒车距离，单位 cm。 */
+#define PATH5_TURN_ANGLE         -360.0f  /* 从-270°继续顺时针90°后的连续世界航向。 */
+#define PATH5_FINAL_BACK_SPEED    160.0f  /* 转向后驶向圆盘机的倒车速度。 */
+#define PATH5_FINAL_BACK_CM        55.0f  /* 转向后驶向圆盘机的倒车距离，单位 cm。 */
+
+/* 路径 6：第二轮暂存区完成后返回启停区。 */
+#define PATH6_BACK_SPEED          160.0f  /* 离开第二轮暂存区的倒车速度。 */
+#define PATH6_BACK_DISTANCE_CM     90.0f  /* 从绿环离开第二轮暂存区的基准倒车距离，单位 cm。 */
+#define PATH6_TURN_ANGLE         -360.0f  /* 返航前顺时针转向后的目标航向。 */
+#define PATH6_LONG_BACK_SPEED     160.0f  /* 朝启停区长距离倒车的速度。 */
+#define PATH6_LONG_BACK_CM        190.0f  /* 朝启停区长距离倒车的距离，单位 cm。 */
+#define PATH6_RIGHT_SPEED          80.0f  /* 最后右移对准启停区的速度。 */
+#define PATH6_RIGHT_DISTANCE_CM    15.0f  /* 最后右移对准启停区的距离，单位 cm。 */
 
 volatile uint8_t ypj_debug_stage = 0;
 volatile uint8_t ypj_debug_color = 0;
@@ -614,6 +652,7 @@ static void App_Test_WaitQR_OpenLoop(void)
 	second_code = 0;
 	HMI_SetVisionText("WAIT QR");
 	HMI_LogInfo("wait qr");
+	Chassis_WorldBeginSegment();
 
 	while(1)
 	{
@@ -638,12 +677,14 @@ static void App_Test_WaitQR_OpenLoop(void)
 	}
 
 	Motor_setspeed(0, 0, 0);
+	Chassis_WorldCommitSegment(0.0f);
 	Test_ShowQRNow();
 	HMI_SetVisionText("QR OK");
 	HMI_LogInfo("qr %03d+%03d", first_code, second_code);
 }
 
-static void Yuanpanji_LocateOpenLoop(uint8_t cls, char *name, float target_angle)
+static void Yuanpanji_LocateOpenLoop(uint8_t cls, char *name, float target_angle,
+									 uint8_t adjust_heading)
 {
 	VISION_TARGET_T target;
 	uint32_t last_frame_count = vision_frame_count;
@@ -652,7 +693,9 @@ static void Yuanpanji_LocateOpenLoop(uint8_t cls, char *name, float target_angle
 	HMI_SetVisionText(name);
 	HMI_LogInfo("wait %s", name);
 	ypj_debug_stage = 11;
-	Test_FineTuneHeading(target_angle);
+	if(adjust_heading)
+		Test_FineTuneHeading(target_angle);
+	Chassis_WorldBeginSegment();
 
 	while(1)
 	{
@@ -711,6 +754,7 @@ static void Yuanpanji_LocateOpenLoop(uint8_t cls, char *name, float target_angle
 				ypj_debug_stage = 20;
 				Motor_setspeed(0, 0, 0);
 				vTaskDelay(pdMS_TO_TICKS(100));
+				Chassis_WorldCommitSegment(target_angle);
 				HMI_LogInfo("%s located", name);
 				return;
 			}
@@ -743,6 +787,41 @@ static uint8_t flow_ring_place_count;
 static uint8_t flow_ring_recover_count;
 static uint8_t flow_current_ring;
 
+/* 绿环为路径基准；最后停在红环少走15cm，停在蓝环多走15cm。 */
+static float Ring_CompensatedDistance(float green_base_cm)
+{
+	int8_t current_position = Ring_Position(flow_current_ring);
+	int8_t green_position = Ring_Position(GREEN);
+
+	if(current_position < 0 || green_position < 0)
+		return green_base_cm;
+
+	return green_base_cm + (float)(current_position - green_position) *
+						   RING_SWITCH_DISTANCE_CM;
+}
+
+static void Flow_LoadRound(uint8_t round)
+{
+	Init_Warehouse(round);
+	if(round == 2)
+	{
+		flow_color_data[0] = (uint8_t)two.firse;
+		flow_color_data[1] = (uint8_t)two.second;
+		flow_color_data[2] = (uint8_t)two.thrid;
+	}
+	else
+	{
+		flow_color_data[0] = (uint8_t)one.firse;
+		flow_color_data[1] = (uint8_t)one.second;
+		flow_color_data[2] = (uint8_t)one.thrid;
+	}
+
+	HMI_LogInfo("R%d %s %s %s", round,
+				 Test_ColorName(flow_color_data[0]),
+				 Test_ColorName(flow_color_data[1]),
+				 Test_ColorName(flow_color_data[2]));
+}
+
 void Route_Path1_StartToQR(void)
 {
 	HMI_LogInfo("path1 start");
@@ -750,29 +829,25 @@ void Route_Path1_StartToQR(void)
 	vTaskDelay(pdMS_TO_TICKS(100));
 	Imu_setZero();
 	vTaskDelay(pdMS_TO_TICKS(200));
-	Chassis_MoveOnce(TEST_CHASSIS_SPEED_MID, 0, 0,
-					 PATH1_LEFT_HOLD_TICKS, PATH1_LEFT_RAMP_TICKS);
-	Chassis_MoveOnce(0, TEST_CHASSIS_SPEED_MID, 0,
-					 PATH1_FORWARD_HOLD_TICKS, PATH1_FORWARD_RAMP_TICKS);
+	Chassis_WorldPoseReset(0.0f, 0.0f, 0.0f);
+	Chassis_MoveByDistance(PATH1_LEFT_SPEED, 0, 0,
+					   PATH1_LEFT_DISTANCE_CM);
+	Chassis_MoveByDistance(0, PATH1_FORWARD_SPEED, 0,
+					   PATH1_FORWARD_DISTANCE_CM);
 	Motor_setspeed(0, 0, 0);
 }
 
 void Flow_QRRecognize(void)
 {
 	App_Test_WaitQR_OpenLoop();
-	Init_Warehouse(1);
-	flow_color_data[0] = (uint8_t)one.firse;
-	flow_color_data[1] = (uint8_t)one.second;
-	flow_color_data[2] = (uint8_t)one.thrid;
-	HMI_LogInfo("seq %s %s %s", Test_ColorName(flow_color_data[0]),
-				Test_ColorName(flow_color_data[1]), Test_ColorName(flow_color_data[2]));
+	Flow_LoadRound(1);
 }
 
 void Route_Path2_QRToTurntable(void)
 {
 	HMI_LogInfo("path2 start");
-	Chassis_MoveOnce(0, TEST_CHASSIS_SPEED_MID, 0,
-					 PATH2_FORWARD_HOLD_TICKS, PATH2_FORWARD_RAMP_TICKS);
+	Chassis_MoveByDistance(0, PATH2_FORWARD_SPEED, 0,
+					   PATH2_FORWARD_DISTANCE_CM);
 	Motor_setspeed(0, 0, 0);
 }
 
@@ -796,7 +871,7 @@ void Flow_TurntableCatch(void)
 			break;
 		}
 
-		Yuanpanji_LocateOpenLoop(color, Test_ColorName(color), 0.0f);
+		Yuanpanji_LocateOpenLoop(color, Test_ColorName(color), 0.0f, 0);
 		Motor_setspeed(0, 0, 0);
 		ypj_debug_stage = 31;
 		CatchLocatedMaterialToWarehouse(color, YUAN_PAN_HEIGHT);
@@ -827,50 +902,84 @@ void Route_Path3_TurntableToProcessing(void)
 	HMI_LogInfo("path3 start");
 	Y_SetLength(0);
 	M8010_SetAngle(0);
-	Chassis_MoveOnce(0, -TEST_CHASSIS_SPEED_MID, 0,
-					 YPJ_BACK_20CM_TICKS, YPJ_BACK_20CM_RAMP_TICKS);
-	Chassis_TurnToAngle(YPJ_FIRST_TURN_ANGLE, YPJ_TURN_TIMEOUT_MS);
-	Chassis_MoveOnce(0, -TEST_CHASSIS_SPEED_MID, -90.0f,
-					 YPJ_BACK_LONG_TICKS, YPJ_BACK_LONG_RAMP_TICKS);
-	Chassis_TurnToAngle(YPJ_FINAL_TURN_ANGLE, YPJ_TURN_TIMEOUT_MS);
-	vTaskDelay(pdMS_TO_TICKS(YPJ_TURN_SETTLE_MS));
-	Chassis_TurnToAngle(YPJ_FINAL_TURN_ANGLE, YPJ_TURN_TIMEOUT_MS);
+	Chassis_MoveByDistance(0, -PATH3_BACK_SPEED, 0,
+					   PATH3_BACK_DISTANCE_CM);
+	Chassis_TurnToAngle(PATH3_FIRST_ANGLE, YPJ_TURN_TIMEOUT_MS);
+	Chassis_MoveByDistance(0, -PATH3_LONG_BACK_SPEED, PATH3_FIRST_ANGLE,
+					   PATH3_LONG_BACK_CM);
+	Chassis_TurnToAngle(PATH3_FINAL_ANGLE, YPJ_TURN_TIMEOUT_MS);
 	Test_ShowYawFixed();
 }
 
-void Flow_ProcessingArea(void)
+static void Flow_RingArea(float target_heading, RING_WORK_LAYER_T work_layer,
+						  uint8_t recover_after_place)
 {
+	uint16_t work_height = work_layer == RING_WORK_LAYER_SECOND ?
+						   CIRCLE_SECOND_LAYER_HEIGHT : CIRCLE_PLACE_HEIGHT;
+	uint8_t locate_existing_material =
+		(work_layer == RING_WORK_LAYER_SECOND && recover_after_place == 0);
+	uint8_t initial_located;
+
 	if(flow_catch_count < 3)
 	{
 		HMI_LogError("caught %d", flow_catch_count);
 		return;
 	}
 
-	USART6_readdata_SeetZero();
-	Set_Circle_Center(RING_CENTER_X, RING_CENTER_Y);
-	Vision_LED_On();
-	Vision_StartRing();
-	vTaskDelay(pdMS_TO_TICKS(300));
-	Circle_PrepareDetectPose();
+	flow_ring_place_count = 0;
+	flow_ring_recover_count = 0;
+	flow_current_ring = GREEN;
 
-	if(Ring_LocateOne(GREEN, "GREEN", RING_ROUTE_HEADING) != 0)
+	USART6_readdata_SeetZero();
+	Vision_LED_On();
+	if(locate_existing_material)
+	{
+		Set_Circle_Center(YPJ_CENTER_X, YPJ_CENTER_Y);
+		Vision_StartMaterial();
+		vTaskDelay(pdMS_TO_TICKS(300));
+		Circle_PrepareMaterialCatchPose();
+		Yuanpanji_LocateOpenLoop(GREEN, "GREEN", target_heading, 1);
+		initial_located = 1;
+	}
+	else
+	{
+		Set_Circle_Center(RING_CENTER_X, RING_CENTER_Y);
+		Vision_StartRing();
+		vTaskDelay(pdMS_TO_TICKS(300));
+		Circle_PrepareDetectPose();
+		initial_located = Ring_LocateOne(GREEN, "GREEN", target_heading);
+	}
+
+	if(initial_located != 0)
 	{
 		for(uint8_t i = 0; i < 3; i++)
 		{
 			uint8_t color = flow_color_data[i];
 			if(color != flow_current_ring)
 			{
-				if(Ring_SwitchToTarget(flow_current_ring, color, RING_ROUTE_HEADING) == 0)
+				if(Ring_SwitchToTarget(flow_current_ring, color, target_heading) == 0)
 					break;
-				if(Ring_LocateOne(color, Test_ColorName(color), RING_ROUTE_HEADING) == 0)
+				if(locate_existing_material)
+				{
+					Circle_PrepareMaterialCatchPose();
+					Yuanpanji_LocateOpenLoop(color, Test_ColorName(color), target_heading, 1);
+				}
+				else if(Ring_LocateOne(color, Test_ColorName(color), target_heading) == 0)
+				{
 					break;
+				}
 				flow_current_ring = color;
 			}
-			if(Ring_PlaceFromWarehouse(color) == 0)
+			if(Ring_PlaceFromWarehouse(color, work_height) == 0)
 				break;
 			flow_ring_place_count++;
 			if(i < 2)
-				Circle_PrepareDetectPose();
+			{
+				if(locate_existing_material)
+					Circle_PrepareMaterialCatchPose();
+				else
+					Circle_PrepareDetectPose();
+			}
 		}
 	}
 
@@ -883,6 +992,18 @@ void Flow_ProcessingArea(void)
 	}
 
 	HMI_LogInfo("all placed");
+	if(recover_after_place == 0)
+	{
+		Vision_Stop();
+		Vision_LED_Off();
+		Motor_setspeed(0, 0, 0);
+		Z_SetHeight(CIRCLE_SAFE_HEIGHT);
+		Y_SetLength(0);
+		M8010_SetAngle(0);
+		HMI_LogInfo("area done");
+		return;
+	}
+
 	USART6_readdata_SeetZero();
 	Set_Circle_Center(YPJ_CENTER_X, YPJ_CENTER_Y);
 	Vision_StartMaterial();
@@ -893,15 +1014,15 @@ void Flow_ProcessingArea(void)
 		uint8_t color = flow_color_data[i];
 		if(color != flow_current_ring)
 		{
-			if(Ring_SwitchToTarget(flow_current_ring, color, RING_ROUTE_HEADING) == 0)
+			if(Ring_SwitchToTarget(flow_current_ring, color, target_heading) == 0)
 				break;
 			flow_current_ring = color;
 		}
 
 		Circle_PrepareMaterialCatchPose();
-		Yuanpanji_LocateOpenLoop(color, Test_ColorName(color), RING_ROUTE_HEADING);
+		Yuanpanji_LocateOpenLoop(color, Test_ColorName(color), target_heading, 1);
 		Motor_setspeed(0, 0, 0);
-		CatchLocatedMaterialToWarehouse(color, CIRCLE_PLACE_HEIGHT);
+		CatchLocatedMaterialToWarehouse(color, work_height);
 		flow_ring_recover_count++;
 		HMI_LogInfo("recover %s ok", Test_ColorName(color));
 	}
@@ -919,6 +1040,79 @@ void Flow_ProcessingArea(void)
 		HMI_LogError("recovered %d", flow_ring_recover_count);
 }
 
+void Flow_ProcessingArea(void)
+{
+	HMI_LogInfo("processing area");
+	Flow_RingArea(RING_ROUTE_HEADING, RING_WORK_LAYER_FIRST, 1);
+}
+
+void Flow_StorageArea(RING_WORK_LAYER_T work_layer)
+{
+	HMI_LogInfo("storage area");
+	Flow_RingArea(PATH4_TURN_ANGLE, work_layer, 0);
+}
+
+void Route_Path4_ProcessingToNext(void)
+{
+	float compensated_back_cm;
+
+	if(flow_ring_recover_count < 3)
+		return;
+
+	compensated_back_cm = Ring_CompensatedDistance(PATH4_BACK_DISTANCE_CM);
+
+	HMI_LogInfo("path4 start");
+	HMI_LogInfo("back %.0fcm", compensated_back_cm);
+	Chassis_MoveByDistance(0, -PATH4_BACK_SPEED, PATH3_FINAL_ANGLE,
+					   compensated_back_cm);
+	Chassis_TurnToAngle(PATH4_TURN_ANGLE, YPJ_TURN_TIMEOUT_MS);
+	Chassis_MoveByDistance(0, PATH4_FORWARD_SPEED, PATH4_TURN_ANGLE,
+					   PATH4_FORWARD_DISTANCE_CM);
+	Motor_setspeed(0, 0, 0);
+	HMI_LogInfo("path4 done");
+}
+
+void Route_Path5_StorageToTurntable(void)
+{
+	float compensated_back_cm;
+
+	if(flow_ring_place_count < 3)
+		return;
+
+	compensated_back_cm = Ring_CompensatedDistance(PATH5_BACK_DISTANCE_CM);
+	HMI_LogInfo("path5 start");
+	HMI_LogInfo("back %.0fcm", compensated_back_cm);
+	Chassis_MoveByDistance(0, -PATH5_BACK_SPEED, PATH4_TURN_ANGLE,
+					   compensated_back_cm);
+	Chassis_TurnToAngle(PATH5_TURN_ANGLE, YPJ_TURN_TIMEOUT_MS);
+	Chassis_MoveByDistance(0, -PATH5_FINAL_BACK_SPEED, PATH5_TURN_ANGLE,
+					   PATH5_FINAL_BACK_CM);
+	Motor_setspeed(0, 0, 0);
+	HMI_LogInfo("round2 ready");
+}
+
+void Route_Path6_StorageToHome(void)
+{
+	float compensated_back_cm;
+
+	if(flow_ring_place_count < 3)
+		return;
+
+	compensated_back_cm = Ring_CompensatedDistance(PATH6_BACK_DISTANCE_CM);
+	HMI_LogInfo("path6 home");
+	HMI_LogInfo("back %.0fcm", compensated_back_cm);
+	Chassis_MoveByDistance(0, -PATH6_BACK_SPEED, PATH4_TURN_ANGLE,
+					   compensated_back_cm);
+	Chassis_TurnToAngle(PATH6_TURN_ANGLE, YPJ_TURN_TIMEOUT_MS);
+	Chassis_MoveByDistance(0, -PATH6_LONG_BACK_SPEED, PATH6_TURN_ANGLE,
+					   PATH6_LONG_BACK_CM);
+	Chassis_MoveByDistance(-PATH6_RIGHT_SPEED, 0, PATH6_TURN_ANGLE,
+					   PATH6_RIGHT_DISTANCE_CM);
+	Motor_setspeed(0, 0, 0);
+	HMI_SetChassisText("HOME");
+	HMI_LogInfo("flow done");
+}
+
 void Flow_RunCurrent(void)
 {
 	flow_catch_count = 0;
@@ -931,6 +1125,26 @@ void Flow_RunCurrent(void)
 	Flow_TurntableCatch();
 	Route_Path3_TurntableToProcessing();
 	Flow_ProcessingArea();
+	if(flow_ring_recover_count < 3)
+		return;
+	Route_Path4_ProcessingToNext();
+	Flow_StorageArea(RING_WORK_LAYER_FIRST);
+	if(flow_ring_place_count < 3)
+		return;
+	Route_Path5_StorageToTurntable();
+
+	flow_catch_count = 0;
+	Flow_LoadRound(2);
+	Flow_TurntableCatch();
+	Route_Path3_TurntableToProcessing();
+	Flow_ProcessingArea();
+	if(flow_ring_recover_count < 3)
+		return;
+	Route_Path4_ProcessingToNext();
+	Flow_StorageArea(RING_WORK_LAYER_SECOND);
+	if(flow_ring_place_count < 3)
+		return;
+	Route_Path6_StorageToHome();
 }
 
 void Yuanpanji_OpenLoop_Catch_Test(void)

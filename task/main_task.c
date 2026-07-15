@@ -16,8 +16,7 @@ static void Main_Task(void *pvParameters)
 {
     (void)pvParameters;
 
-	Chassis_Turn_Error_Test();
-    // Yuanpanji_OpenLoop_Catch_Test();
+	Yuanpanji_OpenLoop_Catch_Test();
 
     while(1)
         vTaskDelay(pdMS_TO_TICKS(200));

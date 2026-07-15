@@ -33,6 +33,10 @@ void Chassis_MoveByPulse(float vx, float vy, float target_angle,
 						 int64_t target_pulse, uint16_t ramp_ticks);
 void Chassis_MoveByDistance(float vx, float vy, float target_angle,
 						   float distance_cm);
+void Chassis_MoveByDistanceSmoothYaw(float vx, float vy, float target_angle,
+									float distance_cm);
+void Chassis_WorldBeginSegment(void);
+void Chassis_WorldCommitSegment(float segment_yaw);
 void Chassis_TurnToAngle(float target_angle, uint32_t timeout_ms);
 uint8_t Chassis_FineTuneAngle(float target_angle, uint32_t timeout_ms);
 void Chassis_MoveTurnOnce(float vx, float vy, float start_angle, float end_angle,

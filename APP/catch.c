@@ -22,12 +22,12 @@
 struct User_parameter_t car_lift; 
 
 ///夹爪控制
-void claw_move_1(int action)
+void claw_move_1(int action)	//防止圆盘机取料下压到物料
 {
     switch(action)
     {
         case 1:
-            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,80);
+            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,50);
             break;
         case 2:
             __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,130);
@@ -42,7 +42,7 @@ void claw_move(int action)
 	claw_move_1(action);
 }
 
-void claw_move_2(int action_2)//应对爪子转圈碰到物料的问题//用这个张开
+void claw_move_2(int action_2)	//防止仓库取料下压到物料
 {
     switch(action_2)
     {

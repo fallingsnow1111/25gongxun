@@ -26,6 +26,7 @@
 #define CIRCLE_ROTATE_LENGTH        110  /* 夹住物料后、机械臂旋转前的避障伸出长度。 */
 #define CIRCLE_PLACE_LENGTH           5  /* 色环区放置和回收物料时的 Y 轴伸出长度。 */
 #define CIRCLE_PLACE_HEIGHT         125  /* 色环区放置和回收物料时的 Z 轴工作高度。 */
+#define CIRCLE_SECOND_LAYER_HEIGHT   50  /* 暂存区第二轮的二层放置高度，当前为试验值。 */
 #define CIRCLE_MATERIAL_DETECT_HEIGHT 20 /* 色环区识别物料时的 Z 轴高度。 */
 #define CIRCLE_DETECT_ANGLE      PUT_AND_CATCH_ANGLE /* 色环识别使用的安全关节角。 */
 #define CIRCLE_PLACE_ANGLE       PUT_AND_CATCH_ANGLE /* 色环放置使用的安全关节角。 */

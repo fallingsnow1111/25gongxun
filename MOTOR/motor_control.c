@@ -25,10 +25,19 @@ volatile uint32_t chassis_period_max_ms = 0;
 #define CHASSIS_TURN_THRESHOLD      0.1f /* 常规转向的到位误差，单位度。 */
 #define CHASSIS_TURN_SETTLE_COUNT    10U /* 常规转向连续约50ms满足误差才算到位。 */
 #define CHASSIS_TURN_MIN_SPEED      2.0f /* 原地转向克服电机死区的最小速度。 */
+#define CHASSIS_TURN_FINE_RANGE     1.5f /* 常规转向进入该误差后切换为低速精调。 */
+#define CHASSIS_TURN_FINE_SPEED     1.0f /* 常规转向末端精调的固定旋转速度。 */
 #define CHASSIS_TURN_ACCEL_DELTA    2.0f /* 原地转向每5ms最多增加2RPM。 */
 #define CHASSIS_TURN_DECEL_DELTA    4.0f /* 原地转向每5ms最多减少4RPM。 */
-#define CHASSIS_FINE_TURN_THRESHOLD 0.2f /* 航向精调的到位误差，单位度。 */
-#define CHASSIS_FINE_TURN_SPEED     1.0f /* 航向精调专用的固定旋转速度。 */
+#define CHASSIS_FINE_TURN_THRESHOLD 0.1f /* 航向精调的到位误差，单位度。 */
+#define CHASSIS_FINE_TURN_SPEED     1.0f /* 色环区航向精调的固定旋转速度。 */
+#define CHASSIS_MOVE_YAW_THRESHOLD  0.1f /* 低速平移时允许的航向误差，单位度。 */
+#define CHASSIS_MOVE_YAW_MAX_SPEED  2.0f /* 低速平移时最大航向修正速度。 */
+#define CHASSIS_MOVE_YAW_DELTA      0.5f /* 低速平移每5ms最大航向速度变化。 */
+
+#define CHASSIS_HEADING_NONE        0U
+#define CHASSIS_HEADING_NORMAL      1U
+#define CHASSIS_HEADING_SMOOTH      2U
 
 #define OPEN_LOOP_PERIOD_MS 5 /* 开环速度更新周期，修改后所有路径周期参数都要重新标定。 */
 #define MOTOR_PULSE_READ_SETTLE_MS 20U /* 停车后等待驱动器完成响应，再读取实际位置。 */
@@ -68,6 +77,36 @@ static void Chassis_LogSegmentOdom(void)
 	Chassis_OdomGetSegment(&odom);
 	HMI_LogInfo("P X%ld Y%ld %lums", (long)odom.x, (long)odom.y,
 				(unsigned long)odom.move_time_ms);
+}
+
+/* 段内只累计软件脉冲，段结束后统一换算为毫米世界坐标。 */
+void Chassis_WorldBeginSegment(void)
+{
+	Chassis_OdomResetSegment();
+}
+
+void Chassis_WorldCommitSegment(float segment_yaw)
+{
+	CHASSIS_ODOM_T odom;
+	float body_x_mm;
+	float body_y_mm;
+	float yaw_rad;
+	float world_dx_mm;
+	float world_dy_mm;
+
+	Chassis_OdomGetSegment(&odom);
+	body_x_mm = (float)odom.x * 10.0f / CHASSIS_LATERAL_PULSE_PER_CM;
+	body_y_mm = (float)odom.y * 10.0f / CHASSIS_LONGITUDINAL_PULSE_PER_CM;
+	yaw_rad = segment_yaw * PI_F / 180.0f;
+	world_dx_mm = body_x_mm * cosf(yaw_rad) + body_y_mm * sinf(yaw_rad);
+	world_dy_mm = -body_x_mm * sinf(yaw_rad) + body_y_mm * cosf(yaw_rad);
+
+	taskENTER_CRITICAL();
+	car.actual_x += world_dx_mm;
+	car.actual_y += world_dy_mm;
+	taskEXIT_CRITICAL();
+
+	Chassis_OdomResetSegment();
 }
 
 static uint8_t Chassis_BeginSegment(int32_t actual_start[4])
@@ -167,9 +206,64 @@ void Chassis_OpenLoop_SetTranslation(float vx_world, float vy_world,
  *备注: 实际加减速时间 = ramp_ticks * OPEN_LOOP_PERIOD_MS
  *备注: 采用正弦曲线插值, 减小起步和停车时的打滑
  */
+static void Chassis_OpenLoop_SetSmoothHeading(float vx_world, float vy_world,
+										  float target_angle,
+										  float *last_vw)
+{
+	float yaw = normalize_angle(imu.yaw);
+	float yaw_err = target_angle - yaw;
+	float angle_error;
+	float rad;
+	float vx_body;
+	float vy_body;
+	float desired_vw;
+	float speed_delta;
+
+	while(yaw_err > 180.0f) yaw_err -= 360.0f;
+	while(yaw_err < -180.0f) yaw_err += 360.0f;
+	rad = yaw_err * PI_F / 180.0f;
+	vx_body = vx_world * cosf(rad) + vy_world * sinf(rad);
+	vy_body = -vx_world * sinf(rad) + vy_world * cosf(rad);
+
+	angle_error = getAngleZ(yaw, target_angle);
+	if(fabsf(angle_error) <= CHASSIS_MOVE_YAW_THRESHOLD)
+	{
+		desired_vw = 0.0f;
+	}
+	else
+	{
+		desired_vw = Direction_Calibration_turn(target_angle);
+		desired_vw = desired_vw >= 0.0f ?
+					 CHASSIS_MOVE_YAW_MAX_SPEED :
+					-CHASSIS_MOVE_YAW_MAX_SPEED;
+	}
+
+	speed_delta = desired_vw - *last_vw;
+	if(speed_delta > CHASSIS_MOVE_YAW_DELTA)
+		speed_delta = CHASSIS_MOVE_YAW_DELTA;
+	else if(speed_delta < -CHASSIS_MOVE_YAW_DELTA)
+		speed_delta = -CHASSIS_MOVE_YAW_DELTA;
+	*last_vw += speed_delta;
+
+	Motor_setspeed(-vy_body, vx_body, *last_vw);
+}
+
+static void Chassis_ApplyMoveSpeed(float vx, float vy, float target_angle,
+								  uint8_t heading_control,
+								  float *last_vw)
+{
+	if(heading_control == CHASSIS_HEADING_NORMAL)
+		Chassis_OpenLoop_SetSpeed(vx, vy, target_angle);
+	else if(heading_control == CHASSIS_HEADING_SMOOTH)
+		Chassis_OpenLoop_SetSmoothHeading(vx, vy, target_angle, last_vw);
+	else
+		Chassis_OpenLoop_SetTranslation(vx, vy, target_angle);
+}
+
 static void Chassis_SINAccel(float vx1, float vy1, float vx2, float vy2,
 							 float target_angle, uint16_t ramp_ticks,
-							 TickType_t *last_wake, TickType_t *last_cycle)
+							 TickType_t *last_wake, TickType_t *last_cycle,
+							 uint8_t heading_control, float *last_vw)
 {
 	if(ramp_ticks == 0) return;
 
@@ -179,7 +273,8 @@ static void Chassis_SINAccel(float vx1, float vy1, float vx2, float vy2,
 		float vx = vx1 + (vx2 - vx1) * k;
 		float vy = vy1 + (vy2 - vy1) * k;
 
-		Chassis_OpenLoop_SetSpeed(vx, vy, target_angle);
+		Chassis_ApplyMoveSpeed(vx, vy, target_angle,
+						   heading_control, last_vw);
 		Chassis_WaitPeriod(last_wake, last_cycle);
 	}
 }
@@ -202,27 +297,32 @@ void Chassis_MoveOnce(float vx, float vy,float target_angle, uint16_t hold_ticks
 	TickType_t last_cycle;
 	int32_t actual_start[4];
 	uint8_t actual_start_valid;
+	float last_vw = 0.0f;
 
 	actual_start_valid = Chassis_BeginSegment(actual_start);
-	Chassis_OdomResetSegment();
+	Chassis_WorldBeginSegment();
 	last_wake = xTaskGetTickCount();
 	last_cycle = last_wake;
 	Chassis_SINAccel(0, 0, vx, vy, target_angle, ramp_ticks,
-					 &last_wake, &last_cycle);
+					 &last_wake, &last_cycle,
+					 CHASSIS_HEADING_NORMAL, &last_vw);
 
 	for(uint16_t i = 0; i < hold_ticks; i++)
 	{
-		Chassis_OpenLoop_SetSpeed(vx, vy, target_angle);
+		Chassis_ApplyMoveSpeed(vx, vy, target_angle,
+						   CHASSIS_HEADING_NORMAL, &last_vw);
 		Chassis_WaitPeriod(&last_wake, &last_cycle);
 	}
 
 	Chassis_SINAccel(vx, vy, 0, 0, target_angle, ramp_ticks,
-					 &last_wake, &last_cycle);
+					 &last_wake, &last_cycle,
+					 CHASSIS_HEADING_NORMAL, &last_vw);
 
 	Motor_setspeed(0,0,0);
 	vTaskDelay(pdMS_TO_TICKS(MOTOR_PULSE_READ_SETTLE_MS));
 	Chassis_EndSegment(actual_start, actual_start_valid);
 	Chassis_LogSegmentOdom();
+	Chassis_WorldCommitSegment(target_angle);
 	vTaskDelay(pdMS_TO_TICKS(50));
 }
 
@@ -252,8 +352,9 @@ static int64_t Chassis_EstimateDecelPulse(float vx, float vy,
 	return pulse;
 }
 
-void Chassis_MoveByPulse(float vx, float vy, float target_angle,
-						 int64_t target_pulse, uint16_t ramp_ticks)
+static void Chassis_MoveByPulseInternal(float vx, float vy, float target_angle,
+									   int64_t target_pulse, uint16_t ramp_ticks,
+									   uint8_t heading_control)
 {
 	TickType_t last_wake;
 	TickType_t last_cycle;
@@ -261,6 +362,7 @@ void Chassis_MoveByPulse(float vx, float vy, float target_angle,
 	CHASSIS_ODOM_T odom;
 	int32_t actual_start[4];
 	uint8_t actual_start_valid;
+	float last_vw = 0.0f;
 
 	if(target_pulse <= 0 || (vx == 0.0f && vy == 0.0f))
 	{
@@ -269,12 +371,12 @@ void Chassis_MoveByPulse(float vx, float vy, float target_angle,
 	}
 
 	actual_start_valid = Chassis_BeginSegment(actual_start);
-	Chassis_OdomResetSegment();
+	Chassis_WorldBeginSegment();
 	last_wake = xTaskGetTickCount();
 	last_cycle = last_wake;
 	decel_pulse = Chassis_EstimateDecelPulse(vx, vy, ramp_ticks);
 	Chassis_SINAccel(0, 0, vx, vy, target_angle, ramp_ticks,
-					 &last_wake, &last_cycle);
+					 &last_wake, &last_cycle, heading_control, &last_vw);
 
 	while(1)
 	{
@@ -282,17 +384,26 @@ void Chassis_MoveByPulse(float vx, float vy, float target_angle,
 		if(Chassis_GetMovePulse(&odom, vx, vy) + decel_pulse >= target_pulse)
 			break;
 
-		Chassis_OpenLoop_SetSpeed(vx, vy, target_angle);
+		Chassis_ApplyMoveSpeed(vx, vy, target_angle,
+						   heading_control, &last_vw);
 		Chassis_WaitPeriod(&last_wake, &last_cycle);
 	}
 
 	Chassis_SINAccel(vx, vy, 0, 0, target_angle, ramp_ticks,
-					 &last_wake, &last_cycle);
+					 &last_wake, &last_cycle, heading_control, &last_vw);
 	Motor_setspeed(0, 0, 0);
 	vTaskDelay(pdMS_TO_TICKS(MOTOR_PULSE_READ_SETTLE_MS));
 	Chassis_EndSegment(actual_start, actual_start_valid);
 	Chassis_LogSegmentOdom();
+	Chassis_WorldCommitSegment(target_angle);
 	vTaskDelay(pdMS_TO_TICKS(50));
+}
+
+void Chassis_MoveByPulse(float vx, float vy, float target_angle,
+						 int64_t target_pulse, uint16_t ramp_ticks)
+{
+	Chassis_MoveByPulseInternal(vx, vy, target_angle, target_pulse,
+								ramp_ticks, CHASSIS_HEADING_NORMAL);
 }
 
 /*
@@ -339,6 +450,32 @@ void Chassis_MoveByDistance(float vx, float vy, float target_angle,
 	Chassis_MoveByPulse(vx, vy, target_angle, target_pulse, ramp_ticks);
 }
 
+void Chassis_MoveByDistanceSmoothYaw(float vx, float vy, float target_angle,
+									float distance_cm)
+{
+	float pulse_per_cm;
+	int64_t target_pulse;
+	uint16_t ramp_ticks;
+
+	if(distance_cm <= 0.0f || (vx == 0.0f && vy == 0.0f) ||
+	   (vx != 0.0f && vy != 0.0f))
+	{
+		Motor_setspeed(0, 0, 0);
+		return;
+	}
+
+	pulse_per_cm = vx != 0.0f ?
+				   CHASSIS_LATERAL_PULSE_PER_CM :
+				   CHASSIS_LONGITUDINAL_PULSE_PER_CM;
+	ramp_ticks = distance_cm >= CHASSIS_LONG_ROUTE_MIN_CM ?
+				 CHASSIS_LONG_ROUTE_RAMP_TICKS :
+				 CHASSIS_SHORT_ROUTE_RAMP_TICKS;
+	target_pulse = (int64_t)(distance_cm * pulse_per_cm + 0.5f);
+
+	Chassis_MoveByPulseInternal(vx, vy, target_angle, target_pulse,
+								ramp_ticks, CHASSIS_HEADING_SMOOTH);
+}
+
 /*
  *函数简介: 底盘原地转向到指定Yaw角度
  *参数说明: target_angle 目标Yaw角度, 单位: 度
@@ -350,6 +487,7 @@ void Chassis_TurnToAngle(float target_angle, uint32_t timeout_ms)
 {
     uint32_t start_tick = HAL_GetTick();
     uint8_t settle_count = 0;
+	uint8_t fine_mode = 0;
 	float turn_speed = 0.0f;
 	float last_turn_speed = 0.0f;
 	float speed_delta;
@@ -379,6 +517,19 @@ void Chassis_TurnToAngle(float target_angle, uint32_t timeout_ms)
         {
             settle_count = 0;
         }
+
+		if(fabsf(angle_error) <= CHASSIS_TURN_FINE_RANGE)
+			fine_mode = 1;
+
+		if(fine_mode)
+		{
+			turn_speed = angle_error > 0.0f ?
+						 CHASSIS_TURN_FINE_SPEED : -CHASSIS_TURN_FINE_SPEED;
+			last_turn_speed = turn_speed;
+			Motor_setspeed(0, 0, turn_speed);
+			Chassis_WaitPeriod(&last_wake, &last_cycle);
+			continue;
+		}
 
 		turn_speed = Direction_Calibration_turn(target_angle);
 		delta_limit = (turn_speed * last_turn_speed >= 0.0f &&

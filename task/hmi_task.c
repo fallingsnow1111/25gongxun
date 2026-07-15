@@ -108,7 +108,7 @@ static void HMI_FixedRefreshNow(void)
 	pose_y = car.actual_y;
 	pose_yaw = car.actual_w;
 
-	snprintf(text, sizeof(text), "POS A%.1f X%.0f Y%.0f",
+	snprintf(text, sizeof(text), "POS A%.1f X%.0f Y%.0fmm",
 			 pose_yaw, pose_x, pose_y);
 	HMI_SendTextNow("t2", text);
 

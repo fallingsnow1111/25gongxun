@@ -34,6 +34,8 @@ static uint32_t odom_last_tick;
 static uint32_t odom_segment_move_time_ms;
 static uint32_t odom_total_move_time_ms;
 static uint8_t odom_started;
+static float world_last_raw_yaw;
+static uint8_t world_yaw_started;
 volatile uint32_t chassis_odom_tx_fail_count = 0;
 volatile int32_t motor_actual_pulse[4];
 
@@ -72,13 +74,36 @@ static uint8_t Chassis_OdomMoving(void)
 	       odom_last_rpm[2] != 0 || odom_last_rpm[3] != 0;
 }
 
+static void Chassis_WorldYawUpdate(void)
+{
+	float raw_yaw = imu.yaw;
+	float delta_yaw;
+
+	while(raw_yaw > 180.0f) raw_yaw -= 360.0f;
+	while(raw_yaw < -180.0f) raw_yaw += 360.0f;
+
+	if(world_yaw_started == 0)
+	{
+		world_last_raw_yaw = raw_yaw;
+		car.actual_w = raw_yaw;
+		world_yaw_started = 1;
+		return;
+	}
+
+	delta_yaw = raw_yaw - world_last_raw_yaw;
+	while(delta_yaw > 180.0f) delta_yaw -= 360.0f;
+	while(delta_yaw < -180.0f) delta_yaw += 360.0f;
+
+	car.actual_w += delta_yaw;
+	world_last_raw_yaw = raw_yaw;
+}
+
 static void Chassis_OdomSettle(uint32_t now)
 {
 	uint32_t elapsed_ms;
 	int64_t delta_wheel[4];
-	float body_x;
-	float body_y;
-	float yaw_rad;
+
+	Chassis_WorldYawUpdate();
 
 	if(odom_started == 0)
 	{
@@ -99,14 +124,6 @@ static void Chassis_OdomSettle(uint32_t now)
 		odom_segment_wheel[i] += delta;
 		odom_total_wheel[i] += delta;
 	}
-	body_x = (float)(-delta_wheel[0] + delta_wheel[1] +
-					 delta_wheel[2] - delta_wheel[3]) * 0.25f;
-	body_y = (float)-(delta_wheel[0] + delta_wheel[1] -
-					  delta_wheel[2] - delta_wheel[3]) * 0.25f;
-	yaw_rad = imu.yaw * 3.1415926f / 180.0f;
-	car.actual_x += body_x * cosf(yaw_rad) + body_y * sinf(yaw_rad);
-	car.actual_y += -body_x * sinf(yaw_rad) + body_y * cosf(yaw_rad);
-	car.actual_w = imu.yaw;
 	odom_segment_move_time_ms += elapsed_ms;
 	odom_total_move_time_ms += elapsed_ms;
 }
@@ -151,6 +168,24 @@ void Chassis_OdomGetSegmentSnapshot(CHASSIS_ODOM_T *odom)
 	taskENTER_CRITICAL();
 	Chassis_OdomBuild(odom, odom_segment_wheel, odom_segment_move_time_ms);
 	taskEXIT_CRITICAL();
+}
+
+void Chassis_WorldPoseReset(float x_mm, float y_mm, float yaw_deg)
+{
+	float raw_yaw = imu.yaw;
+
+	while(raw_yaw > 180.0f) raw_yaw -= 360.0f;
+	while(raw_yaw < -180.0f) raw_yaw += 360.0f;
+
+	taskENTER_CRITICAL();
+	car.actual_x = x_mm;
+	car.actual_y = y_mm;
+	car.actual_w = yaw_deg;
+	world_last_raw_yaw = raw_yaw;
+	world_yaw_started = 1;
+	taskEXIT_CRITICAL();
+
+	Chassis_OdomResetSegment();
 }
 
 uint8_t Motor_ReadPulseSnapshot(int32_t pulse[4])
@@ -206,6 +241,8 @@ void MOTOR_Init(void)// 电机初始化
 	odom_segment_move_time_ms = 0;
 	odom_total_move_time_ms = 0;
 	odom_started = 1;
+	world_last_raw_yaw = 0.0f;
+	world_yaw_started = 0;
 	car_setspeed.x_setpeed = 0.0f;
 	car_setspeed.y_setpeed = 0.0f;
 	car_setspeed.w_setpeed = 0.0f;

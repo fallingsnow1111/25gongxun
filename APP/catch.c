@@ -30,7 +30,7 @@ void claw_move_1(int action)	//防止圆盘机取料下压到物料
             __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,50);
             break;
         case 2:
-            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,130);
+            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,160);
             break;
          default:
             break;
@@ -50,7 +50,7 @@ void claw_move_2(int action_2)	//防止仓库取料下压到物料
             __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,85);//OPEN//120
             break;
         case 2:
-            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,130);//初赛145，决赛157
+            __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,160);//初赛145，决赛157
             break;
          default:
             break;

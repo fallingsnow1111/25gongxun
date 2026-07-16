@@ -38,7 +38,7 @@ extern volatile uint8_t vision_last_mode;
 extern volatile uint8_t vision_last_count;
 extern volatile uint32_t vision_frame_count;
 
-void U6_Init(void);
+void Vision_Receive_Init(void);
 void circle_color_data_deal(void);
 void U6_send(unsigned char data);
 void uart6WriteBuf(uint8_t *buf, uint8_t len);

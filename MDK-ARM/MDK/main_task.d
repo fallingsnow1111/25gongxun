@@ -66,12 +66,11 @@ mdk\main_task.o: ../SENSOR/QR_code.h
 mdk\main_task.o: ../MOTOR/postion_control.h
 mdk\main_task.o: ../APP/catch.h
 mdk\main_task.o: ../SENSOR/circe.h
-mdk\main_task.o: ../MOTOR/circle_control.h
 mdk\main_task.o: ../SENSOR/GO-M8010-6.h
 mdk\main_task.o: ../SENSOR/ris_protocol.h
-mdk\main_task.o: ../APP/user.h
 mdk\main_task.o: ../MOTOR/delay.h
 mdk\main_task.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\main_task.o: ../MOTOR/telescopic_boom.h
 mdk\main_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\main_task.o: ../APP/test.h
+mdk\main_task.o: ../APP/task_flow.h

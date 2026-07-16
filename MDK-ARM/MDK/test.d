@@ -66,13 +66,12 @@ mdk\test.o: ../SENSOR/QR_code.h
 mdk\test.o: ../MOTOR/postion_control.h
 mdk\test.o: ../APP/catch.h
 mdk\test.o: ../SENSOR/circe.h
-mdk\test.o: ../MOTOR/circle_control.h
 mdk\test.o: ../SENSOR/GO-M8010-6.h
 mdk\test.o: ../SENSOR/ris_protocol.h
-mdk\test.o: ../APP/user.h
 mdk\test.o: ../MOTOR/delay.h
 mdk\test.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\test.o: ../MOTOR/telescopic_boom.h
+mdk\test.o: ..\APP\task_flow.h
 mdk\test.o: ../task/hmi_task.h
 mdk\test.o: ../SENSOR/tjc_usart_hmi.h
 mdk\test.o: ..\APP\warehouse_app.h

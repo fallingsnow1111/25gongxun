@@ -659,24 +659,9 @@
               <FilePath>..\APP\catch.c</FilePath>
             </File>
             <File>
-              <FileName>user.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\APP\user.c</FilePath>
-            </File>
-            <File>
-              <FileName>user.h</FileName>
+              <FileName>catch.h</FileName>
               <FileType>5</FileType>
-              <FilePath>..\APP\user.h</FilePath>
-            </File>
-            <File>
-              <FileName>action_control.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\APP\action_control.c</FilePath>
-            </File>
-            <File>
-              <FileName>action_control.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\APP\action_control.h</FilePath>
+              <FilePath>..\APP\catch.h</FilePath>
             </File>
             <File>
               <FileName>warehouse_app.c</FileName>
@@ -697,6 +682,26 @@
               <FileName>test.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\APP\test.h</FilePath>
+            </File>
+            <File>
+              <FileName>task_flow.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\task_flow.c</FilePath>
+            </File>
+            <File>
+              <FileName>task_flow.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\task_flow.h</FilePath>
+            </File>
+            <File>
+              <FileName>action_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\APP\action_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>action_control.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\action_control.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -727,11 +732,6 @@
               <FileName>postion_control.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\MOTOR\postion_control.c</FilePath>
-            </File>
-            <File>
-              <FileName>circle_control.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\MOTOR\circle_control.c</FilePath>
             </File>
             <File>
               <FileName>delay.c</FileName>
@@ -2538,16 +2538,6 @@
               <FileName>action_sets.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\task\action_sets.h</FilePath>
-            </File>
-            <File>
-              <FileName>catch_yuanpanji_task.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\task\catch_yuanpanji_task.c</FilePath>
-            </File>
-            <File>
-              <FileName>catch_yuanpanji_task.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\task\catch_yuanpanji_task.h</FilePath>
             </File>
             <File>
               <FileName>imu_task.c</FileName>

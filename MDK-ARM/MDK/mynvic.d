@@ -65,10 +65,8 @@ mdk\mynvic.o: ../SENSOR/QR_code.h
 mdk\mynvic.o: ../MOTOR/postion_control.h
 mdk\mynvic.o: ../APP/catch.h
 mdk\mynvic.o: ../SENSOR/circe.h
-mdk\mynvic.o: ../MOTOR/circle_control.h
 mdk\mynvic.o: ../SENSOR/GO-M8010-6.h
 mdk\mynvic.o: ../SENSOR/ris_protocol.h
-mdk\mynvic.o: ../APP/user.h
 mdk\mynvic.o: ../MOTOR/delay.h
 mdk\mynvic.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\mynvic.o: ../MOTOR/telescopic_boom.h

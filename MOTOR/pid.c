@@ -2,7 +2,6 @@
 
 struct PIDstruct Gyro_Pid;
 struct PIDstruct pid_coordination;
-struct PIDstruct Pid_Circle_Positioning;
 
 //求绝对值
 float _ABS(float a, float b) {

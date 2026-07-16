@@ -65,10 +65,8 @@ mdk\stm32f7xx_hal_msp.o: ../SENSOR/QR_code.h
 mdk\stm32f7xx_hal_msp.o: ../MOTOR/postion_control.h
 mdk\stm32f7xx_hal_msp.o: ../APP/catch.h
 mdk\stm32f7xx_hal_msp.o: ../SENSOR/circe.h
-mdk\stm32f7xx_hal_msp.o: ../MOTOR/circle_control.h
 mdk\stm32f7xx_hal_msp.o: ../SENSOR/GO-M8010-6.h
 mdk\stm32f7xx_hal_msp.o: ../SENSOR/ris_protocol.h
-mdk\stm32f7xx_hal_msp.o: ../APP/user.h
 mdk\stm32f7xx_hal_msp.o: ../MOTOR/delay.h
 mdk\stm32f7xx_hal_msp.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\stm32f7xx_hal_msp.o: ../MOTOR/telescopic_boom.h

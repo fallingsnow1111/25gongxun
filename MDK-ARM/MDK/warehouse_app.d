@@ -66,10 +66,8 @@ mdk\warehouse_app.o: ../SENSOR/QR_code.h
 mdk\warehouse_app.o: ../MOTOR/postion_control.h
 mdk\warehouse_app.o: ../APP/catch.h
 mdk\warehouse_app.o: ../SENSOR/circe.h
-mdk\warehouse_app.o: ../MOTOR/circle_control.h
 mdk\warehouse_app.o: ../SENSOR/GO-M8010-6.h
 mdk\warehouse_app.o: ../SENSOR/ris_protocol.h
-mdk\warehouse_app.o: ../APP/user.h
 mdk\warehouse_app.o: ../MOTOR/delay.h
 mdk\warehouse_app.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\warehouse_app.o: ../MOTOR/telescopic_boom.h

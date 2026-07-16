@@ -65,10 +65,8 @@ mdk\tjc_usart_hmi.o: ../SENSOR/QR_code.h
 mdk\tjc_usart_hmi.o: ../MOTOR/postion_control.h
 mdk\tjc_usart_hmi.o: ../APP/catch.h
 mdk\tjc_usart_hmi.o: ../SENSOR/circe.h
-mdk\tjc_usart_hmi.o: ../MOTOR/circle_control.h
 mdk\tjc_usart_hmi.o: ../SENSOR/GO-M8010-6.h
 mdk\tjc_usart_hmi.o: ../SENSOR/ris_protocol.h
-mdk\tjc_usart_hmi.o: ../APP/user.h
 mdk\tjc_usart_hmi.o: ../MOTOR/delay.h
 mdk\tjc_usart_hmi.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\tjc_usart_hmi.o: ../MOTOR/telescopic_boom.h

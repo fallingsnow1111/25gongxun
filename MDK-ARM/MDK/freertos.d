@@ -65,10 +65,8 @@ mdk\freertos.o: ../SENSOR/QR_code.h
 mdk\freertos.o: ../MOTOR/postion_control.h
 mdk\freertos.o: ../APP/catch.h
 mdk\freertos.o: ../SENSOR/circe.h
-mdk\freertos.o: ../MOTOR/circle_control.h
 mdk\freertos.o: ../SENSOR/GO-M8010-6.h
 mdk\freertos.o: ../SENSOR/ris_protocol.h
-mdk\freertos.o: ../APP/user.h
 mdk\freertos.o: ../MOTOR/delay.h
 mdk\freertos.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\freertos.o: ../MOTOR/telescopic_boom.h
@@ -78,6 +76,4 @@ mdk\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\freertos.o: ../task/main_task.h
 mdk\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\freertos.o: ../task/action_sets.h
-mdk\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\freertos.o: ../task/catch_yuanpanji_task.h
 mdk\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h

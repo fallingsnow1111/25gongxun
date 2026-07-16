@@ -27,7 +27,7 @@ MOTOR_SPEED_t car_setspeed;
 volatile CARDATA_T car;
 volatile struct CHECK_FLAG_t motor_check;
 
-static int16_t odom_last_rpm[4];
+static int16_t odom_last_rpm_x10[4];
 static int64_t odom_segment_wheel[4];
 static int64_t odom_total_wheel[4];
 static uint32_t odom_last_tick;
@@ -38,6 +38,7 @@ static float world_last_raw_yaw;
 static uint8_t world_yaw_started;
 volatile uint32_t chassis_odom_tx_fail_count = 0;
 volatile int32_t motor_actual_pulse[4];
+volatile uint8_t motor_speed_scale10_ready = 0;
 
 int motor_mode = speed_mode;
 int postion_bit = finish;
@@ -70,8 +71,8 @@ HAL_StatusTypeDef uart3WriteBuf(uint8_t *buf, uint8_t len)
 
 static uint8_t Chassis_OdomMoving(void)
 {
-	return odom_last_rpm[0] != 0 || odom_last_rpm[1] != 0 ||
-	       odom_last_rpm[2] != 0 || odom_last_rpm[3] != 0;
+	return odom_last_rpm_x10[0] != 0 || odom_last_rpm_x10[1] != 0 ||
+	       odom_last_rpm_x10[2] != 0 || odom_last_rpm_x10[3] != 0;
 }
 
 static void Chassis_WorldYawUpdate(void)
@@ -119,7 +120,7 @@ static void Chassis_OdomSettle(uint32_t now)
 
 	for(uint8_t i = 0; i < 4; i++)
 	{
-		int64_t delta = (int64_t)odom_last_rpm[i] * elapsed_ms;
+		int64_t delta = (int64_t)odom_last_rpm_x10[i] * elapsed_ms;
 		delta_wheel[i] = delta;
 		odom_segment_wheel[i] += delta;
 		odom_total_wheel[i] += delta;
@@ -135,12 +136,12 @@ static void Chassis_OdomBuild(CHASSIS_ODOM_T *odom,
 		return;
 
 	for(uint8_t i = 0; i < 4; i++)
-		odom->wheel[i] = wheel[i];
+		odom->wheel[i] = wheel[i] / 10;
 
 	/* Match the public chassis convention: x left+, y forward+. */
-	odom->x = (-wheel[0] + wheel[1] + wheel[2] - wheel[3]) / 4;
-	odom->y = -(wheel[0] + wheel[1] - wheel[2] - wheel[3]) / 4;
-	odom->w = (wheel[0] + wheel[1] + wheel[2] + wheel[3]) / 4;
+	odom->x = (-wheel[0] + wheel[1] + wheel[2] - wheel[3]) / 40;
+	odom->y = -(wheel[0] + wheel[1] - wheel[2] - wheel[3]) / 40;
+	odom->w = (wheel[0] + wheel[1] + wheel[2] + wheel[3]) / 40;
 	odom->move_time_ms = move_time_ms;
 }
 
@@ -233,7 +234,7 @@ void MOTOR_Init(void)// 电机初始化
 {
 	memset((void *)&car, 0, sizeof(car));
 	memset((void *)&motor_check, 0, sizeof(motor_check));
-	memset(odom_last_rpm, 0, sizeof(odom_last_rpm));
+	memset(odom_last_rpm_x10, 0, sizeof(odom_last_rpm_x10));
 	memset(odom_segment_wheel, 0, sizeof(odom_segment_wheel));
 	memset(odom_total_wheel, 0, sizeof(odom_total_wheel));
 	memset((void *)motor_actual_pulse, 0, sizeof(motor_actual_pulse));
@@ -254,7 +255,28 @@ void MOTOR_Init(void)// 电机初始化
 	motor3.actual_angle = 0;
 	motor4.target_angle = 0;
 	motor4.actual_angle = 0;
+	motor_speed_scale10_ready = Motor_EnableSpeedScale10();
 	UART3_RxRestart();
+}
+
+/* 上电启用并保存0.1RPM通信单位；每台配置后等待5ms。 */
+uint8_t Motor_EnableSpeedScale10(void)
+{
+	static uint8_t command[4][6] = {
+		{0x01, 0x4F, 0x71, 0x01, 0x01, 0x6B},
+		{0x02, 0x4F, 0x71, 0x01, 0x01, 0x6B},
+		{0x03, 0x4F, 0x71, 0x01, 0x01, 0x6B},
+		{0x04, 0x4F, 0x71, 0x01, 0x01, 0x6B}
+	};
+
+	for(uint8_t i = 0; i < 4; i++)
+	{
+		if(uart3WriteBuf(command[i], sizeof(command[i])) != HAL_OK)
+			return 0;
+		Delay_ms(5);
+	}
+
+	return 1;
 }
 
 /**********************************************************************************************************
@@ -263,7 +285,7 @@ void MOTOR_Init(void)// 电机初始化
 * 输入:   LB, LF, RF, RB - 四个电机的目标速度
 * 返回值: 无
 **********************************************************************************************************/
-void Motor_Send_Speed_together(float LB,float LF,float RF,float RB)
+void Motor_Send_Speed_together(int16_t LB,int16_t LF,int16_t RF,int16_t RB)
 {
 	static uint8_t* LB_speedptr = LB_send;
     static uint8_t* LF_speedptr = LF_send;
@@ -271,7 +293,7 @@ void Motor_Send_Speed_together(float LB,float LF,float RF,float RB)
     static uint8_t* RF_speedptr = RF_send;
 ////////////////////////     1          2              3           4///////
     uint8_t* temp[4] = {LB_speedptr, LF_speedptr, RF_speedptr, RB_speedptr};
-    int tempspeed = 0;
+    int16_t tempspeed = 0;
     for (uint8_t i = 0; i < 4; i++)
     {
 			uint8_t var=i;
@@ -291,11 +313,6 @@ void Motor_Send_Speed_together(float LB,float LF,float RF,float RB)
 				}
                 temp[i][0] = var+1;
 				temp[i][1] = 0xF6;
-
-				if(__fabs(tempspeed)>255)
-				{
-					
-				}
 
 				if(tempspeed>0)
 				{
@@ -466,17 +483,36 @@ void Motor_setposition(float vy,float vx,float vw,char mode)
 }
 
 //多机同步
-void Motor_setspeed(float vy, float vx, float vw)
+static int16_t Motor_EncodeRpmX10(float rpm, uint8_t fine)
 {
-	int16_t next_rpm[4];
+	float encoded;
+
+	/* 普通跑图先取整到1RPM；精细控制保留到0.1RPM。 */
+	if(fine)
+		encoded = rpm * 10.0f;
+	else
+		encoded = (float)((int16_t)rpm) * 10.0f;
+
+	if(encoded > 3000.0f)
+		encoded = 3000.0f;
+	else if(encoded < -3000.0f)
+		encoded = -3000.0f;
+
+	return (int16_t)(encoded >= 0.0f ? encoded + 0.5f : encoded - 0.5f);
+}
+
+static void Motor_setspeed_internal(float vy, float vx, float vw, uint8_t fine)
+{
+	int16_t next_rpm_x10[4];
 	HAL_StatusTypeDef status;
 
-    Motor_Action_Calculate_target(vy, vx, vw);
-	next_rpm[0] = (int16_t)motor1.target_angle;
-	next_rpm[1] = (int16_t)motor2.target_angle;
-	next_rpm[2] = (int16_t)motor3.target_angle;
-	next_rpm[3] = (int16_t)motor4.target_angle;
-	Motor_Send_Speed_together(next_rpm[0], next_rpm[1], next_rpm[2], next_rpm[3]);
+	Motor_Action_Calculate_target(vy, vx, vw);
+	next_rpm_x10[0] = Motor_EncodeRpmX10(motor1.target_angle, fine);
+	next_rpm_x10[1] = Motor_EncodeRpmX10(motor2.target_angle, fine);
+	next_rpm_x10[2] = Motor_EncodeRpmX10(motor3.target_angle, fine);
+	next_rpm_x10[3] = Motor_EncodeRpmX10(motor4.target_angle, fine);
+	Motor_Send_Speed_together(next_rpm_x10[0], next_rpm_x10[1],
+							  next_rpm_x10[2], next_rpm_x10[3]);
 	status = send_speed_data_all();
 	if(status == HAL_OK)
 		status = Send_motor_together();
@@ -485,7 +521,7 @@ void Motor_setspeed(float vy, float vx, float vw)
 	{
 		Chassis_OdomSettle(HAL_GetTick());
 		for(uint8_t i = 0; i < 4; i++)
-			odom_last_rpm[i] = next_rpm[i];
+			odom_last_rpm_x10[i] = next_rpm_x10[i];
 	}
 	else
 	{
@@ -499,6 +535,18 @@ void motor_setspeed_chassis(float vy, float vx, float vw) // 普通通道设定�
 	car_setspeed.y_setpeed = vy;
 	car_setspeed.x_setpeed = vx;
 	car_setspeed.w_setpeed = vw;
+}
+
+// 普通跑图接口：实际轮速保持1RPM分辨率。
+void Motor_setspeed(float vy, float vx, float vw)
+{
+	Motor_setspeed_internal(vy, vx, vw, 0);
+}
+
+// 转向精调接口：实际轮速保留0.1RPM分辨率。
+void Motor_setspeed_fine(float vy, float vx, float vw)
+{
+	Motor_setspeed_internal(vy, vx, vw, 1);
 }
 
 //use Motor_setspeed_in_tim() to set speed in tim for 10ms

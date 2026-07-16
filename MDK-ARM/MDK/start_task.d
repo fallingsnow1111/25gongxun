@@ -66,10 +66,8 @@ mdk\start_task.o: ../SENSOR/QR_code.h
 mdk\start_task.o: ../MOTOR/postion_control.h
 mdk\start_task.o: ../APP/catch.h
 mdk\start_task.o: ../SENSOR/circe.h
-mdk\start_task.o: ../MOTOR/circle_control.h
 mdk\start_task.o: ../SENSOR/GO-M8010-6.h
 mdk\start_task.o: ../SENSOR/ris_protocol.h
-mdk\start_task.o: ../APP/user.h
 mdk\start_task.o: ../MOTOR/delay.h
 mdk\start_task.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\start_task.o: ../MOTOR/telescopic_boom.h
@@ -77,8 +75,6 @@ mdk\start_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os
 mdk\start_task.o: ..\task\main_task.h
 mdk\start_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\start_task.o: ..\task\action_sets.h
-mdk\start_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
-mdk\start_task.o: ..\task\catch_yuanpanji_task.h
 mdk\start_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 mdk\start_task.o: ..\task\imu_task.h
 mdk\start_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h

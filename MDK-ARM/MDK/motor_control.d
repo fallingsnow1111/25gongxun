@@ -66,10 +66,8 @@ mdk\motor_control.o: ../SENSOR/QR_code.h
 mdk\motor_control.o: ../MOTOR/postion_control.h
 mdk\motor_control.o: ../APP/catch.h
 mdk\motor_control.o: ../SENSOR/circe.h
-mdk\motor_control.o: ../MOTOR/circle_control.h
 mdk\motor_control.o: ../SENSOR/GO-M8010-6.h
 mdk\motor_control.o: ../SENSOR/ris_protocol.h
-mdk\motor_control.o: ../APP/user.h
 mdk\motor_control.o: ../MOTOR/delay.h
 mdk\motor_control.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\motor_control.o: ../MOTOR/telescopic_boom.h

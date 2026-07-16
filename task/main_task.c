@@ -1,5 +1,6 @@
 #include "main_task.h"
 #include "test.h"
+#include "task_flow.h"
 
 TaskHandle_t main_task_Handle;
 
@@ -16,7 +17,7 @@ static void Main_Task(void *pvParameters)
 {
     (void)pvParameters;
 
-	Yuanpanji_OpenLoop_Catch_Test();
+	Flow_RunCurrent();
 
     while(1)
         vTaskDelay(pdMS_TO_TICKS(200));

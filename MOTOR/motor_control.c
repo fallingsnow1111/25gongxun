@@ -9,28 +9,23 @@
 #include "IMU.h"
 #include "hmi_task.h"
 
-unsigned char Calibration_Complete = 1;	
-unsigned char Calibration_Complete_turn = 1;	
-unsigned char W_Gray_openmv = 1;
-volatile uint32_t move_to_target_last_wait_ms = 0;
-volatile uint32_t move_to_target_timeout_count = 0;
-volatile uint8_t move_to_target_last_timeout = 0;
 volatile uint32_t chassis_period_overrun_count = 0;
 volatile uint32_t chassis_period_max_ms = 0;
 
-#define ratio_of_pulse_distance_y  1.44928f       //脉冲数与距离的比值
-#define ratio_of_pulse_distance_x  1.51515f
-#define ratio_of_pulse_angle  (float)(280/83.50)//脉冲数与距离的比值89.59
-#define MOVE_TO_TARGET_TIMEOUT_MS 10000U
-#define CHASSIS_TURN_THRESHOLD      0.1f /* 常规转向的到位误差，单位度。 */
-#define CHASSIS_TURN_SETTLE_COUNT    10U /* 常规转向连续约50ms满足误差才算到位。 */
-#define CHASSIS_TURN_MIN_SPEED      2.0f /* 原地转向克服电机死区的最小速度。 */
-#define CHASSIS_TURN_FINE_RANGE     1.5f /* 常规转向进入该误差后切换为低速精调。 */
-#define CHASSIS_TURN_FINE_SPEED     1.0f /* 常规转向末端精调的固定旋转速度。 */
+#define CHASSIS_TURN_THRESHOLD     0.1f /* 常规转向的到位误差，单位度。 */
+#define CHASSIS_TURN_STOP_RATE      8.0f /* 停车判定允许的最大角速度，单位度每秒。 */
+#define CHASSIS_TURN_SETTLE_COUNT    10U /* 角度和角速度连续约50ms满足阈值才算到位。 */
+#define CHASSIS_TURN_MIN_SPEED      0.1f /* 双环最小输出，实车测试后再确定机械有效下限。 */
 #define CHASSIS_TURN_ACCEL_DELTA    2.0f /* 原地转向每5ms最多增加2RPM。 */
 #define CHASSIS_TURN_DECEL_DELTA    4.0f /* 原地转向每5ms最多减少4RPM。 */
-#define CHASSIS_FINE_TURN_THRESHOLD 0.1f /* 航向精调的到位误差，单位度。 */
-#define CHASSIS_FINE_TURN_SPEED     1.0f /* 色环区航向精调的固定旋转速度。 */
+#define CHASSIS_TURN_ANGLE_KP       3.0f /* 角度外环增益：角度误差转换为目标角速度。 */
+#define CHASSIS_TURN_RATE_MAX     150.0f /* 角度外环最大目标角速度，单位度每秒。 */
+#define CHASSIS_TURN_RATE_GAIN      1.055f /* 实测电机RPM到车身角速度的换算系数。 */
+#define CHASSIS_TURN_RATE_KP        0.20f /* 角速度内环比例增益，输出单位为RPM。 */
+#define CHASSIS_TURN_RATE_KI        0.15f /* 角速度内环积分增益，仅补偿稳态偏差。 */
+#define CHASSIS_TURN_RATE_I_LIMIT  30.0f /* 角速度积分限幅，防止转向饱和时积分累积。 */
+#define CHASSIS_TURN_RATE_FILTER    0.25f /* 角速度低通滤波系数，减小IMU瞬时波动。 */
+#define CHASSIS_TURN_RPM_MAX      150.0f /* 原地转向允许输出的最大电机RPM。 */
 #define CHASSIS_MOVE_YAW_THRESHOLD  0.1f /* 低速平移时允许的航向误差，单位度。 */
 #define CHASSIS_MOVE_YAW_MAX_SPEED  2.0f /* 低速平移时最大航向修正速度。 */
 #define CHASSIS_MOVE_YAW_DELTA      0.5f /* 低速平移每5ms最大航向速度变化。 */
@@ -291,41 +286,6 @@ static void Chassis_SINAccel(float vx1, float vy1, float vx2, float vy2,
  *备注: 实际匀速时间 = hold_ticks * OPEN_LOOP_PERIOD_MS
  *备注: 本函数为开环距离控制, 距离由速度和时间标定决定
  */
-void Chassis_MoveOnce(float vx, float vy,float target_angle, uint16_t hold_ticks, uint16_t ramp_ticks)
-{
-	TickType_t last_wake;
-	TickType_t last_cycle;
-	int32_t actual_start[4];
-	uint8_t actual_start_valid;
-	float last_vw = 0.0f;
-
-	actual_start_valid = Chassis_BeginSegment(actual_start);
-	Chassis_WorldBeginSegment();
-	last_wake = xTaskGetTickCount();
-	last_cycle = last_wake;
-	Chassis_SINAccel(0, 0, vx, vy, target_angle, ramp_ticks,
-					 &last_wake, &last_cycle,
-					 CHASSIS_HEADING_NORMAL, &last_vw);
-
-	for(uint16_t i = 0; i < hold_ticks; i++)
-	{
-		Chassis_ApplyMoveSpeed(vx, vy, target_angle,
-						   CHASSIS_HEADING_NORMAL, &last_vw);
-		Chassis_WaitPeriod(&last_wake, &last_cycle);
-	}
-
-	Chassis_SINAccel(vx, vy, 0, 0, target_angle, ramp_ticks,
-					 &last_wake, &last_cycle,
-					 CHASSIS_HEADING_NORMAL, &last_vw);
-
-	Motor_setspeed(0,0,0);
-	vTaskDelay(pdMS_TO_TICKS(MOTOR_PULSE_READ_SETTLE_MS));
-	Chassis_EndSegment(actual_start, actual_start_valid);
-	Chassis_LogSegmentOdom();
-	Chassis_WorldCommitSegment(target_angle);
-	vTaskDelay(pdMS_TO_TICKS(50));
-}
-
 static int64_t Chassis_AbsPulse(int64_t value)
 {
 	return value < 0 ? -value : value;
@@ -487,11 +447,12 @@ void Chassis_TurnToAngle(float target_angle, uint32_t timeout_ms)
 {
     uint32_t start_tick = HAL_GetTick();
     uint8_t settle_count = 0;
-	uint8_t fine_mode = 0;
 	float turn_speed = 0.0f;
 	float last_turn_speed = 0.0f;
 	float speed_delta;
 	float delta_limit;
+	float rate_integral = 0.0f;
+	float filtered_rate = -imu.angular_rate;
 	TickType_t last_wake = xTaskGetTickCount();
 	TickType_t last_cycle = last_wake;
 
@@ -499,12 +460,17 @@ void Chassis_TurnToAngle(float target_angle, uint32_t timeout_ms)
     {
         float current_angle = normalize_angle(imu.yaw);
         float angle_error = getAngleZ(current_angle, target_angle);
+        float measured_rate = -imu.angular_rate;
 
-        if (fabsf(angle_error) <= CHASSIS_TURN_THRESHOLD)
+        filtered_rate += CHASSIS_TURN_RATE_FILTER *
+                         (measured_rate - filtered_rate);
+
+        if (fabsf(angle_error) <= CHASSIS_TURN_THRESHOLD &&
+            fabsf(filtered_rate) <= CHASSIS_TURN_STOP_RATE)
         {
             settle_count++;
 			last_turn_speed = 0.0f;
-            Motor_setspeed(0, 0, 0);
+            Motor_setspeed_fine(0, 0, 0);
             if (settle_count >= CHASSIS_TURN_SETTLE_COUNT)
             {
                 break;
@@ -518,20 +484,30 @@ void Chassis_TurnToAngle(float target_angle, uint32_t timeout_ms)
             settle_count = 0;
         }
 
-		if(fabsf(angle_error) <= CHASSIS_TURN_FINE_RANGE)
-			fine_mode = 1;
-
-		if(fine_mode)
 		{
-			turn_speed = angle_error > 0.0f ?
-						 CHASSIS_TURN_FINE_SPEED : -CHASSIS_TURN_FINE_SPEED;
-			last_turn_speed = turn_speed;
-			Motor_setspeed(0, 0, turn_speed);
-			Chassis_WaitPeriod(&last_wake, &last_cycle);
-			continue;
-		}
+			float target_rate = angle_error * CHASSIS_TURN_ANGLE_KP;
+			float rate_error;
 
-		turn_speed = Direction_Calibration_turn(target_angle);
+			if(target_rate > CHASSIS_TURN_RATE_MAX)
+				target_rate = CHASSIS_TURN_RATE_MAX;
+			else if(target_rate < -CHASSIS_TURN_RATE_MAX)
+				target_rate = -CHASSIS_TURN_RATE_MAX;
+
+			rate_error = target_rate - filtered_rate;
+			rate_integral += rate_error * (OPEN_LOOP_PERIOD_MS / 1000.0f);
+			if(rate_integral > CHASSIS_TURN_RATE_I_LIMIT)
+				rate_integral = CHASSIS_TURN_RATE_I_LIMIT;
+			else if(rate_integral < -CHASSIS_TURN_RATE_I_LIMIT)
+				rate_integral = -CHASSIS_TURN_RATE_I_LIMIT;
+
+			turn_speed = target_rate / CHASSIS_TURN_RATE_GAIN +
+						 CHASSIS_TURN_RATE_KP * rate_error +
+						 CHASSIS_TURN_RATE_KI * rate_integral;
+			if(turn_speed > CHASSIS_TURN_RPM_MAX)
+				turn_speed = CHASSIS_TURN_RPM_MAX;
+			else if(turn_speed < -CHASSIS_TURN_RPM_MAX)
+				turn_speed = -CHASSIS_TURN_RPM_MAX;
+		}
 		delta_limit = (turn_speed * last_turn_speed >= 0.0f &&
 					   fabsf(turn_speed) > fabsf(last_turn_speed)) ?
 					  CHASSIS_TURN_ACCEL_DELTA : CHASSIS_TURN_DECEL_DELTA;
@@ -549,51 +525,24 @@ void Chassis_TurnToAngle(float target_angle, uint32_t timeout_ms)
 		}
 
 		last_turn_speed = turn_speed;
-		Motor_setspeed(0, 0, turn_speed);
+		Motor_setspeed_fine(0, 0, turn_speed);
 		Chassis_WaitPeriod(&last_wake, &last_cycle);
     }
 
-    Motor_setspeed(0, 0, 0);
+    Motor_setspeed_fine(0, 0, 0);
     vTaskDelay(pdMS_TO_TICKS(100));
 }
 
-/* Fine heading correction with a fixed minimum executable motor speed. */
+/* 色环姿态微调复用原地转向双环，返回1表示最终角度和角速度均满足停车阈值。 */
 uint8_t Chassis_FineTuneAngle(float target_angle, uint32_t timeout_ms)
 {
-    uint32_t start_tick = HAL_GetTick();
-    uint8_t settle_count = 0;
-	TickType_t last_wake = xTaskGetTickCount();
-	TickType_t last_cycle = last_wake;
+    float angle_error;
 
-    while ((HAL_GetTick() - start_tick) < timeout_ms)
-    {
-        float current_angle = normalize_angle(imu.yaw);
-        float angle_error = getAngleZ(current_angle, target_angle);
+    Chassis_TurnToAngle(target_angle, timeout_ms);
+    angle_error = getAngleZ(normalize_angle(imu.yaw), target_angle);
 
-        if (fabsf(angle_error) <= CHASSIS_FINE_TURN_THRESHOLD)
-        {
-            Motor_setspeed(0, 0, 0);
-            settle_count++;
-            if (settle_count >= 3)
-            {
-                vTaskDelay(pdMS_TO_TICKS(100));
-                return 1;
-            }
-        }
-        else
-        {
-            settle_count = 0;
-            Motor_setspeed(0, 0,
-                           angle_error > 0.0f ?
-                           CHASSIS_FINE_TURN_SPEED : -CHASSIS_FINE_TURN_SPEED);
-        }
-
-		Chassis_WaitPeriod(&last_wake, &last_cycle);
-    }
-
-    Motor_setspeed(0, 0, 0);
-    vTaskDelay(pdMS_TO_TICKS(100));
-    return 0;
+    return (fabsf(angle_error) <= CHASSIS_TURN_THRESHOLD &&
+            fabsf(imu.angular_rate) <= CHASSIS_TURN_STOP_RATE) ? 1U : 0U;
 }
 
 /*
@@ -752,79 +701,3 @@ float FMy_Abs(float temp)
 	if(temp<0)return -temp;
 	else return temp;
 }
-
-void motor_read_coordination_all(void)
-{
-	for (uint8_t i = 1; i <= 4; i++)
-	{
-		motor_read_coordination(i);
-		Delay_ms(3);
-	}
-}
-
-//Odometer is turned on by default
-void Move_To_Target_area(float x,float y,float angle,int imu_able,MODE_POSITION mode)
-{	
-	uint32_t start_tick;
-
-	car.imu_modeable=(ABLE_T)imu_able;
-	car.Odometer_able=enable;
-
-	// 相对模式就清零编码器和imu
-	if(mode==Relative_Position)
-	{
-		Motor_SetZero();
-		Imu_setZero();
-		Delay_ms(200);	//等imu稳定
-	}
-
-	// 绝对模式什么都不做
-	car.target_x=(x*ratio_of_pulse_distance_x);
-	car.target_y=(-y*ratio_of_pulse_distance_y);
-	car.target_w=angle;
-	MOTOR_ACTIONFALG=Incomplete;
-	start_tick = HAL_GetTick();
-	while (MOTOR_ACTIONFALG!=finish)
-	{
-		if ((HAL_GetTick() - start_tick) > MOVE_TO_TARGET_TIMEOUT_MS)
-		{
-			break;
-		}
-		vTaskDelay(pdMS_TO_TICKS(2));
-	}
-
-	move_to_target_last_wait_ms = HAL_GetTick() - start_tick;
-	move_to_target_last_timeout = (MOTOR_ACTIONFALG != finish);
-	if(move_to_target_last_timeout)
-	{
-		move_to_target_timeout_count++;
-	}
-}
-
-void Move_To_Target_Postion(float vy,float vx,float w,char mode)//旋转,厘米为单位
-{
-	uint32_t start_tick;
-
-	// uint8_t _COUNT=150;
-	// uint8_t count=0;
-	motor_data_reset();
-	inu_turn.ANGEL = w;///设置目标角度
-	//Motor_setposition(ratio_of_pulse_distance_y*vy,ratio_of_pulse_distance_x*vx,ratio_of_pulse_angle*w,(MODE_POSITION)mode);
-	MOTOR_ACTIONFALG=Incomplete;
-	start_tick = HAL_GetTick();
-	while(MOTOR_ACTIONFALG!=finish)
-	{
-		if ((HAL_GetTick() - start_tick) > MOVE_TO_TARGET_TIMEOUT_MS)
-		{
-			break;
-		}
-		Delay_ms(20);
-		motor_read_stateflag(1);
-		//vofa_printf("MOTOR_ACTIONFALG:%d\n",MOTOR_ACTIONFALG);
-	}
-	MOTOR_ACTIONFALG=Incomplete;
-	Motor_Rxdata_SetSero();
-}
-
-
-

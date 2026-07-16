@@ -69,11 +69,6 @@ uint8_t Circle_PlaceFromWarehouseAtHeight(uint8_t warehouse_index, uint16_t plac
 	return 1;
 }
 
-uint8_t Circle_PlaceFromWarehouse(uint8_t warehouse_index)
-{
-	return Circle_PlaceFromWarehouseAtHeight(warehouse_index, CIRCLE_PLACE_HEIGHT);
-}
-
 //准备定位圆盘机的动作组（决赛）；
 uint8_t Positioning_Circle_action(void)
 {

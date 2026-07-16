@@ -60,10 +60,12 @@ typedef struct
 
 extern volatile uint32_t chassis_odom_tx_fail_count;
 extern volatile int32_t motor_actual_pulse[4];
+extern volatile uint8_t motor_speed_scale10_ready;
 
 
 void MOTOR_Init(void);                                                // 电机初始化
-void Motor_Send_Speed_together(float LB,float LF,float RF,float RB); // 打包四电机速度命令
+uint8_t Motor_EnableSpeedScale10(void);                               // 上电启用0.1RPM通信单位
+void Motor_Send_Speed_together(int16_t LB,int16_t LF,int16_t RF,int16_t RB); // 协议速度单位为0.1RPM
 void Motor_Send_Postion_together(int LB,int LF,int RF,int RB,char mode); // 打包四电机位置命令
 
 void USART3_RXdata_processing(uint8_t* data,uint8_t size);          // UART3接收数据处理
@@ -78,7 +80,8 @@ void motor_setspeed_chassis(float vy, float vx, float vw);
 
 void Motor_Action_Calculate_target(float vy,float vx,float vw);
 void Motor_Action_Calculate_actual(volatile float *actual_y,volatile float *actual_x,volatile float *actual_w);
-void Motor_setspeed(float vy,float vx,float vw);//�趨������ٶ�
+void Motor_setspeed(float vy,float vx,float vw);//普通跑图使用整数RPM
+void Motor_setspeed_fine(float vy,float vx,float vw);//转向精调使用0.1RPM
 void Motor_setposition(float vy,float vx,float vw,char mode);//���õ��λ��
 void motor_data_reset(void);
 

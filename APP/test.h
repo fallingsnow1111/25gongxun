@@ -3,35 +3,20 @@
 
 #include "main.h"
 
-typedef enum {
-	RING_WORK_LAYER_FIRST = 1,
-	RING_WORK_LAYER_SECOND = 2
-} RING_WORK_LAYER_T;
-
 void QR_Code_Test(void);
 void Vision_Parse_Test(void);
-void Chassis_Odom_Calibration_Test(void);
+
+/* 底盘里程、转向精度和角速度映射测试。 */
 void Chassis_Turn_Error_Test(void);
+void Chassis_AngularRate_Baseline_Test(void);
+void Chassis_TurnRate_Map_Test(void);
+void Chassis_LowSpeed_Linearity_Test(void);
+
+/* 机械臂仓位间隙与色环视觉定位测试。 */
 void Ring_Warehouse_Clearance_Test(void);
 void Ring_Location_Test(void);
 
-void Yuanpanji_OpenLoop_Catch_Test(void);
-void Route_Path1_StartToQR(void);
-void Flow_QRRecognize(void);
-void Route_Path2_QRToTurntable(void);
-void Flow_TurntableCatch(void);
-void Route_Path3_TurntableToProcessing(void);
-void Flow_ProcessingArea(void);
-void Route_Path4_ProcessingToNext(void);
-void Flow_StorageArea(RING_WORK_LAYER_T work_layer);
-void Route_Path5_StorageToTurntable(void);
-void Route_Path6_StorageToHome(void);
-void Flow_RunCurrent(void);
-extern volatile uint8_t ypj_debug_stage;
-extern volatile uint8_t ypj_debug_color;
-extern volatile uint8_t ypj_debug_target_valid;
-extern volatile uint8_t ypj_debug_target_x;
-extern volatile uint8_t ypj_debug_target_y;
-extern volatile uint32_t ypj_debug_frame_count;
+/* 夹爪重新安装后的舵机位置循环校正测试。 */
+void Claw_Calibration_Test(void);
 
 #endif

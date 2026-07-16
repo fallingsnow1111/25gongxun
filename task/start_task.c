@@ -16,7 +16,7 @@ void Init_Task_Create(void)
 	MOTOR_Init();
 	Gyro_Init();
 	POSTION_init();			// 机械臂Z轴升降Y轴伸缩初始化
-	openmv_Init();			// 视觉初始化
+	Vision_Receive_Init();	// 初始化 MaixCam 串口接收
 	M8010_init();
     HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_3);
     HAL_TIM_PWM_Start(&htim4,TIM_CHANNEL_3);
@@ -32,7 +32,6 @@ void Start_Task(void*pvParameters)
 	Init_Task_Create();
 	IMU_Task_Create();          // IMU 5ms 解析任务
 	Main_Task_create();
-	//Catch_yuanpanji_Task_create();
 	vTaskDelete(Start_Task_Handle);
 }
 

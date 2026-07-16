@@ -48,7 +48,7 @@ volatile uint8_t vision_request_cls = 0;
 
 static void Vision_ClearSelected(void);
 
-void U6_Init(void)
+void Vision_Receive_Init(void)
 {
 	__HAL_UART_ENABLE_IT(&huart6, UART_IT_RXNE);
 }
@@ -522,4 +522,3 @@ void USART6_readdata_SeetZero(void)
 	vision_last_count = 0;
 	Vision_ClearSelected();
 }
-

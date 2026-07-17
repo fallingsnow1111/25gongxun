@@ -13,8 +13,7 @@ volatile uint32_t chassis_period_overrun_count = 0;
 volatile uint32_t chassis_period_max_ms = 0;
 
 #define CHASSIS_TURN_THRESHOLD     0.1f /* 常规转向的到位误差，单位度。 */
-#define CHASSIS_TURN_STOP_RATE      8.0f /* 停车判定允许的最大角速度，单位度每秒。 */
-#define CHASSIS_TURN_SETTLE_COUNT    10U /* 角度和角速度连续约50ms满足阈值才算到位。 */
+#define CHASSIS_TURN_SETTLE_COUNT    10U /* 角度连续约50ms满足阈值才算到位。 */
 #define CHASSIS_TURN_MIN_SPEED      0.1f /* 双环最小输出，实车测试后再确定机械有效下限。 */
 #define CHASSIS_TURN_ACCEL_DELTA    2.0f /* 原地转向每5ms最多增加2RPM。 */
 #define CHASSIS_TURN_DECEL_DELTA    4.0f /* 原地转向每5ms最多减少4RPM。 */
@@ -313,7 +312,9 @@ static int64_t Chassis_EstimateDecelPulse(float vx, float vy,
 }
 
 static void Chassis_MoveByPulseInternal(float vx, float vy, float target_angle,
-									   int64_t target_pulse, uint16_t ramp_ticks,
+									   int64_t target_pulse,
+									   uint16_t accel_ticks,
+									   uint16_t decel_ticks,
 									   uint8_t heading_control)
 {
 	TickType_t last_wake;
@@ -334,8 +335,8 @@ static void Chassis_MoveByPulseInternal(float vx, float vy, float target_angle,
 	Chassis_WorldBeginSegment();
 	last_wake = xTaskGetTickCount();
 	last_cycle = last_wake;
-	decel_pulse = Chassis_EstimateDecelPulse(vx, vy, ramp_ticks);
-	Chassis_SINAccel(0, 0, vx, vy, target_angle, ramp_ticks,
+	decel_pulse = Chassis_EstimateDecelPulse(vx, vy, decel_ticks);
+	Chassis_SINAccel(0, 0, vx, vy, target_angle, accel_ticks,
 					 &last_wake, &last_cycle, heading_control, &last_vw);
 
 	while(1)
@@ -349,7 +350,7 @@ static void Chassis_MoveByPulseInternal(float vx, float vy, float target_angle,
 		Chassis_WaitPeriod(&last_wake, &last_cycle);
 	}
 
-	Chassis_SINAccel(vx, vy, 0, 0, target_angle, ramp_ticks,
+	Chassis_SINAccel(vx, vy, 0, 0, target_angle, decel_ticks,
 					 &last_wake, &last_cycle, heading_control, &last_vw);
 	Motor_setspeed(0, 0, 0);
 	vTaskDelay(pdMS_TO_TICKS(MOTOR_PULSE_READ_SETTLE_MS));
@@ -363,7 +364,39 @@ void Chassis_MoveByPulse(float vx, float vy, float target_angle,
 						 int64_t target_pulse, uint16_t ramp_ticks)
 {
 	Chassis_MoveByPulseInternal(vx, vy, target_angle, target_pulse,
-								ramp_ticks, CHASSIS_HEADING_NORMAL);
+								ramp_ticks, ramp_ticks,
+								CHASSIS_HEADING_NORMAL);
+}
+
+void Chassis_MoveByDistanceRamp(float vx, float vy, float target_angle,
+								float distance_cm,
+								uint16_t accel_ticks,
+								uint16_t decel_ticks)
+{
+	float pulse_per_cm;
+	int64_t target_pulse;
+
+	if(distance_cm <= 0.0f || (vx == 0.0f && vy == 0.0f))
+	{
+		Motor_setspeed(0, 0, 0);
+		return;
+	}
+
+	if(vx != 0.0f && vy != 0.0f)
+	{
+		HMI_LogError("distance axis error");
+		Motor_setspeed(0, 0, 0);
+		return;
+	}
+
+	pulse_per_cm = vx != 0.0f ?
+				   CHASSIS_LATERAL_PULSE_PER_CM :
+				   CHASSIS_LONGITUDINAL_PULSE_PER_CM;
+	target_pulse = (int64_t)(distance_cm * pulse_per_cm + 0.5f);
+
+	Chassis_MoveByPulseInternal(vx, vy, target_angle, target_pulse,
+								accel_ticks, decel_ticks,
+								CHASSIS_HEADING_NORMAL);
 }
 
 /*
@@ -433,7 +466,8 @@ void Chassis_MoveByDistanceSmoothYaw(float vx, float vy, float target_angle,
 	target_pulse = (int64_t)(distance_cm * pulse_per_cm + 0.5f);
 
 	Chassis_MoveByPulseInternal(vx, vy, target_angle, target_pulse,
-								ramp_ticks, CHASSIS_HEADING_SMOOTH);
+								ramp_ticks, ramp_ticks,
+								CHASSIS_HEADING_SMOOTH);
 }
 
 /*
@@ -465,8 +499,7 @@ void Chassis_TurnToAngle(float target_angle, uint32_t timeout_ms)
         filtered_rate += CHASSIS_TURN_RATE_FILTER *
                          (measured_rate - filtered_rate);
 
-        if (fabsf(angle_error) <= CHASSIS_TURN_THRESHOLD &&
-            fabsf(filtered_rate) <= CHASSIS_TURN_STOP_RATE)
+        if (fabsf(angle_error) <= CHASSIS_TURN_THRESHOLD)
         {
             settle_count++;
 			last_turn_speed = 0.0f;
@@ -533,7 +566,7 @@ void Chassis_TurnToAngle(float target_angle, uint32_t timeout_ms)
     vTaskDelay(pdMS_TO_TICKS(100));
 }
 
-/* 色环姿态微调复用原地转向双环，返回1表示最终角度和角速度均满足停车阈值。 */
+/* 色环姿态微调复用原地转向双环，返回1表示最终角度满足停车阈值。 */
 uint8_t Chassis_FineTuneAngle(float target_angle, uint32_t timeout_ms)
 {
     float angle_error;
@@ -541,8 +574,7 @@ uint8_t Chassis_FineTuneAngle(float target_angle, uint32_t timeout_ms)
     Chassis_TurnToAngle(target_angle, timeout_ms);
     angle_error = getAngleZ(normalize_angle(imu.yaw), target_angle);
 
-    return (fabsf(angle_error) <= CHASSIS_TURN_THRESHOLD &&
-            fabsf(imu.angular_rate) <= CHASSIS_TURN_STOP_RATE) ? 1U : 0U;
+    return (fabsf(angle_error) <= CHASSIS_TURN_THRESHOLD) ? 1U : 0U;
 }
 
 /*

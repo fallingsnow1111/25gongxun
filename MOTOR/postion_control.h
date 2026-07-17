@@ -36,6 +36,8 @@ void POSTION_init(void);
 void postion_send(uint8_t id,int position);
 void Z_SetHeight(int high);
 void Y_SetLength(int length);
+uint8_t Z_InitMoveSigned(int height);
+uint8_t Y_InitMoveSigned(int length);
 void Read_Z_position(void);
 void uart7WriteBuf(uint8_t *buf, uint8_t len);
 void u7RXdat_dispose(uint8_t* data);

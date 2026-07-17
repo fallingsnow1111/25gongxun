@@ -13,6 +13,7 @@
 #include "GO-M8010-6.h"
 #include "catch.h"
 #include "postion_control.h"
+#include "task_flow.h"
 #include "tim.h"
 #include <math.h>
 #include <stdio.h>
@@ -527,6 +528,20 @@ void Ring_Location_Test(void)
 		HMI_SetVisionText("WAIT");
 		HMI_LogInfo("round done");
 		vTaskDelay(pdMS_TO_TICKS(2000));
+	}
+}
+
+/*
+ * 函数简介：独立运行主流程使用的机械臂姿态初始化。
+ * 调参位置：APP/task_flow.c 文件顶部的 ARM_INIT_* 参数。
+ */
+void Arm_Pose_Init_Test(void)
+{
+	(void)Flow_ArmPoseInit();
+
+	while(1)
+	{
+		vTaskDelay(pdMS_TO_TICKS(200));
 	}
 }
 

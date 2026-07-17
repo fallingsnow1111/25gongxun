@@ -11,13 +11,13 @@
 #define Y_LENGHT_WAREHOUSE            20  /* 在物料仓位置使用的 Y 轴伸出长度。 */
 
 /* 色环区识别、放置和回收姿态。 */
-#define CIRCLE_DETECT_HEIGHT          20  /* 定位色环时的 Z 轴高度。 */
+#define CIRCLE_DETECT_HEIGHT          40  /* 定位色环时的 Z 轴高度。 */
 #define CIRCLE_DETECT_LENGTH           5  /* 定位色环时的 Y 轴伸出长度。 */
 #define CIRCLE_SAFE_HEIGHT             0  /* 机械臂旋转前必须到达的 Z 轴安全高度。 */
 #define CIRCLE_WAREHOUSE_LENGTH       20  /* 从物料仓取料时的 Y 轴伸出长度。 */
 #define CIRCLE_WAREHOUSE_HEIGHT       30  /* 从物料仓取料时的 Z 轴夹取高度。 */
 #define CIRCLE_ROTATE_LENGTH         110  /* 夹住物料后、机械臂旋转前的避障伸出长度。 */
-#define CIRCLE_PLACE_LENGTH            5  /* 色环区放置和回收物料时的 Y 轴伸出长度。 */
+#define CIRCLE_PLACE_LENGTH            18  /* 色环区放置和回收物料时的 Y 轴伸出长度。 */
 #define CIRCLE_PLACE_HEIGHT          125  /* 粗加工区第一层放置和回收高度。 */
 #define CIRCLE_SECOND_LAYER_HEIGHT    50  /* 暂存区第二轮的二层放置高度。 */
 #define CIRCLE_MATERIAL_DETECT_HEIGHT 20  /* 色环区识别物料时的 Z 轴高度。 */

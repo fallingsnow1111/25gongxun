@@ -6,6 +6,7 @@
 #define U7_RX_BUF_LEN 8
 #define U7_DMA_RX_LEN 4
 #define Z_MAX_TIMEOUT_MS 4000U
+#define UART7_RX_SETTLE_MS 20U
 static uint8_t u7RXdat[U7_RX_BUF_LEN];
 static uint8_t USART7_senddata[128];
 static uint8_t u7_stream_frame[U7_RX_BUF_LEN];
@@ -50,7 +51,8 @@ void uart7WriteBuf(uint8_t *buf, uint8_t len)
 
 void UART7_RxRestart(void)
 {
-	HAL_UART_DMAStop(&huart7);
+	HAL_UART_AbortReceive(&huart7);
+	__HAL_UART_DISABLE_IT(&huart7, UART_IT_RXNE);
 	__HAL_UART_CLEAR_FLAG(&huart7, UART_CLEAR_OREF | UART_CLEAR_NEF | UART_CLEAR_PEF | UART_CLEAR_FEF);
 	__HAL_UART_SEND_REQ(&huart7, UART_RXDATA_FLUSH_REQUEST);
 	huart7.ErrorCode = HAL_UART_ERROR_NONE;
@@ -102,7 +104,10 @@ void u7_speed_send(uint8_t id,int speed)
    uart7WriteBuf(USART7_senddata,8);
 }
 
-void postion_send(uint8_t id,int position)
+#define POSITION_MODE_RELATIVE 0x00U
+#define POSITION_MODE_ABSOLUTE 0x01U
+
+static void postion_send_mode(uint8_t id, int position, uint8_t mode)
 {
     // 计算目标与当前位置差值
         // 设置数据帧并初始化
@@ -136,11 +141,16 @@ void postion_send(uint8_t id,int position)
         USART7_senddata[8] = (uint8_t)((position ) >> 8);
         USART7_senddata[9] = (uint8_t)(position );
 
-        USART7_senddata[10] = (uint8_t)0x01;
+        USART7_senddata[10] = mode;
         USART7_senddata[11] = 0x00;
         USART7_senddata[12] = 0x6B;
         // 发送数据
         uart7WriteBuf(USART7_senddata, 13);  // 将数据发送到串口7
+}
+
+void postion_send(uint8_t id,int position)
+{
+	postion_send_mode(id, position, POSITION_MODE_ABSOLUTE);
 }
 
  void Z_SetHeight(int high)
@@ -184,6 +194,53 @@ void Read_Y_position(void)
 #define GEAR_RATIO (360.0 * 8.90 / 94.2)  // 传动比常数
 #define POSITION_TOLERANCE 1.0            // 位置容差
 #define MAX_TIMEOUT_MS  300
+#define INIT_MOVE_TIMEOUT_MS 4000U
+
+/*
+ * 上电零点标定专用：允许使用负方向偏移，不经过正常动作的行程限位。
+ * 返回1表示收到到位帧，返回0表示等待超时。
+ */
+uint8_t Z_InitMoveSigned(int height)
+{
+	uint32_t start_tick;
+
+	Z_POSTION.TARGE = (int)((2000.0f / 106.5f) * height * 14.0f);
+	UART7_RxRestart();
+	vTaskDelay(pdMS_TO_TICKS(UART7_RX_SETTLE_MS));
+	Z_POSTION.BIT = Incomplete;
+	postion_send_mode(0x01, Z_POSTION.TARGE, POSITION_MODE_RELATIVE);
+	start_tick = HAL_GetTick();
+
+	while(Z_POSTION.BIT != finish &&
+		  (HAL_GetTick() - start_tick) < INIT_MOVE_TIMEOUT_MS)
+	{
+		vTaskDelay(pdMS_TO_TICKS(1));
+	}
+
+	z_debug_last_wait_ms = HAL_GetTick() - start_tick;
+	z_debug_last_timeout = (Z_POSTION.BIT != finish);
+	return (Z_POSTION.BIT == finish);
+}
+
+uint8_t Y_InitMoveSigned(int length)
+{
+	uint32_t start_tick;
+
+	Telescopic_POSTION.TARGE = (int)(-length * GEAR_RATIO);
+	UART7_RxRestart();
+	vTaskDelay(pdMS_TO_TICKS(UART7_RX_SETTLE_MS));
+	Telescopic_POSTION.BIT = Incomplete;
+	postion_send_mode(0x02, Telescopic_POSTION.TARGE, POSITION_MODE_RELATIVE);
+	start_tick = HAL_GetTick();
+
+	while(Telescopic_POSTION.BIT != finish &&
+		  (HAL_GetTick() - start_tick) < INIT_MOVE_TIMEOUT_MS)
+	{
+		vTaskDelay(pdMS_TO_TICKS(1));
+	}
+
+	return (Telescopic_POSTION.BIT == finish);
+}
 
 void Y_SetLength(int position) 
 {
@@ -227,6 +284,22 @@ void YZ_SetZero(char id)
 	senddata[2]=0x6D;
 	senddata[3]=0x6B;
 	uart7WriteBuf(senddata,4);
+
+	/* 硬件当前位置清零后，同步软件坐标，避免后续绝对位置继续使用旧值。 */
+	if(id == 1)
+	{
+		Z_POSTION.NOW = 0;
+		Z_POSTION.TARGE = 0;
+		Z_POSTION.CHANGE = 0;
+		Z_POSTION.BIT = finish;
+	}
+	else if(id == 2)
+	{
+		Telescopic_POSTION.NOW = 0;
+		Telescopic_POSTION.TARGE = 0;
+		Telescopic_POSTION.CHANGE = 0;
+		Telescopic_POSTION.BIT = finish;
+	}
 }
 
 void Read_Z_position(void)

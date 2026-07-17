@@ -19,4 +19,7 @@ void Ring_Location_Test(void);
 /* 夹爪重新安装后的舵机位置循环校正测试。 */
 void Claw_Calibration_Test(void);
 
+/* 上电机械臂姿态与三轴零点初始化测试。 */
+void Arm_Pose_Init_Test(void);
+
 #endif

@@ -25,6 +25,7 @@ void Route_Path4_ProcessingToNext(void);
 void Flow_StorageArea(RING_WORK_LAYER_T work_layer);
 void Route_Path5_StorageToTurntable(void);
 void Route_Path6_StorageToHome(void);
+uint8_t Flow_ArmPoseInit(void);
 void Flow_RunCurrent(void);
 
 extern volatile uint8_t ypj_debug_stage;

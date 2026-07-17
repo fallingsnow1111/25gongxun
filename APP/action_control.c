@@ -64,7 +64,15 @@ uint8_t Circle_PlaceFromWarehouseAtHeight(uint8_t warehouse_index, uint16_t plac
 	Z_SetHeight(place_height);
 	claw_move_2(open);
 	vTaskDelay(pdMS_TO_TICKS(100));
-	Z_SetHeight(CIRCLE_SAFE_HEIGHT);
+	if(place_height == CIRCLE_SECOND_LAYER_HEIGHT)
+	{
+		claw_move_1(open);
+		Z_SetHeight(CIRCLE_MATERIAL_DETECT_HEIGHT);
+	}
+	else
+	{
+		Z_SetHeight(CIRCLE_DETECT_HEIGHT);
+	}
 
 	return 1;
 }

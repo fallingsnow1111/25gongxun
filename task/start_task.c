@@ -4,6 +4,8 @@
 
 TaskHandle_t Start_Task_Handle;
 
+#define UART7_COLD_BOOT_WAIT_MS 500U
+
 #define START_TASK_STACK 256//任务栈
 #define START_TASK_PRIORITY 5//���ȼ�
 
@@ -15,6 +17,8 @@ void Init_Task_Create(void)
 	HMI_InitScreen();		// 串口屏内容初始化
 	MOTOR_Init();
 	Gyro_Init();
+	// 等待机械臂驱动器完成上电阶段的串口活动，避免冷启动时污染UART7 DMA状态。
+	vTaskDelay(pdMS_TO_TICKS(UART7_COLD_BOOT_WAIT_MS));
 	POSTION_init();			// 机械臂Z轴升降Y轴伸缩初始化
 	Vision_Receive_Init();	// 初始化 MaixCam 串口接收
 	M8010_init();

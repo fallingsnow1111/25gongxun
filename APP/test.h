@@ -11,10 +11,14 @@ void Chassis_Turn_Error_Test(void);
 void Chassis_AngularRate_Baseline_Test(void);
 void Chassis_TurnRate_Map_Test(void);
 void Chassis_LowSpeed_Linearity_Test(void);
+void IMU_Static_Stability_Test(void);
+void IMU_Drift_Rezero_Test(void);
+void IMU_Stable_Straight_Test(void);
 
 /* 机械臂仓位间隙与色环视觉定位测试。 */
 void Ring_Warehouse_Clearance_Test(void);
 void Ring_Location_Test(void);
+void Ring_LocateOne_Place123_Test(void);
 
 /* 夹爪重新安装后的舵机位置循环校正测试。 */
 void Claw_Calibration_Test(void);

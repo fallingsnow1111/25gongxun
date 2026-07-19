@@ -12,6 +12,8 @@ void HMI_SetSys(char* mode, char* err);
 void HMI_SetVisionText(char* text);
 void HMI_SetChassisText(char* text);
 void HMI_SetArmText(char* text);
+void HMI_SetArmFault(char* text);
+void HMI_ClearArmFault(void);
 void HMI_SetPixelError(int err_x, int err_y, uint8_t valid);
 void HMI_SetMotorCompare(int32_t actual_x, int32_t actual_y,
 						 int32_t error_x, int32_t error_y, uint8_t valid);

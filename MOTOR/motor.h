@@ -61,6 +61,7 @@ typedef struct
 extern volatile uint32_t chassis_odom_tx_fail_count;
 extern volatile int32_t motor_actual_pulse[4];
 extern volatile uint8_t motor_speed_scale10_ready;
+extern volatile int16_t motor_debug_cmd_rpm_x10[4];
 
 
 void MOTOR_Init(void);                                                // 电机初始化

@@ -16,8 +16,8 @@
 #include <stdio.h>
 
 /* 上电机械臂姿态初始化参数，调试机械零点时只修改这里。 */
-#define ARM_INIT_Z_OFFSET             (-78)  /* Z轴从上电临时零点上升的距离。 */
-#define ARM_INIT_Y_OFFSET             (-44)  /* Y轴从上电临时零点缩回的距离。 */
+#define ARM_INIT_Z_OFFSET             (-77.5)  /* Z轴从上电临时零点上升的距离。 */
+#define ARM_INIT_Y_OFFSET             (-52)  /* Y轴从上电临时零点缩回的距离。 */
 #define ARM_INIT_JOINT_ANGLE             34  /* 关节转到该角度后设置为新零点。 */
 #define ARM_INIT_JOINT_SETTLE_MS       1000U /* 关节转动后的机械稳定时间。 */
 #define ARM_INIT_ZERO_INTERVAL_MS        20U /* UART7两条清零命令之间的间隔。 */
@@ -38,7 +38,7 @@
 /* 色环放置定位模式：定位一次放3件，或每放1件都重新定位。 */
 #define RING_PLACE_MODE_LOCATE_ONE   1U /* 先定位绿色环一次，再按固定间距连续放3件。 */
 #define RING_PLACE_MODE_LOCATE_EACH  3U /* 切换到目标环后，每件都重新视觉定位。 */
-#define RING_PLACE_MODE              RING_PLACE_MODE_LOCATE_EACH /* 当前调试模式。 */
+#define RING_PLACE_MODE              RING_PLACE_MODE_LOCATE_ONE /* 当前调试模式。 */
 
 /* 色环切换参数。 */
 #define RING_SWITCH_SPEED         50.0f  /* 色环之间固定移动的速度。 */
@@ -55,7 +55,7 @@
 
 /* 二维码小范围搜索。 */
 #define YPJ_QR_SCAN_DISTANCE_CM   2.0f    /* 每次二维码小范围搜索的固定移动距离。 */
-#define YPJ_TURN_TIMEOUT_MS      4000U    /* 每次常规转向的最大时间，单位 ms。 */
+#define YPJ_TURN_TIMEOUT_MS      5000U    /* 每次常规转向及二次确认的总时间，单位 ms。 */
 
 /* 路径 1：启停区到二维码区域。 */
 #define PATH1_LEFT_SPEED          80.0f   /* 第一段左移速度。 */
@@ -64,7 +64,7 @@
 #define PATH1_FORWARD_DISTANCE_CM 63.0f   /* 前进到二维码区域的距离，单位 cm。 */
 
 /* 路径 2：二维码区域到圆盘机。 */
-#define PATH2_FORWARD_SPEED      200.0f   /* 扫码完成后的前进速度。 */
+#define PATH2_FORWARD_SPEED      180.0f   /* 扫码完成后的前进速度。 */
 #define PATH2_FORWARD_DISTANCE_CM 80.0f   /* 二维码区域到圆盘机的距离，单位 cm。 */
 #define PATH2_ACCEL_TICKS        100U     /* 加速 500ms，1 tick = 5ms。 */
 #define PATH2_DECEL_TICKS        200U     /* 减速 750ms，降低停车冲击。 */
@@ -73,7 +73,7 @@
 
 /* 路径 3：圆盘机到粗加工区。 */
 #define PATH3_BACK_SPEED          80.0f   /* 圆盘机夹取完成后的倒车速度。 */
-#define PATH3_BACK_DISTANCE_CM    36.0f   /* 第一段倒车距离，单位 cm。 */
+#define PATH3_BACK_DISTANCE_CM    38.0f   /* 第一段倒车距离，单位 cm。 */
 #define PATH3_LEFT_SPEED          20.0f   /* 转弯前左移避线速度。 */
 #define PATH3_LEFT_DISTANCE_CM     5.0f   /* 转弯前左移避线距离，单位 cm。 */
 #define PATH3_FIRST_ANGLE        -90.0f   /* 第一次顺时针转90°后的目标航向。 */
@@ -83,21 +83,23 @@
 
 /* 路径 4：粗加工区物料全部回收后的路线。 */
 #define PATH4_BACK_SPEED         200.0f   /* 离开粗加工区的倒车速度。 */
-#define PATH4_BACK_DISTANCE_CM   85.0f    /* 离开粗加工区的倒车距离，单位 cm。 */
+#define PATH4_BACK_DISTANCE_CM   87.0f    /* 离开粗加工区的倒车距离，单位 cm。 */
 #define PATH4_BACK_ACCEL_TICKS   100U     /* 倒车加速 500ms，1 tick = 5ms。 */
 #define PATH4_BACK_DECEL_TICKS   150U     /* 倒车减速 750ms，降低停车冲击。 */
 #define PATH4_LEFT_SPEED          20.0f    /* 转弯前左移避线速度。 */
 #define PATH4_LEFT_DISTANCE_CM     5.0f    /* 转弯前左移避线距离，单位 cm。 */
 #define PATH4_TURN_ANGLE        -270.0f   /* 从-180°继续顺时针90°后的连续世界航向。 */
-#define PATH4_FORWARD_SPEED     -200.0f   /* 前往暂存区的移动速度。 */
-#define PATH4_FORWARD_DISTANCE_CM 86.0f   /* 前往暂存区的距离，单位 cm。 */
+#define PATH4_FORWARD_SPEED     -180.0f   /* 前往暂存区的移动速度。 */
+#define PATH4_FORWARD_DISTANCE_CM 85.0f   /* 前往暂存区的距离，单位 cm。 */
 
 /* 路径 5：第一轮暂存区完成后返回圆盘机。 */
-#define PATH5_BACK_SPEED          200.0f  /* 离开暂存区的倒车速度。 */
-#define PATH5_BACK_DISTANCE_CM     90.0f  /* 离开暂存区的倒车距离，单位 cm。 */
+#define PATH5_BACK_SPEED          160.0f  /* 离开暂存区的倒车速度。 */
+#define PATH5_BACK_DISTANCE_CM     93.0f  /* 离开暂存区的倒车距离，单位 cm。 */
+#define PATH5_LEFT_SPEED           20.0f  /* 转弯前左移避线速度。 */
+#define PATH5_LEFT_DISTANCE_CM      5.0f  /* 转弯前左移避线距离，单位 cm。 */
 #define PATH5_TURN_ANGLE         -360.0f  /* 从-270°继续顺时针90°后的连续世界航向。 */
 #define PATH5_FINAL_BACK_SPEED    160.0f  /* 转向后驶向圆盘机的倒车速度。 */
-#define PATH5_FINAL_BACK_CM        52.0f  /* 转向后驶向圆盘机的倒车距离，单位 cm。 */
+#define PATH5_FINAL_BACK_CM        43.0f  /* 转向后驶向圆盘机的倒车距离，单位 cm。 */
 
 /* 路径 6：第二轮暂存区完成后返回启停区。 */
 #define PATH6_BACK_SPEED          200.0f  /* 离开第二轮暂存区的倒车速度。 */
@@ -329,7 +331,8 @@ static uint8_t Ring_SwitchToTarget(uint8_t current_color, uint8_t target_color,
 }
 
 uint8_t TaskFlow_PlaceFromWarehouseIndex(uint8_t warehouse_index, char *name,
-											 uint16_t place_height)
+											 uint16_t place_height, uint8_t need_clear,
+											 uint8_t need_cw)
 {
 	if(warehouse_index > 2)
 	{
@@ -341,19 +344,73 @@ uint8_t TaskFlow_PlaceFromWarehouseIndex(uint8_t warehouse_index, char *name,
 	HMI_LogInfo("take %s wh%d", name, warehouse_index + 1);
 
 	HMI_SetArmText("PUT RING");
-	if(Circle_PlaceFromWarehouseAtHeight(warehouse_index, place_height) == 0)
+	if(Circle_PlaceFromWarehouseAtHeight(warehouse_index, place_height, need_clear, need_cw) == 0)
 		return 0;
 
 	HMI_LogInfo("put %s ok", name);
 	return 1;
 }
 
-static uint8_t Ring_PlaceFromWarehouse(uint8_t color, uint16_t place_height)
+static uint8_t TaskFlow_PlaceFromWarehousePose(uint8_t warehouse_index, char *name,
+											  uint16_t place_height, int16_t place_angle,
+											  uint16_t place_length, uint8_t need_clear,
+											  uint8_t need_cw)
+{
+	if(warehouse_index > 2)
+	{
+		HMI_LogError("bad wh %d", warehouse_index + 1);
+		return 0;
+	}
+
+	HMI_SetArmText("TAKE WH");
+	HMI_LogInfo("take %s wh%d", name, warehouse_index + 1);
+	HMI_SetArmText("PUT RING");
+	if(Circle_PlaceFromWarehouseAtPose(warehouse_index, place_height,
+										  place_angle, place_length, need_clear, need_cw) == 0)
+		return 0;
+
+	HMI_LogInfo("put %s ok", name);
+	return 1;
+}
+
+static void Ring_GetFixedPose(uint8_t color, int16_t *angle, uint16_t *length)
+{
+	switch(color)
+	{
+		case RED:
+			*angle = RED_PLACE_ANGLE;
+			*length = RED_PLACE_LENGTH;
+			break;
+		case BLUE:
+			*angle = BLUE_PLACE_ANGLE;
+			*length = BLUE_PLACE_LENGTH;
+			break;
+		case GREEN:
+		default:
+			*angle = GREEN_PLACE_ANGLE;
+			*length = GREEN_PLACE_LENGTH;
+			break;
+	}
+}
+
+static uint8_t Ring_PlaceFromWarehouse(uint8_t color, uint16_t place_height,
+                                         uint8_t need_clear, uint8_t need_cw)
 {
 	uint8_t warehouse_index = Get_Warehouse_index_from_color(color);
+	int16_t place_angle;
+	uint16_t place_length;
 
-	return TaskFlow_PlaceFromWarehouseIndex(warehouse_index, Flow_ColorName(color),
-										 place_height);
+	if(RING_PLACE_MODE != RING_PLACE_MODE_LOCATE_ONE)
+	{
+		return TaskFlow_PlaceFromWarehouseIndex(warehouse_index, Flow_ColorName(color),
+											 place_height, need_clear, need_cw);
+	}
+
+	Ring_GetFixedPose(color, &place_angle, &place_length);
+
+	return TaskFlow_PlaceFromWarehousePose(warehouse_index, Flow_ColorName(color),
+										 place_height, place_angle, place_length,
+										 need_clear, need_cw);
 }
 
 volatile uint8_t ypj_debug_stage = 0;
@@ -408,7 +465,19 @@ static void CatchLocatedMaterialToWarehouse(uint8_t color, uint16_t catch_height
 	Y_SetLength(Y_LENGHT_WAREHOUSE);
 
 	warehouse_index = Get_Warehouse_index_from_color(color);
-	warehouse_angle = Get_Warehouse_Angle(warehouse_index);
+	switch(warehouse_index)
+	{
+		case 0:
+			warehouse_angle = FIRST_WAREHOUSE_PUT_ANGLE;
+			break;
+		case 1:
+			warehouse_angle = SECOND_WAREHOUSE_PUT_ANGLE;
+			break;
+		case 2:
+		default:
+			warehouse_angle = THIRD_WAREHOUSE_PUT_ANGLE;
+			break;
+	}
 	HMI_LogInfo("turn wh %d", warehouse_index);
 	M8010_SetAngle(warehouse_angle);
 
@@ -422,6 +491,20 @@ static void CatchLocatedMaterialToWarehouse(uint8_t color, uint16_t catch_height
 	HMI_LogInfo("z safe");
 	Z_SetHeight(0);
 	claw_move_1(open);
+}
+
+/* 定1放3模式下，按放置时的固定机械臂姿态原地回收，不移动底盘。 */
+static void Ring_RecoverFromFixedPose(uint8_t color, uint16_t catch_height)
+{
+	int16_t catch_angle;
+	uint16_t catch_length;
+
+	Ring_GetFixedPose(color, &catch_angle, &catch_length);
+	claw_move_1(open);
+	Z_SetHeight(CIRCLE_SAFE_HEIGHT);
+	M8010_SetAngle(catch_angle);
+	Y_SetLength(catch_length);
+	CatchLocatedMaterialToWarehouse(color, catch_height);
 }
 
 static uint8_t Flow_QRWait(uint32_t wait_ms)
@@ -706,10 +789,12 @@ void Route_Path3_TurntableToProcessing(void)
 					(int64_t)(PATH3_LEFT_DISTANCE_CM *
 							  CHASSIS_LATERAL_PULSE_PER_CM + 0.5f),
 					0U);
-	Chassis_TurnToAngle(PATH3_FIRST_ANGLE, YPJ_TURN_TIMEOUT_MS);
+	Chassis_TurnToAngle(Yaw_DriftCorrect(0.0f, PATH3_FIRST_ANGLE),
+					   YPJ_TURN_TIMEOUT_MS);
 	Chassis_MoveByDistance(0, -PATH3_LONG_BACK_SPEED, PATH3_FIRST_ANGLE,
 					   PATH3_LONG_BACK_CM);
-	Chassis_TurnToAngle(PATH3_FINAL_ANGLE, YPJ_TURN_TIMEOUT_MS);
+	Chassis_TurnToAngle(Yaw_DriftCorrect(PATH3_FIRST_ANGLE, PATH3_FINAL_ANGLE),
+					   YPJ_TURN_TIMEOUT_MS);
 	Flow_ShowYawFixed();
 }
 
@@ -757,7 +842,8 @@ static void Flow_RingArea(float target_heading, RING_WORK_LAYER_T work_layer,
 		for(uint8_t i = 0; i < 3; i++)
 		{
 			uint8_t color = flow_color_data[i];
-			if(color != flow_current_ring)
+			if(color != flow_current_ring &&
+			   RING_PLACE_MODE == RING_PLACE_MODE_LOCATE_EACH)
 			{
 				if(Ring_SwitchToTarget(flow_current_ring, color, target_heading) == 0)
 					break;
@@ -772,8 +858,13 @@ static void Flow_RingArea(float target_heading, RING_WORK_LAYER_T work_layer,
 				}
 				flow_current_ring = color;
 			}
-			if(Ring_PlaceFromWarehouse(color, work_height) == 0)
-				break;
+			{
+				uint8_t clear = (color == BLUE && i < 2) ? 1 : 0;
+				uint8_t cw    = (color == RED &&
+								 Get_Warehouse_index_from_color(RED) == 2) ? 1 : 0;
+				if(Ring_PlaceFromWarehouse(color, work_height, clear, cw) == 0)
+					break;
+			}
 			flow_ring_place_count++;
 		}
 	}
@@ -795,31 +886,48 @@ static void Flow_RingArea(float target_heading, RING_WORK_LAYER_T work_layer,
 		Z_SetHeight(CIRCLE_SAFE_HEIGHT);
 		Y_SetLength(0);
 		M8010_SetAngle(0);
+		Flow_FineTuneHeading(target_heading);
 		HMI_LogInfo("area done");
 		return;
 	}
 
 	USART6_readdata_SeetZero();
-	Set_Circle_Center(YPJ_CENTER_X, YPJ_CENTER_Y);
-	Vision_StartMaterial();
-	vTaskDelay(pdMS_TO_TICKS(300));
-
-	for(uint8_t i = 0; i < 3; i++)
+	Motor_setspeed(0, 0, 0);
+	if(RING_PLACE_MODE == RING_PLACE_MODE_LOCATE_ONE)
 	{
-		uint8_t color = flow_color_data[i];
-		if(color != flow_current_ring)
+		Vision_Stop();
+		Vision_LED_Off();
+		for(uint8_t i = 0; i < 3; i++)
 		{
-			if(Ring_SwitchToTarget(flow_current_ring, color, target_heading) == 0)
-				break;
-			flow_current_ring = color;
+			uint8_t color = flow_color_data[i];
+			Ring_RecoverFromFixedPose(color, work_height);
+			flow_ring_recover_count++;
+			HMI_LogInfo("recover %s ok", Flow_ColorName(color));
 		}
+	}
+	else
+	{
+		Set_Circle_Center(YPJ_CENTER_X, YPJ_CENTER_Y);
+		Vision_StartMaterial();
+		vTaskDelay(pdMS_TO_TICKS(300));
 
-		Circle_PrepareMaterialCatchPose();
-		Yuanpanji_LocateOpenLoop(color, Flow_ColorName(color), target_heading, 1);
-		Motor_setspeed(0, 0, 0);
-		CatchLocatedMaterialToWarehouse(color, work_height);
-		flow_ring_recover_count++;
-		HMI_LogInfo("recover %s ok", Flow_ColorName(color));
+		for(uint8_t i = 0; i < 3; i++)
+		{
+			uint8_t color = flow_color_data[i];
+			if(color != flow_current_ring)
+			{
+				if(Ring_SwitchToTarget(flow_current_ring, color, target_heading) == 0)
+					break;
+				flow_current_ring = color;
+			}
+
+			Circle_PrepareMaterialCatchPose();
+			Yuanpanji_LocateOpenLoop(color, Flow_ColorName(color), target_heading, 1);
+			Motor_setspeed(0, 0, 0);
+			CatchLocatedMaterialToWarehouse(color, work_height);
+			flow_ring_recover_count++;
+			HMI_LogInfo("recover %s ok", Flow_ColorName(color));
+		}
 	}
 
 	Vision_Stop();
@@ -828,6 +936,7 @@ static void Flow_RingArea(float target_heading, RING_WORK_LAYER_T work_layer,
 	Z_SetHeight(CIRCLE_SAFE_HEIGHT);
 	Y_SetLength(0);
 	M8010_SetAngle(0);
+	Flow_FineTuneHeading(target_heading);
 	ypj_debug_stage = 100;
 	if(flow_ring_recover_count >= 3)
 		HMI_LogInfo("all recovered");
@@ -866,7 +975,8 @@ void Route_Path4_ProcessingToNext(void)
 					(int64_t)(PATH4_LEFT_DISTANCE_CM *
 							  CHASSIS_LATERAL_PULSE_PER_CM + 0.5f),
 					0U);
-	Chassis_TurnToAngle(PATH4_TURN_ANGLE, YPJ_TURN_TIMEOUT_MS);
+	Chassis_TurnToAngle(Yaw_DriftCorrect(PATH3_FINAL_ANGLE, PATH4_TURN_ANGLE),
+					   YPJ_TURN_TIMEOUT_MS);
 	Chassis_MoveByDistance(0, PATH4_FORWARD_SPEED, PATH4_TURN_ANGLE,
 					   PATH4_FORWARD_DISTANCE_CM);
 	Motor_setspeed(0, 0, 0);
@@ -885,7 +995,10 @@ void Route_Path5_StorageToTurntable(void)
 	HMI_LogInfo("back %.0fcm", compensated_back_cm);
 	Chassis_MoveByDistance(0, -PATH5_BACK_SPEED, PATH4_TURN_ANGLE,
 					   compensated_back_cm);
-	Chassis_TurnToAngle(PATH5_TURN_ANGLE, YPJ_TURN_TIMEOUT_MS);
+	Chassis_MoveByDistance(PATH5_LEFT_SPEED, 0, PATH4_TURN_ANGLE,
+					   PATH5_LEFT_DISTANCE_CM);
+	Chassis_TurnToAngle(Yaw_DriftCorrect(PATH4_TURN_ANGLE, PATH5_TURN_ANGLE),
+					   YPJ_TURN_TIMEOUT_MS);
 	Chassis_MoveByDistance(0, -PATH5_FINAL_BACK_SPEED, PATH5_TURN_ANGLE,
 					   PATH5_FINAL_BACK_CM);
 	Motor_setspeed(0, 0, 0);
@@ -910,7 +1023,8 @@ void Route_Path6_StorageToHome(void)
 					(int64_t)(PATH6_PRETURN_LEFT_CM *
 							  CHASSIS_LATERAL_PULSE_PER_CM + 0.5f),
 					0U);
-	Chassis_TurnToAngle(PATH6_TURN_ANGLE, YPJ_TURN_TIMEOUT_MS);
+	Chassis_TurnToAngle(Yaw_DriftCorrect(PATH4_TURN_ANGLE, PATH6_TURN_ANGLE),
+					   YPJ_TURN_TIMEOUT_MS);
 	Chassis_MoveByDistance(0, -PATH6_LONG_BACK_SPEED, PATH6_TURN_ANGLE,
 					   PATH6_LONG_BACK_CM);
 	Chassis_MoveByDistance(-PATH6_RIGHT_SPEED, 0, PATH6_TURN_ANGLE,
@@ -922,7 +1036,10 @@ void Route_Path6_StorageToHome(void)
 
 uint8_t Flow_ArmPoseInit(void)
 {
+	char init_error[20];
+
 	vTaskDelay(pdMS_TO_TICKS(500));
+	HMI_ClearArmFault();
 	HMI_InitScreen();
 	HMI_SetSys("ARM INIT", "RUN");
 	HMI_SetChassisText("STOP");
@@ -932,9 +1049,22 @@ uint8_t Flow_ArmPoseInit(void)
 	HMI_LogInfo("init z %d", ARM_INIT_Z_OFFSET);
 	if(!Z_InitMoveSigned(ARM_INIT_Z_OFFSET))
 	{
-		HMI_SetSys("ARM INIT", "Z TIMEOUT");
-		HMI_SetArmText("Z ERROR");
-		HMI_LogError("init z timeout");
+		if(u7_debug_last_tx_status != HAL_OK)
+		{
+			snprintf(init_error, sizeof(init_error), "Z TX FAIL:%u",
+					 (unsigned int)u7_debug_last_tx_status);
+			HMI_SetSys("ARM INIT", init_error);
+			HMI_SetArmText("Z TX FAIL");
+			HMI_SetArmFault(init_error);
+			HMI_LogError("init z tx fail %u", (unsigned int)u7_debug_last_tx_status);
+		}
+		else
+		{
+			HMI_SetSys("ARM INIT", "Z RX TIMEOUT");
+			HMI_SetArmText("Z RX TIMEOUT");
+			HMI_SetArmFault("Z RX TIMEOUT");
+			HMI_LogError("init z rx timeout");
+		}
 		return 0;
 	}
 
@@ -942,9 +1072,22 @@ uint8_t Flow_ArmPoseInit(void)
 	HMI_LogInfo("init y %d", ARM_INIT_Y_OFFSET);
 	if(!Y_InitMoveSigned(ARM_INIT_Y_OFFSET))
 	{
-		HMI_SetSys("ARM INIT", "Y TIMEOUT");
-		HMI_SetArmText("Y ERROR");
-		HMI_LogError("init y timeout");
+		if(u7_debug_last_tx_status != HAL_OK)
+		{
+			snprintf(init_error, sizeof(init_error), "Y TX FAIL:%u",
+					 (unsigned int)u7_debug_last_tx_status);
+			HMI_SetSys("ARM INIT", init_error);
+			HMI_SetArmText("Y TX FAIL");
+			HMI_SetArmFault(init_error);
+			HMI_LogError("init y tx fail %u", (unsigned int)u7_debug_last_tx_status);
+		}
+		else
+		{
+			HMI_SetSys("ARM INIT", "Y RX TIMEOUT");
+			HMI_SetArmText("Y RX TIMEOUT");
+			HMI_SetArmFault("Y RX TIMEOUT");
+			HMI_LogError("init y rx timeout");
+		}
 		return 0;
 	}
 

@@ -7,6 +7,7 @@
 #define U7_DMA_RX_LEN 4
 #define Z_MAX_TIMEOUT_MS 4000U
 #define UART7_RX_SETTLE_MS 20U
+#define UART7_TX_RETRY_DELAY_MS 5U
 static uint8_t u7RXdat[U7_RX_BUF_LEN];
 static uint8_t USART7_senddata[128];
 static uint8_t u7_stream_frame[U7_RX_BUF_LEN];
@@ -19,6 +20,7 @@ volatile uint32_t u7_debug_rx_event_count = 0;
 volatile uint32_t u7_debug_error_count = 0;
 volatile uint32_t u7_debug_last_error = 0;
 volatile uint32_t u7_debug_tx_count = 0;
+volatile uint32_t u7_debug_tx_retry_count = 0;
 volatile uint8_t u7_debug_last_tx_status = 0xFF;
 volatile uint8_t u7_debug_last_tx_len = 0;
 volatile uint8_t u7_debug_last_tx_buf[13];
@@ -32,7 +34,7 @@ extern struct POSTION Telescopic_POSTION;
 int postion_redstage_Z = 0;
 int postion_redstage = 0;
 
-void uart7WriteBuf(uint8_t *buf, uint8_t len)
+uint8_t uart7WriteBuf(uint8_t *buf, uint8_t len)
 {
 	uint8_t copy_len = len;
 
@@ -47,6 +49,7 @@ void uart7WriteBuf(uint8_t *buf, uint8_t len)
 	u7_debug_last_tx_len = len;
 	u7_debug_tx_count++;
 	u7_debug_last_tx_status = (uint8_t)HAL_UART_Transmit(&huart7, buf, len, HAL_MAX_DELAY);
+	return u7_debug_last_tx_status;
 }
 
 void UART7_RxRestart(void)
@@ -148,6 +151,23 @@ static void postion_send_mode(uint8_t id, int position, uint8_t mode)
         uart7WriteBuf(USART7_senddata, 13);  // 将数据发送到串口7
 }
 
+static uint8_t position_init_send(uint8_t id, int target)
+{
+	postion_send_mode(id, target, POSITION_MODE_RELATIVE);
+	if(u7_debug_last_tx_status == HAL_OK)
+	{
+		return 1U;
+	}
+
+	u7_debug_tx_retry_count++;
+	vTaskDelay(pdMS_TO_TICKS(UART7_TX_RETRY_DELAY_MS));
+	UART7_RxRestart();
+	vTaskDelay(pdMS_TO_TICKS(UART7_RX_SETTLE_MS));
+	postion_send_mode(id, target, POSITION_MODE_RELATIVE);
+
+	return (u7_debug_last_tx_status == HAL_OK);
+}
+
 void postion_send(uint8_t id,int position)
 {
 	postion_send_mode(id, position, POSITION_MODE_ABSOLUTE);
@@ -208,7 +228,12 @@ uint8_t Z_InitMoveSigned(int height)
 	UART7_RxRestart();
 	vTaskDelay(pdMS_TO_TICKS(UART7_RX_SETTLE_MS));
 	Z_POSTION.BIT = Incomplete;
-	postion_send_mode(0x01, Z_POSTION.TARGE, POSITION_MODE_RELATIVE);
+	if(!position_init_send(0x01, Z_POSTION.TARGE))
+	{
+		z_debug_last_wait_ms = 0;
+		z_debug_last_timeout = 1;
+		return 0;
+	}
 	start_tick = HAL_GetTick();
 
 	while(Z_POSTION.BIT != finish &&
@@ -230,7 +255,10 @@ uint8_t Y_InitMoveSigned(int length)
 	UART7_RxRestart();
 	vTaskDelay(pdMS_TO_TICKS(UART7_RX_SETTLE_MS));
 	Telescopic_POSTION.BIT = Incomplete;
-	postion_send_mode(0x02, Telescopic_POSTION.TARGE, POSITION_MODE_RELATIVE);
+	if(!position_init_send(0x02, Telescopic_POSTION.TARGE))
+	{
+		return 0;
+	}
 	start_tick = HAL_GetTick();
 
 	while(Telescopic_POSTION.BIT != finish &&

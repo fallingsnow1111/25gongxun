@@ -48,6 +48,7 @@ static volatile int32_t hmi_actual_y;
 static volatile int32_t hmi_actual_error_x;
 static volatile int32_t hmi_actual_error_y;
 static volatile uint8_t hmi_actual_valid;
+static char hmi_arm_fault_text[HMI_TEXT_MAX + 1];
 
 static void HMI_CopyString(char* dst, uint8_t dst_size, const char* src)
 {
@@ -127,7 +128,16 @@ static void HMI_FixedRefreshNow(void)
 				 (unsigned long)odom.move_time_ms);
 	HMI_SendTextNow("t4", text);
 
-	if(hmi_actual_valid)
+	if(motor_debug_cmd_rpm_x10[0] != 0 || motor_debug_cmd_rpm_x10[1] != 0 ||
+	   motor_debug_cmd_rpm_x10[2] != 0 || motor_debug_cmd_rpm_x10[3] != 0)
+		snprintf(text, sizeof(text), "W %d %d %d %d",
+				 (int)motor_debug_cmd_rpm_x10[0],
+				 (int)motor_debug_cmd_rpm_x10[1],
+				 (int)motor_debug_cmd_rpm_x10[2],
+				 (int)motor_debug_cmd_rpm_x10[3]);
+	else if(hmi_arm_fault_text[0] != '\0')
+		snprintf(text, sizeof(text), "ARM %s", hmi_arm_fault_text);
+	else if(hmi_actual_valid)
 		snprintf(text, sizeof(text), "ACT X%ld Y%ld EX%ld EY%ld",
 				 (long)hmi_actual_x, (long)hmi_actual_y,
 				 (long)hmi_actual_error_x, (long)hmi_actual_error_y);
@@ -281,6 +291,16 @@ void HMI_SetChassisText(char* text)
 void HMI_SetArmText(char* text)
 {
 	(void)text;
+}
+
+void HMI_SetArmFault(char* text)
+{
+	HMI_CopyString(hmi_arm_fault_text, sizeof(hmi_arm_fault_text), text);
+}
+
+void HMI_ClearArmFault(void)
+{
+	hmi_arm_fault_text[0] = '\0';
 }
 
 void HMI_SetPixelError(int err_x, int err_y, uint8_t valid)

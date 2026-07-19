@@ -12,7 +12,8 @@ typedef enum {
 uint8_t TaskFlow_RingLocateOne(uint8_t color, char *name, float target_angle);
 void TaskFlow_RingSwitchY(float vy, float target_angle, float distance_cm);
 uint8_t TaskFlow_PlaceFromWarehouseIndex(uint8_t warehouse_index, char *name,
-										 uint16_t place_height);
+										 uint16_t place_height,
+										 uint8_t need_clear, uint8_t need_cw);
 
 /* 比赛流程各阶段，可独立调用进行路径调试。 */
 void Route_Path1_StartToQR(void);

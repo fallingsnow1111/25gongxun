@@ -14,7 +14,7 @@ volatile uint32_t chassis_period_max_ms = 0;
 
 #define CHASSIS_TURN_THRESHOLD     0.1f /* 常规转向的到位误差，单位度。 */
 #define CHASSIS_TURN_SETTLE_COUNT    10U /* 角度连续约50ms满足阈值才算到位。 */
-#define CHASSIS_TURN_MIN_SPEED      0.1f /* 双环最小输出，实车测试后再确定机械有效下限。 */
+#define CHASSIS_TURN_MIN_SPEED      1.0f /* 双环最小输出，实车测试后再确定机械有效下限。 */
 #define CHASSIS_TURN_ACCEL_DELTA    2.0f /* 原地转向每5ms最多增加2RPM。 */
 #define CHASSIS_TURN_DECEL_DELTA    4.0f /* 原地转向每5ms最多减少4RPM。 */
 #define CHASSIS_TURN_ANGLE_KP       3.0f /* 角度外环增益：角度误差转换为目标角速度。 */
@@ -474,10 +474,10 @@ void Chassis_MoveByDistanceSmoothYaw(float vx, float vy, float target_angle,
  *函数简介: 底盘原地转向到指定Yaw角度
  *参数说明: target_angle 目标Yaw角度, 单位: 度
  *参数说明: timeout_ms   超时时间, 单位: ms
- *返回类型: 无
+ *返回类型: 1表示在超时前到位，0表示超时
  *备注: 使用IMU角度PID计算旋转速度, 连续多次进入角度误差范围后停车
  */
-void Chassis_TurnToAngle(float target_angle, uint32_t timeout_ms)
+static uint8_t Chassis_TurnToAngleOnce(float target_angle, uint32_t timeout_ms)
 {
     uint32_t start_tick = HAL_GetTick();
     uint8_t settle_count = 0;
@@ -501,22 +501,23 @@ void Chassis_TurnToAngle(float target_angle, uint32_t timeout_ms)
 
         if (fabsf(angle_error) <= CHASSIS_TURN_THRESHOLD)
         {
-            settle_count++;
+			settle_count++;
 			last_turn_speed = 0.0f;
             Motor_setspeed_fine(0, 0, 0);
             if (settle_count >= CHASSIS_TURN_SETTLE_COUNT)
             {
-                break;
+                Motor_setspeed_fine(0, 0, 0);
+                vTaskDelay(pdMS_TO_TICKS(100));
+                return 1U;
             }
 
 			Chassis_WaitPeriod(&last_wake, &last_cycle);
             continue;
         }
-        else
-        {
-            settle_count = 0;
-        }
-
+		else
+		{
+			settle_count = 0;
+		}
 		{
 			float target_rate = angle_error * CHASSIS_TURN_ANGLE_KP;
 			float rate_error;
@@ -564,9 +565,39 @@ void Chassis_TurnToAngle(float target_angle, uint32_t timeout_ms)
 
     Motor_setspeed_fine(0, 0, 0);
     vTaskDelay(pdMS_TO_TICKS(100));
+    return 0U;
 }
 
 /* 色环姿态微调复用原地转向双环，返回1表示最终角度满足停车阈值。 */
+uint8_t Chassis_TurnToAngle(float target_angle, uint32_t timeout_ms)
+{
+    uint32_t start_tick = HAL_GetTick();
+    uint32_t elapsed_ms;
+    uint32_t remaining_ms;
+    float angle_error;
+
+    if (Chassis_TurnToAngleOnce(target_angle, timeout_ms) == 0U)
+    {
+        return 0U;
+    }
+
+    /* Stop first, then verify the settled IMU angle before leaving the turn. */
+    angle_error = getAngleZ(normalize_angle(imu.yaw), target_angle);
+    if (fabsf(angle_error) <= CHASSIS_TURN_THRESHOLD)
+    {
+        return 1U;
+    }
+
+    elapsed_ms = HAL_GetTick() - start_tick;
+    if (elapsed_ms >= timeout_ms)
+    {
+        return 0U;
+    }
+
+    remaining_ms = timeout_ms - elapsed_ms;
+    return Chassis_TurnToAngleOnce(target_angle, remaining_ms);
+}
+
 uint8_t Chassis_FineTuneAngle(float target_angle, uint32_t timeout_ms)
 {
     float angle_error;

@@ -78,3 +78,19 @@ void Direction_Calibration(int target_angle)
     float w_output = PID_Compute(&Gyro_Pid, tar, current_val);
     return -w_output;
 }
+
+/* 补偿 IMU 累积漂移：用实测 yaw 与期望角度的差值修正目标角度。
+   expected_current: 当前位置"应该"是什么角度 (上一段转弯的目标)
+   target_angle:     要转到的目标角度
+   返回 target_angle + drift_error，使机器人物理上转到正确的方向。 */
+float Yaw_DriftCorrect(float expected_current, float target_angle)
+{
+    float current = normalize_angle(imu.yaw);
+    float expected = normalize_angle(expected_current);
+    float error = current - expected;
+
+    while (error > 180.0f)  error -= 360.0f;
+    while (error < -180.0f) error += 360.0f;
+
+    return target_angle + error;
+}

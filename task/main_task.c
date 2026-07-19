@@ -1,5 +1,5 @@
 #include "main_task.h"
-#include "task_flow.h"
+#include "test.h"
 
 TaskHandle_t main_task_Handle;
 
@@ -16,9 +16,9 @@ static void Main_Task(void *pvParameters)
 {
     (void)pvParameters;
 
-    Flow_RunCurrent();
-	// Flow_ArmPoseInit();
+	Flow_RunCurrent();
 
+	
     while(1)
         vTaskDelay(pdMS_TO_TICKS(200));
 } 

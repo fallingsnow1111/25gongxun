@@ -53,6 +53,7 @@ volatile uint32_t u3_debug_rx_restart_fail = 0;
 volatile uint32_t u3_debug_error_count = 0;
 volatile uint32_t u3_debug_last_error = 0;
 volatile uint8_t u3_debug_buf[8];
+volatile int16_t motor_debug_cmd_rpm_x10[4];
 
 HAL_StatusTypeDef uart3WriteBuf(uint8_t *buf, uint8_t len)
 {
@@ -255,7 +256,8 @@ void MOTOR_Init(void)// 电机初始化
 	motor3.actual_angle = 0;
 	motor4.target_angle = 0;
 	motor4.actual_angle = 0;
-	motor_speed_scale10_ready = Motor_EnableSpeedScale10();
+	/* 0.1RPM mode is configured and saved directly on each motor driver. */
+	// motor_speed_scale10_ready = Motor_EnableSpeedScale10();
 	UART3_RxRestart();
 }
 
@@ -521,7 +523,10 @@ static void Motor_setspeed_internal(float vy, float vx, float vw, uint8_t fine)
 	{
 		Chassis_OdomSettle(HAL_GetTick());
 		for(uint8_t i = 0; i < 4; i++)
+		{
 			odom_last_rpm_x10[i] = next_rpm_x10[i];
+			motor_debug_cmd_rpm_x10[i] = next_rpm_x10[i];
+		}
 	}
 	else
 	{

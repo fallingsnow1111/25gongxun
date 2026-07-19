@@ -39,29 +39,40 @@ void Circle_PrepareMaterialCatchPose(void)
 	Z_SetHeight(CIRCLE_MATERIAL_DETECT_HEIGHT);
 }
 
-// Take one material from the selected warehouse and place it at the selected layer height.
-uint8_t Circle_PlaceFromWarehouseAtHeight(uint8_t warehouse_index, uint16_t place_height)
+// 从指定物料仓取料，并按给定关节角、Y轴长度和Z轴高度放置。
+uint8_t Circle_PlaceFromWarehouseAtPose(uint8_t warehouse_index, uint16_t place_height,
+										int16_t place_angle, uint16_t place_length,
+										uint8_t need_clear, uint8_t need_cw)
 {
+	int wh_angle;
+
 	if(warehouse_index > 2)
 		return 0;
 
 	claw_move_2(open);
 	Z_SetHeight(CIRCLE_SAFE_HEIGHT);
-	M8010_SetAngle(Get_Warehouse_Angle(warehouse_index));
+	wh_angle = (need_cw && warehouse_index == 2)
+			 ? -394 : Get_Warehouse_Angle(warehouse_index);
+	M8010_SetAngle(wh_angle);
 	Y_SetLength(CIRCLE_WAREHOUSE_LENGTH);
 	Z_SetHeight(CIRCLE_WAREHOUSE_HEIGHT);
 	claw_move_2(close);
 	vTaskDelay(pdMS_TO_TICKS(100));
 
 	Z_SetHeight(CIRCLE_SAFE_HEIGHT);
-	if(warehouse_index < 2)
+	if (need_clear && place_height == CIRCLE_SECOND_LAYER_HEIGHT)
 	{
-		Y_SetLength(CIRCLE_ROTATE_LENGTH);
-		vTaskDelay(pdMS_TO_TICKS(400));
+		/* CCW 侧取料后 Y 轴伸出避让，防止旋转时扫到已放环。 */
+		Y_SetLength(95);
 	}
-	M8010_SetAngle(CIRCLE_PLACE_ANGLE);
-	Y_SetLength(CIRCLE_PLACE_LENGTH);
+	else if (place_height == CIRCLE_SECOND_LAYER_HEIGHT)
+	{
+		Y_SetLength(0);
+	}
+	M8010_SetAngle(place_angle);
+	Y_SetLength(place_length);
 	Z_SetHeight(place_height);
+	vTaskDelay(pdMS_TO_TICKS(200));
 	claw_move_2(open);
 	vTaskDelay(pdMS_TO_TICKS(100));
 	if(place_height == CIRCLE_SECOND_LAYER_HEIGHT)
@@ -75,6 +86,15 @@ uint8_t Circle_PlaceFromWarehouseAtHeight(uint8_t warehouse_index, uint16_t plac
 	}
 
 	return 1;
+}
+
+// 通用放置姿态，供定3放3和孤立动作测试继续使用。
+uint8_t Circle_PlaceFromWarehouseAtHeight(uint8_t warehouse_index, uint16_t place_height,
+                                            uint8_t need_clear, uint8_t need_cw)
+{
+	return Circle_PlaceFromWarehouseAtPose(warehouse_index, place_height,
+										 CIRCLE_PLACE_ANGLE, CIRCLE_PLACE_LENGTH,
+										 need_clear, need_cw);
 }
 
 //准备定位圆盘机的动作组（决赛）；

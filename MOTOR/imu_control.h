@@ -20,5 +20,6 @@ float Direction_Calibration_turn(float tar_angle);
 float getAngleZ_avg(float my_angel);
 float getAngleZ(float yaw,float my_angel); 
 float normalize_angle(float angle);
+float Yaw_DriftCorrect(float expected_current, float target_angle);
 #endif
 

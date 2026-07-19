@@ -518,6 +518,14 @@ void Chassis_TurnRate_Map_Test(void)
 #define TURN_LOW_RATE_SAMPLE_PERIOD_MS    20U
 #define TURN_LOW_RATE_PHOTO_WAIT_MS     2000U
 
+#define TURN_INTEGRAL_CMD_RPM           40.0f
+#define TURN_INTEGRAL_RATE_GAIN          1.066f
+#define TURN_INTEGRAL_RAMP_STEPS         20U
+#define TURN_INTEGRAL_RAMP_PERIOD_MS      5U
+#define TURN_INTEGRAL_PERIOD_MS           5U
+#define TURN_INTEGRAL_TIMEOUT_MS       5000U
+#define TURN_INTEGRAL_PHOTO_WAIT_MS    2000U
+
 /*
  * 依次测试正反向0.1~1.0RPM，每档采样10秒。
  * 屏幕输出指令RPM、IMU平均角速度、Yaw反算角速度及角速度范围。
@@ -525,15 +533,14 @@ void Chassis_TurnRate_Map_Test(void)
 void Chassis_LowSpeed_Linearity_Test(void)
 {
 	static const float command_rpm[] = {
-		 0.1f, -0.1f,  0.2f, -0.2f,  0.3f, -0.3f,
-		 0.5f, -0.5f,  0.7f, -0.7f,  1.0f, -1.0f
+		 1.0f, -1.0f
 	};
 	char chassis_text[32];
 
 	vTaskDelay(pdMS_TO_TICKS(500));
 	HMI_InitScreen();
 	HMI_SetSys("TURN", "LOW RPM");
-	HMI_SetVisionText("0.1RPM TEST");
+	HMI_SetVisionText("1RPM MIN TEST");
 	HMI_LogInfo("scale10 cfg=%d", motor_speed_scale10_ready);
 
 	Motor_setspeed_fine(0, 0, 0);
@@ -597,6 +604,116 @@ void Chassis_LowSpeed_Linearity_Test(void)
 	Motor_setspeed_fine(0, 0, 0);
 	HMI_SetChassisText("LOW RPM DONE");
 	HMI_LogInfo("low rpm test done");
+}
+
+static float Test_IntegralTurnRamp(float start_speed, float end_speed, uint8_t send_cmd)
+{
+	float calc_delta = 0.0f;
+
+	for(uint8_t step = 1; step <= TURN_INTEGRAL_RAMP_STEPS; step++)
+	{
+		float ratio = (float)step / (float)TURN_INTEGRAL_RAMP_STEPS;
+		float speed = start_speed + (end_speed - start_speed) * ratio;
+
+		if(send_cmd != 0U)
+			Motor_setspeed_fine(0, 0, speed);
+
+		/* 当前底盘方向：正 vw 对应 yaw 减小，负 vw 对应 yaw 增大。 */
+		calc_delta += (-speed) * TURN_INTEGRAL_RATE_GAIN *
+					  (float)TURN_INTEGRAL_RAMP_PERIOD_MS / 1000.0f;
+		if(send_cmd != 0U)
+			vTaskDelay(pdMS_TO_TICKS(TURN_INTEGRAL_RAMP_PERIOD_MS));
+	}
+
+	return calc_delta;
+}
+
+static void Test_IntegralTurnOnce(float target_delta, float abs_cmd_rpm)
+{
+	TickType_t last_wake;
+	CHASSIS_ODOM_T odom;
+	uint32_t start_tick;
+	uint32_t last_tick;
+	uint32_t now_tick;
+	float start_yaw;
+	float end_yaw;
+	float cmd_rpm;
+	float calc_delta = 0.0f;
+	float brake_delta;
+	float imu_delta;
+	float error;
+
+	cmd_rpm = (target_delta < 0.0f) ? fabsf(abs_cmd_rpm) : -fabsf(abs_cmd_rpm);
+
+	Chassis_OdomResetSegment();
+	start_yaw = normalize_angle(imu.yaw);
+	start_tick = HAL_GetTick();
+
+	HMI_SetChassisText("INT TURN RUN");
+	HMI_LogInfo("I turn %.0f C%.0f", target_delta, cmd_rpm);
+
+	calc_delta += Test_IntegralTurnRamp(0.0f, cmd_rpm, 1U);
+	last_tick = HAL_GetTick();
+	brake_delta = Test_IntegralTurnRamp(cmd_rpm, 0.0f, 0U);
+	last_wake = xTaskGetTickCount();
+
+	while((HAL_GetTick() - start_tick) < TURN_INTEGRAL_TIMEOUT_MS)
+	{
+		now_tick = HAL_GetTick();
+		calc_delta += (-cmd_rpm) * TURN_INTEGRAL_RATE_GAIN *
+					  (float)(now_tick - last_tick) / 1000.0f;
+		last_tick = now_tick;
+
+		if(fabsf(calc_delta + brake_delta) >= fabsf(target_delta))
+			break;
+
+		Motor_setspeed_fine(0, 0, cmd_rpm);
+		vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(TURN_INTEGRAL_PERIOD_MS));
+	}
+
+	calc_delta += Test_IntegralTurnRamp(cmd_rpm, 0.0f, 1U);
+	Motor_setspeed_fine(0, 0, 0);
+	vTaskDelay(pdMS_TO_TICKS(300));
+
+	end_yaw = normalize_angle(imu.yaw);
+	imu_delta = getAngleZ(end_yaw, start_yaw);
+	error = imu_delta - calc_delta;
+	Chassis_OdomGetSegment(&odom);
+
+	HMI_SetChassisText("INT TURN DONE");
+	HMI_LogInfo("I%.1f Y%.2f E%.2f", calc_delta, imu_delta, error);
+	HMI_LogInfo("O%ld T%lums", (long)odom.w,
+				(unsigned long)(HAL_GetTick() - start_tick));
+	vTaskDelay(pdMS_TO_TICKS(TURN_INTEGRAL_PHOTO_WAIT_MS));
+}
+
+/*
+ * 积分转弯测试：只按发送的转向速度和时间积分估算转角，
+ * 停车后再和 IMU 实测角度对比，用来判断“不开角度闭环转弯”是否可用。
+ */
+void Chassis_Integral_Turn_Test(void)
+{
+	static const float target_delta[] = {-90.0f, -90.0f, 90.0f, 90.0f};
+
+	vTaskDelay(pdMS_TO_TICKS(500));
+	HMI_InitScreen();
+	HMI_SetSys("TURN", "INTEGRAL");
+	HMI_SetVisionText("C40 INT");
+	HMI_LogInfo("integral turn test");
+
+	Motor_setspeed_fine(0, 0, 0);
+	vTaskDelay(pdMS_TO_TICKS(200));
+	Imu_setZero();
+	vTaskDelay(pdMS_TO_TICKS(200));
+
+	for(uint8_t i = 0; i < (sizeof(target_delta) / sizeof(target_delta[0])); i++)
+	{
+		Test_IntegralTurnOnce(target_delta[i], TURN_INTEGRAL_CMD_RPM);
+	}
+
+	Motor_setspeed_fine(0, 0, 0);
+	HMI_SetChassisText("INT TEST DONE");
+	HMI_LogInfo("integral test done");
 }
 
 void QR_Code_Test(void)

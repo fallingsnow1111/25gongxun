@@ -146,7 +146,7 @@ void M8010_send(int position) {
             break;
         }
 
-        HAL_Delay(10);
+        HAL_Delay(15);
     }
 }
 

@@ -11,6 +11,7 @@ void Chassis_Turn_Error_Test(void);
 void Chassis_AngularRate_Baseline_Test(void);
 void Chassis_TurnRate_Map_Test(void);
 void Chassis_LowSpeed_Linearity_Test(void);
+void Chassis_Integral_Turn_Test(void);
 void IMU_Static_Stability_Test(void);
 void IMU_Drift_Rezero_Test(void);
 void IMU_Stable_Straight_Test(void);

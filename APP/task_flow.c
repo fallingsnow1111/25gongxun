@@ -52,6 +52,8 @@
 #define YPJ_TRACK_ROI              80     /* 以目标中心为原点的方形跟踪区域半宽，单位像素。 */
 #define YPJ_LOCATE_DEADZONE         5     /* 物料中心允许的像素误差。 */
 #define YPJ_LOCATE_STABLE_COUNT     3     /* 连续满足误差要求多少帧才算定位完成。 */
+#define YPJ_LOCATE_MAX_X_OFFSET_CM  2.0f  /* 定位过程中前后位移限制，单位 cm。 */
+#define YPJ_LOCATE_MAX_Y_OFFSET_CM  1.5f  /* 定位过程中右移位移限制，单位 cm。 */
 
 /* 二维码小范围搜索。 */
 #define YPJ_QR_SCAN_DISTANCE_CM   2.0f    /* 每次二维码小范围搜索的固定移动距离。 */
@@ -60,59 +62,65 @@
 /* 路径 1：启停区到二维码区域。 */
 #define PATH1_LEFT_SPEED          80.0f   /* 第一段左移速度。 */
 #define PATH1_LEFT_DISTANCE_CM    18.0f   /* 第一段左移距离，单位 cm。 */
-#define PATH1_FORWARD_SPEED      160.0f   /* 前进到二维码区域的速度。 */
+#define PATH1_FORWARD_SPEED      130.0f   /* 前进到二维码区域的速度。 */
 #define PATH1_FORWARD_DISTANCE_CM 63.0f   /* 前进到二维码区域的距离，单位 cm。 */
 
 /* 路径 2：二维码区域到圆盘机。 */
-#define PATH2_FORWARD_SPEED      180.0f   /* 扫码完成后的前进速度。 */
+#define PATH2_FORWARD_SPEED      100.0f   /* 扫码完成后的前进速度。 */
 #define PATH2_FORWARD_DISTANCE_CM 80.0f   /* 二维码区域到圆盘机的距离，单位 cm。 */
-#define PATH2_ACCEL_TICKS        100U     /* 加速 500ms，1 tick = 5ms。 */
+#define PATH2_ACCEL_TICKS        200U     /* 加速 500ms，1 tick = 5ms。 */
 #define PATH2_DECEL_TICKS        200U     /* 减速 750ms，降低停车冲击。 */
 #define PATH2_RIGHT_SPEED          20.0f   /* 到达圆盘机后的低速右移速度。 */
 #define PATH2_RIGHT_DISTANCE_CM    5.0f   /* 到达圆盘机后的右移距离，单位 cm。 */
 
 /* 路径 3：圆盘机到粗加工区。 */
 #define PATH3_BACK_SPEED          80.0f   /* 圆盘机夹取完成后的倒车速度。 */
-#define PATH3_BACK_DISTANCE_CM    38.0f   /* 第一段倒车距离，单位 cm。 */
+#define PATH3_BACK_DISTANCE_CM    40.0f   /* 第一段倒车距离，单位 cm。 */
 #define PATH3_LEFT_SPEED          20.0f   /* 转弯前左移避线速度。 */
 #define PATH3_LEFT_DISTANCE_CM     5.0f   /* 转弯前左移避线距离，单位 cm。 */
 #define PATH3_FIRST_ANGLE        -90.0f   /* 第一次顺时针转90°后的目标航向。 */
-#define PATH3_LONG_BACK_SPEED    200.0f   /* 到粗加工区的长距离倒车速度。 */
-#define PATH3_LONG_BACK_CM       176.0f   /* 到粗加工区的长距离倒车距离，单位 cm。 */
+#define PATH3_LONG_BACK_SPEED    170.0f   /* 到粗加工区的长距离倒车速度。 */
+#define PATH3_LONG_BACK_CM       173.0f   /* 到粗加工区的长距离倒车距离，单位 cm。 */
+#define PATH3_LONG_BACK_ACCEL_TICKS 250U  /* 173cm 长距离倒车加速时间，1 tick = 5ms。 */
+#define PATH3_LONG_BACK_DECEL_TICKS 150U  /* 173cm 长距离倒车减速时间，1 tick = 5ms。 */
 #define PATH3_FINAL_ANGLE       -180.0f   /* 进入粗加工区后的目标航向。 */
+#define PATH3_FINAL_LEFT_SPEED  20.0f   /* 倒车后左移对准速度。 */
+#define PATH3_FINAL_LEFT_CM      3.0f   /* 倒车后左移对准距离，单位 cm。 */
 
 /* 路径 4：粗加工区物料全部回收后的路线。 */
-#define PATH4_BACK_SPEED         200.0f   /* 离开粗加工区的倒车速度。 */
-#define PATH4_BACK_DISTANCE_CM   87.0f    /* 离开粗加工区的倒车距离，单位 cm。 */
-#define PATH4_BACK_ACCEL_TICKS   100U     /* 倒车加速 500ms，1 tick = 5ms。 */
+#define PATH4_BACK_SPEED         120.0f   /* 离开粗加工区的倒车速度。 */
+#define PATH4_BACK_DISTANCE_CM   85.0f    /* 离开粗加工区的倒车距离，单位 cm。 */
+#define PATH4_BACK_ACCEL_TICKS   150U     /* 倒车加速 500ms，1 tick = 5ms。 */
 #define PATH4_BACK_DECEL_TICKS   150U     /* 倒车减速 750ms，降低停车冲击。 */
 #define PATH4_LEFT_SPEED          20.0f    /* 转弯前左移避线速度。 */
 #define PATH4_LEFT_DISTANCE_CM     5.0f    /* 转弯前左移避线距离，单位 cm。 */
 #define PATH4_TURN_ANGLE        -270.0f   /* 从-180°继续顺时针90°后的连续世界航向。 */
-#define PATH4_FORWARD_SPEED     -180.0f   /* 前往暂存区的移动速度。 */
+#define PATH4_FORWARD_SPEED      180.0f   /* 前往暂存区的移动速度。 */
 #define PATH4_FORWARD_DISTANCE_CM 85.0f   /* 前往暂存区的距离，单位 cm。 */
+#define PATH4_FINAL_RIGHT_SPEED   20.0f   /* 转向后右移对准速度。 */
+#define PATH4_FINAL_RIGHT_CM       4.0f   /* 转向后右移对准距离，单位 cm。 */
 
 /* 路径 5：第一轮暂存区完成后返回圆盘机。 */
 #define PATH5_BACK_SPEED          160.0f  /* 离开暂存区的倒车速度。 */
 #define PATH5_BACK_DISTANCE_CM     93.0f  /* 离开暂存区的倒车距离，单位 cm。 */
 #define PATH5_LEFT_SPEED           20.0f  /* 转弯前左移避线速度。 */
-#define PATH5_LEFT_DISTANCE_CM      5.0f  /* 转弯前左移避线距离，单位 cm。 */
+#define PATH5_LEFT_DISTANCE_CM      7.0f  /* 转弯前左移避线距离，单位 cm。 */
 #define PATH5_TURN_ANGLE         -360.0f  /* 从-270°继续顺时针90°后的连续世界航向。 */
 #define PATH5_FINAL_BACK_SPEED    160.0f  /* 转向后驶向圆盘机的倒车速度。 */
-#define PATH5_FINAL_BACK_CM        43.0f  /* 转向后驶向圆盘机的倒车距离，单位 cm。 */
+#define PATH5_FINAL_BACK_CM        42.0f  /* 转向后驶向圆盘机的倒车距离，单位 cm。 */
 
 /* 路径 6：第二轮暂存区完成后返回启停区。 */
-#define PATH6_BACK_SPEED          200.0f  /* 离开第二轮暂存区的倒车速度。 */
-#define PATH6_BACK_DISTANCE_CM     90.0f  /* 从绿环离开暂存区的基准倒车距离，单位 cm。 */
+#define PATH6_BACK_SPEED          170.0f  /* 离开第二轮暂存区的倒车速度。 */
+#define PATH6_BACK_DISTANCE_CM     88.0f  /* 从绿环离开暂存区的基准倒车距离，单位 cm。 */
 #define PATH6_BACK_ACCEL_TICKS    100U    /* 倒车加速 500ms，1 tick = 5ms。 */
 #define PATH6_BACK_DECEL_TICKS    150U    /* 倒车减速 750ms，降低停车冲击。 */
 #define PATH6_PRETURN_LEFT_SPEED   20.0f   /* 转弯前左移避线速度。 */
-#define PATH6_PRETURN_LEFT_CM       5.0f   /* 转弯前左移避线距离，单位 cm。 */
-#define PATH6_TURN_ANGLE         -360.0f  /* 返航前顺时针转向后的目标航向。 */
+#define PATH6_PRETURN_LEFT_CM       7.0f   /* 转弯前左移避线距离，单位 cm。 */
+#define PATH6_TURN_ANGLE         -358.0f  /* 返航前顺时针转向后的目标航向。 */
 #define PATH6_LONG_BACK_SPEED     200.0f  /* 朝启停区长距离倒车的速度。 */
-#define PATH6_LONG_BACK_CM        190.0f  /* 朝启停区长距离倒车的距离，单位 cm。 */
+#define PATH6_LONG_BACK_CM        186.0f  /* 朝启停区长距离倒车的距离，单位 cm。 */
 #define PATH6_RIGHT_SPEED          80.0f  /* 最后右移对准启停区的速度。 */
-#define PATH6_RIGHT_DISTANCE_CM    14.0f  /* 最后右移对准启停区的距离，单位 cm。 */
+#define PATH6_RIGHT_DISTANCE_CM    16.0f  /* 最后右移对准启停区的距离，单位 cm。 */
 
 static int Flow_AbsInt(int value)
 {
@@ -420,6 +428,9 @@ volatile uint8_t ypj_debug_target_x = 0;
 volatile uint8_t ypj_debug_target_y = 0;
 volatile uint32_t ypj_debug_frame_count = 0;
 
+static float ypj_anchor_x = 0.0f;
+static float ypj_anchor_y = 0.0f;
+
 static void CatchLocatedMaterialToWarehouse(uint8_t color, uint16_t catch_height)
 {
 	uint8_t warehouse_index;
@@ -566,11 +577,13 @@ static void Flow_WaitQR_OpenLoop(void)
 }
 
 static void Yuanpanji_LocateOpenLoop(uint8_t cls, char *name, float target_angle,
-									 uint8_t adjust_heading)
+									 uint8_t adjust_heading,
+									 uint8_t entry_gate_enable)
 {
 	VISION_TARGET_T target;
 	uint32_t last_frame_count = vision_frame_count;
 	uint8_t stable_count = 0;
+	uint8_t track_started = 0;
 
 	HMI_SetVisionText(name);
 	HMI_LogInfo("wait %s", name);
@@ -578,6 +591,8 @@ static void Yuanpanji_LocateOpenLoop(uint8_t cls, char *name, float target_angle
 	if(adjust_heading)
 		Flow_FineTuneHeading(target_angle);
 	Chassis_WorldBeginSegment();
+	ypj_anchor_x = car.actual_x;
+	ypj_anchor_y = car.actual_y;
 
 	while(1)
 	{
@@ -585,6 +600,8 @@ static void Yuanpanji_LocateOpenLoop(uint8_t cls, char *name, float target_angle
 		int err_y;
 		float vx = 0.0f;
 		float vy = 0.0f;
+		float offset_x;
+		float offset_y;
 
 		if(vision_frame_count == last_frame_count)
 		{
@@ -602,6 +619,7 @@ static void Yuanpanji_LocateOpenLoop(uint8_t cls, char *name, float target_angle
 			ypj_debug_stage = 13;
 			ypj_debug_target_valid = 0;
 			stable_count = 0;
+			track_started = 0;
 			Motor_setspeed(0, 0, 0);
 			vTaskDelay(pdMS_TO_TICKS(20));
 			continue;
@@ -614,11 +632,38 @@ static void Yuanpanji_LocateOpenLoop(uint8_t cls, char *name, float target_angle
 		err_y = YPJ_CENTER_Y - (int)target.y;
 		HMI_SetPixelError(err_x, err_y, 1);
 
+		/* 位移超限检查：超过锚点范围则回锚点 */
+		offset_x = FMy_Abs(car.actual_x - ypj_anchor_x);
+		offset_y = FMy_Abs(car.actual_y - ypj_anchor_y);
+		if(offset_x > YPJ_LOCATE_MAX_X_OFFSET_CM ||
+		   offset_y > YPJ_LOCATE_MAX_Y_OFFSET_CM)
+		{
+			ypj_debug_stage = 49;
+			stable_count = 0;
+			Motor_setspeed(0, 0, 0);
+			vTaskDelay(pdMS_TO_TICKS(100));
+			Chassis_WorldCommitSegment(target_angle);
+			HMI_LogWarn("%s exceed limit x%.1f y%.1f", name, offset_x, offset_y);
+			Chassis_WorldBeginSegment();
+			Chassis_MoveByDistance(0,
+								   (ypj_anchor_y - car.actual_y) > 0 ? 50.0f : -50.0f,
+								   target_angle,
+								   FMy_Abs(ypj_anchor_y - car.actual_y));
+			Chassis_MoveByDistance((ypj_anchor_x - car.actual_x) > 0 ? 100.0f : -100.0f,
+								   0,
+								   target_angle,
+								   FMy_Abs(ypj_anchor_x - car.actual_x));
+			Motor_setspeed(0, 0, 0);
+			vTaskDelay(pdMS_TO_TICKS(200));
+			return;
+		}
+
 		if(Flow_AbsInt(err_x) > YPJ_TRACK_ROI ||
 		   Flow_AbsInt(err_y) > YPJ_TRACK_ROI)
 		{
 			ypj_debug_stage = 14;
 			stable_count = 0;
+			track_started = 0;
 			Motor_setspeed(0, 0, 0);
 			vTaskDelay(pdMS_TO_TICKS(20));
 			continue;
@@ -647,6 +692,24 @@ static void Yuanpanji_LocateOpenLoop(uint8_t cls, char *name, float target_angle
 
 			vx = Flow_PixelErrorSpeed(-err_y, YPJ_LOCATE_DEADZONE);
 			vy = Flow_PixelErrorSpeed(err_x, YPJ_LOCATE_DEADZONE);
+
+			/*
+			 * 圆盘机物料刚进入 ROI 时先看第一次校正方向：
+			 * 右前方校正会把车带向不希望的入口，先不接管；
+			 * 允许从右后方进入，进入跟踪后再持续按视觉误差闭环。
+			 */
+			if(entry_gate_enable && track_started == 0)
+			{
+				if(vx < 0.0f && vy > 0.0f)
+				{
+					ypj_debug_stage = 17;
+					Motor_setspeed(0, 0, 0);
+					vTaskDelay(pdMS_TO_TICKS(20));
+					continue;
+				}
+
+				track_started = 1;
+			}
 
 			ypj_debug_stage = 18;
 			Chassis_OpenLoop_SetTranslation(vx, vy, target_angle);
@@ -746,13 +809,20 @@ void Flow_TurntableCatch(void)
 	{
 		uint8_t color = flow_color_data[i];
 		ypj_debug_color = color;
+
+		/* 转关节到夹取角度 -180°，再进行颜色检查 */
+		HMI_LogInfo("turn catch angle -180");
+		M8010_SetAngle(-180);
+
 		if(color < RED || color > BLUE)
 		{
 			HMI_LogError("bad color %d", color);
 			break;
 		}
 
-		Yuanpanji_LocateOpenLoop(color, Flow_ColorName(color), 0.0f, 0);
+		ypj_anchor_x = car.actual_x;
+		ypj_anchor_y = car.actual_y;
+		Yuanpanji_LocateOpenLoop(color, Flow_ColorName(color), 0.0f, 0, 1);
 		Motor_setspeed(0, 0, 0);
 		ypj_debug_stage = 31;
 		CatchLocatedMaterialToWarehouse(color, YUAN_PAN_HEIGHT);
@@ -791,10 +861,16 @@ void Route_Path3_TurntableToProcessing(void)
 					0U);
 	Chassis_TurnToAngle(Yaw_DriftCorrect(0.0f, PATH3_FIRST_ANGLE),
 					   YPJ_TURN_TIMEOUT_MS);
-	Chassis_MoveByDistance(0, -PATH3_LONG_BACK_SPEED, PATH3_FIRST_ANGLE,
-					   PATH3_LONG_BACK_CM);
+	Chassis_MoveByDistanceRamp(0, -PATH3_LONG_BACK_SPEED, PATH3_FIRST_ANGLE,
+						   PATH3_LONG_BACK_CM,
+						   PATH3_LONG_BACK_ACCEL_TICKS,
+						   PATH3_LONG_BACK_DECEL_TICKS);
 	Chassis_TurnToAngle(Yaw_DriftCorrect(PATH3_FIRST_ANGLE, PATH3_FINAL_ANGLE),
 					   YPJ_TURN_TIMEOUT_MS);
+	Chassis_MoveByPulse(-PATH3_FINAL_LEFT_SPEED, 0, PATH3_FINAL_ANGLE,
+					(int64_t)(PATH3_FINAL_LEFT_CM *
+							  CHASSIS_LATERAL_PULSE_PER_CM + 0.5f),
+					0U);
 	Flow_ShowYawFixed();
 }
 
@@ -825,7 +901,7 @@ static void Flow_RingArea(float target_heading, RING_WORK_LAYER_T work_layer,
 		Vision_StartMaterial();
 		vTaskDelay(pdMS_TO_TICKS(300));
 		Circle_PrepareMaterialCatchPose();
-		Yuanpanji_LocateOpenLoop(GREEN, "GREEN", target_heading, 1);
+		Yuanpanji_LocateOpenLoop(GREEN, "GREEN", target_heading, 1, 0);
 		initial_located = 1;
 	}
 	else
@@ -849,7 +925,7 @@ static void Flow_RingArea(float target_heading, RING_WORK_LAYER_T work_layer,
 					break;
 				if(locate_existing_material)
 				{
-					Yuanpanji_LocateOpenLoop(color, Flow_ColorName(color), target_heading, 1);
+					Yuanpanji_LocateOpenLoop(color, Flow_ColorName(color), target_heading, 1, 0);
 				}
 				else if(RING_PLACE_MODE == RING_PLACE_MODE_LOCATE_EACH &&
 						TaskFlow_RingLocateOne(color, Flow_ColorName(color), target_heading) == 0)
@@ -922,7 +998,7 @@ static void Flow_RingArea(float target_heading, RING_WORK_LAYER_T work_layer,
 			}
 
 			Circle_PrepareMaterialCatchPose();
-			Yuanpanji_LocateOpenLoop(color, Flow_ColorName(color), target_heading, 1);
+			Yuanpanji_LocateOpenLoop(color, Flow_ColorName(color), target_heading, 1, 0);
 			Motor_setspeed(0, 0, 0);
 			CatchLocatedMaterialToWarehouse(color, work_height);
 			flow_ring_recover_count++;
@@ -967,18 +1043,22 @@ void Route_Path4_ProcessingToNext(void)
 
 	HMI_LogInfo("path4 start");
 	HMI_LogInfo("back %.0fcm", compensated_back_cm);
-	Chassis_MoveByDistanceRamp(0, -PATH4_BACK_SPEED, PATH3_FINAL_ANGLE,
-						   compensated_back_cm,
-						   PATH4_BACK_ACCEL_TICKS,
-						   PATH4_BACK_DECEL_TICKS);
 	Chassis_MoveByPulse(PATH4_LEFT_SPEED, 0, PATH3_FINAL_ANGLE,
 					(int64_t)(PATH4_LEFT_DISTANCE_CM *
 							  CHASSIS_LATERAL_PULSE_PER_CM + 0.5f),
 					0U);
+	Chassis_MoveByDistanceRamp(0, -PATH4_BACK_SPEED, PATH3_FINAL_ANGLE,
+						   compensated_back_cm,
+						   PATH4_BACK_ACCEL_TICKS,
+						   PATH4_BACK_DECEL_TICKS);
 	Chassis_TurnToAngle(Yaw_DriftCorrect(PATH3_FINAL_ANGLE, PATH4_TURN_ANGLE),
 					   YPJ_TURN_TIMEOUT_MS);
-	Chassis_MoveByDistance(0, PATH4_FORWARD_SPEED, PATH4_TURN_ANGLE,
+	Chassis_MoveByDistance(0, -PATH4_FORWARD_SPEED, PATH4_TURN_ANGLE,
 					   PATH4_FORWARD_DISTANCE_CM);
+	Chassis_MoveByPulse(-PATH4_FINAL_RIGHT_SPEED, 0, PATH4_TURN_ANGLE,
+					(int64_t)(PATH4_FINAL_RIGHT_CM *
+							  CHASSIS_LATERAL_PULSE_PER_CM + 0.5f),
+					0U);
 	Motor_setspeed(0, 0, 0);
 	HMI_LogInfo("path4 done");
 }

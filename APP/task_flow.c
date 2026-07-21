@@ -49,7 +49,7 @@
 /* 圆盘机物料定位参数。 */
 #define YPJ_CENTER_X              116     /* 物料在画面中的目标中心 X 坐标。 */
 #define YPJ_CENTER_Y              125     /* 物料在画面中的目标中心 Y 坐标。 */
-#define YPJ_TRACK_ROI_X            60     /* 以目标中心为原点的 X 方向跟踪区域半宽，单位像素。 */
+#define YPJ_TRACK_ROI_X            80     /* 以目标中心为原点的 X 方向跟踪区域半宽，单位像素。 */
 #define YPJ_TRACK_ROI_Y            80     /* 以目标中心为原点的 Y 方向跟踪区域半宽，单位像素。 */
 #define YPJ_LOCATE_DEADZONE        10     /* 物料中心允许的像素误差。 */
 #define YPJ_LOCATE_STABLE_COUNT     3     /* 连续满足误差要求多少帧才算定位完成。 */

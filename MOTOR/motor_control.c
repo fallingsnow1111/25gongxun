@@ -14,9 +14,9 @@ volatile uint32_t chassis_period_max_ms = 0;
 
 #define CHASSIS_TURN_USE_DOUBLE_LOOP 0U  /* 1=double loop; 0=single angle PID experiment. */
 
-#define CHASSIS_TURN_THRESHOLD     0.1f /* 常规转向的到位误差，单位度。 */
+#define CHASSIS_TURN_THRESHOLD     0.07f /* 常规转向的到位误差，单位度。 */
 #define CHASSIS_TURN_SETTLE_COUNT    7U /* 角度连续约50ms满足阈值才算到位。 */
-#define CHASSIS_TURN_MIN_SPEED      1.0f /* 双环最小输出，实车测试后再确定机械有效下限。 */
+#define CHASSIS_TURN_MIN_SPEED      2.0f /* 双环最小输出，实车测试后再确定机械有效下限。 */
 #define CHASSIS_TURN_ACCEL_DELTA    2.0f /* 原地转向每5ms最多增加2RPM。 */
 #define CHASSIS_TURN_DECEL_DELTA    4.0f /* 原地转向每5ms最多减少4RPM。 */
 #define CHASSIS_TURN_ANGLE_KP       3.0f /* 角度外环增益：角度误差转换为目标角速度。 */

@@ -90,16 +90,16 @@
 
 /* 路径 4：粗加工区物料全部回收后的路线。 */
 #define PATH4_BACK_SPEED         120.0f   /* 离开粗加工区的倒车速度。 */
-#define PATH4_BACK_DISTANCE_CM   83.0f    /* 离开粗加工区的倒车距离，单位 cm。 */
+#define PATH4_BACK_DISTANCE_CM   82.0f    /* 离开粗加工区的倒车距离，单位 cm。 */
 #define PATH4_BACK_ACCEL_TICKS   150U     /* 倒车加速 500ms，1 tick = 5ms。 */
 #define PATH4_BACK_DECEL_TICKS   150U     /* 倒车减速 750ms，降低停车冲击。 */
 #define PATH4_LEFT_SPEED          20.0f    /* 转弯前左移避线速度。 */
-#define PATH4_LEFT_DISTANCE_CM     5.0f    /* 转弯前左移避线距离，单位 cm。 */
+#define PATH4_LEFT_DISTANCE_CM     6.0f    /* 转弯前左移避线距离，单位 cm。 */
 #define PATH4_TURN_ANGLE        -269.8f   /* 从-180°继续顺时针90°后的连续世界航向。 */
 #define PATH4_FORWARD_SPEED      120.0f   /* 前往暂存区的移动速度。 */
-#define PATH4_FORWARD_DISTANCE_CM 83.0f   /* 前往暂存区的距离，单位 cm。 */
+#define PATH4_FORWARD_DISTANCE_CM 82.0f   /* 前往暂存区的距离，单位 cm。 */
 #define PATH4_FINAL_RIGHT_SPEED   20.0f   /* 转向后右移对准速度。 */
-#define PATH4_FINAL_RIGHT_CM       5.0f   /* 转向后右移对准距离，单位 cm。 */
+#define PATH4_FINAL_RIGHT_CM       6.0f   /* 转向后右移对准距离，单位 cm。 */
 
 /* 路径 5：第一轮暂存区完成后返回圆盘机。 */
 #define PATH5_BACK_SPEED          100.0f  /* 离开暂存区的倒车速度。 */

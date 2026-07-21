@@ -178,7 +178,7 @@ void postion_send(uint8_t id,int position)
 	uint32_t start_tick;
 
 	if(high < 0) high = 0;
-	if(high > 125) high = 125;   // 这里按你的安全最大高度改
+	if(high > 160) high = 160;   // 这里按你的安全最大高度改
 
 	Z_POSTION.TARGE =(2000/106.5)*high*14;
 		// 若目标高度与当前接近则直接返回

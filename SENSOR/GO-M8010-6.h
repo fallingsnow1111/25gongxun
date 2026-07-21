@@ -6,12 +6,23 @@
 #include "ris_protocol.h"
 #pragma pack(1)
 
-#define PUT_HOUSE_ANGLE  -7
-#define PUT_AND_CATCH_ANGLE -180
+#define PUT_HOUSE_ANGLE       -7   /* 旧流程放入物料仓时使用的关节角。 */
 
 #ifndef _LIMIT_MIN
 #define _LIMIT_MIN(x, min) ((x) < (min) ? (min) : (x))
 #endif
+
+/* M8010 错误码 (MError 字段) */
+#define M8010_ERR_NONE      0U  /* 正常 */
+#define M8010_ERR_OVERHEAT  1U  /* 过热 */
+#define M8010_ERR_OVERCUR   2U  /* 过流 (堵转典型特征) */
+#define M8010_ERR_OVERVOL   3U  /* 过压 */
+#define M8010_ERR_ENCODER   4U  /* 磁编码异常 */
+
+extern volatile uint8_t  M8010_Error;   /* 电机错误标识 */
+extern volatile int16_t  M8010_Torque;  /* 实际扭矩 (q8) */
+extern volatile int16_t  M8010_Speed;   /* 实际速度 (q8) */
+extern volatile int8_t   M8010_Temp;    /* 电机温度 (°C) */
 
 void M8010_Set_Zero(void);
 void M8010_send(int position);
@@ -20,6 +31,7 @@ void read_init_postion(void);
 void M8010_SetAngle(int tar_angle);
 uint32_t M8010_ShowRealPostion(void);
 float M8010_Control_pid(float differnt,float Initial_value);
+uint8_t M8010_IsStalled(void);
 void MY_UART8_IRQHandler(void);
 
 struct ANGLE

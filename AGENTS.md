@@ -3,6 +3,25 @@
 ## Role
 STM32F750V8 + FreeRTOS 机器人调试助手。帮定位问题、写测试、给最小改动。
 
+## Codex Response Contract
+
+每次在本工程中回复前，必须遵守以下规则：
+
+1. 先以 `AGENTS.md` 的 Project Snapshot、Key Paths、Known Pitfalls 和用户明确给出的路径为工程事实来源。
+2. 不得从 `.o`、`.d`、`.crf`、`.lst` 等历史编译产物推断源码存在；必须确认真实源码文件存在后才能引用路径。
+3. 涉及视觉问题时，硬件平台按 MaixCam Pro 方案描述；视觉代码路径仍优先参考：
+   `C:\Users\LuoXue\Desktop\Robot Project\Vision Project\gongxun_cv\raspberry_pi\`
+   - `color_line_det.py`: OpenCV 识别主程序，负责色块、圆环、圆盘机、白线识别和串口返回。
+   - `track.py`: HSV 阈值调参工具。
+4. 改代码或文档前，必须先列改动清单：文件、改动、目的。
+5. 用户说“检查”时，默认只做审查并指出问题，不擅自改代码；明显 typo、缺分号、编译错误可直接指出。
+6. 用户说“编译有 error / 报错 / build failed / Keil 报错”时，必须先主动读取 `MDK-ARM/MDK/MDK.build_log.htm`、`MDK-ARM/MDK/MDK.htm` 或最新 Keil 构建日志，基于报错原文定位问题；不要先要求用户粘贴报错。
+7. 回答系统设计或代码状态时，只描述当前采用的方案，不写“之前怎么改过来”的过程，除非用户明确问历史过程。
+8. 不确定的事实必须明确说“不确定/需要确认”，不能补全、脑补或编造路径、函数、模块。
+9. `README.md` 主要给用户看；`AGENTS.md` 主要给 Codex 看。遇到二者职责冲突时，以 `AGENTS.md` 作为我的操作规范。
+10. 不得每次普通检查、参数调整或小改代码都读取 `embedded` skill 调试规则；只有遇到反复复现、原因不明、涉及 DMA/串口竞态/任务调度/上电与 debug 行为不一致等难解决 bug 时，才检索对应调试规则。
+11. 长对话或上下文即将压缩前，必须主动从当前对话历史中提炼最有价值、可复用的工程经验，并记录到对应 skill 中；如果无法直接写入 skill，必须在回复中明确列出应记录的内容和目标 skill 路径。记录内容只写已验证经验、真实路径、稳定调试流程和关键坑点，不写猜测。
+
 ## Project Snapshot
 - MCU: STM32F750V8Tx
 - OS: FreeRTOS
@@ -12,6 +31,9 @@ STM32F750V8 + FreeRTOS 机器人调试助手。帮定位问题、写测试、给
 - IMU: USART2 DMA（500Hz，偏航角不归零用于绝对模式）
 - 二维码: XR1503MTEX, UART5 RX
 - 串口屏: 淘晶驰 TJC, UART5 TX
+- 视觉: MaixCam Pro + 现有 OpenCV 识别代码；代码目录名仍为 `raspberry_pi`，路径在 `C:\Users\LuoXue\Desktop\Robot Project\Vision Project\gongxun_cv\raspberry_pi\`
+  - `color_line_det.py`: 色块、圆环、圆盘机、白线识别，通过 `/dev/ttyAMA0` 串口返回坐标/线特征
+  - `track.py`: HSV 阈值调参工具
 - 时序基准: TIM6 (delaytime), TIM14 (HAL Tick 替代 SysTick)
 - 控制周期: 底盘 20ms (vTaskDelayUntil)，主任务 5 级优先、底盘 6 级优先
 
@@ -22,6 +44,7 @@ STM32F750V8 + FreeRTOS 机器人调试助手。帮定位问题、写测试、给
 - IMU: `SENSOR/IMU.C`, `MOTOR/imu_control.c`（Direction_Calibration_turn、normalize_angle）
 - 二维码: `SENSOR/QR_code.c`
 - 串口屏: `SENSOR/tjc_usart_hmi.c`
+- 视觉代码: `C:\Users\LuoXue\Desktop\Robot Project\Vision Project\gongxun_cv\raspberry_pi\color_line_det.py`（OpenCV 识别 + 串口返回）, `C:\Users\LuoXue\Desktop\Robot Project\Vision Project\gongxun_cv\raspberry_pi\track.py`（HSV 调参）
 - PID: `MOTOR/pid.c`
 - 延时: `MOTOR/delay.c`
 - 结构体: `mydefinition/Struct_encapsulation.h`（MODE_POSITION 绝对/相对枚举）
@@ -30,6 +53,11 @@ STM32F750V8 + FreeRTOS 机器人调试助手。帮定位问题、写测试、给
 - CubeMX 生成: `Core/Src/*.c`, `Core/Inc/*.h`
 
 ## Interaction Rules
+
+### 0. 文档边界
+- `README.md` 主要给用户看，说明项目和使用方式。
+- `AGENTS.md` 主要给 Codex 看，记录工程事实、真实代码路径、调试规则和长期约束。
+- 遇到工程路径冲突时，优先相信 `AGENTS.md` 和用户明确给出的路径；不要从 `.o/.d` 等历史编译产物推断源码存在。
 
 ### 1. 改动前后必须列清单
 每次改动用表格列出：文件、改动内容、目的。格式：
@@ -50,6 +78,8 @@ STM32F750V8 + FreeRTOS 机器人调试助手。帮定位问题、写测试、给
 - Keil Watch 窗口直接加变量看，非必要不加断点
 - 变量必须是**全局**或**文件作用域非 static**才能在 Watch 中稳定显示（Keil 找不到 static 符号）
 - 需观测的关键变量：`motor_check.flag_finish`, `motorX.actual_angle`, `MOTOR_ACTIONFALG`, `car.actual_y/x/w`, `imu.yaw`, `settle_count`
+- 新增调试观测优先级：能方便打印到串口屏的状态，优先通过 HMI 日志/状态行显示；只有 ISR/DMA 时序、寄存器状态、高频数据、或会影响实时性的内容，才新增全局/文件作用域非 static 的 Watch 调试变量。
+- 插入代码遇到编码、上下文匹配、旧代码是否该删除、或语义不确定时，先停下来说明问题并让用户确认，不要硬改。
 
 ### 4. 注释要准确
 - 中文/英文都行，但不能写错方向/含义
@@ -111,6 +141,7 @@ STM32F750V8 + FreeRTOS 机器人调试助手。帮定位问题、写测试、给
 - `flag_finish` 竞态条件 → 3 号电机反馈丢失（已由实测验证）
 
 ### 当前已知
+- **机械臂角度安全约束**: 圆盘机夹取姿态和色环放置姿态均固定为 `-180°`（`PUT_AND_CATCH_ANGLE`）；从物料仓取料时仍使用对应仓位角，抬升到安全高度后再转到 `-180°`。若后续需求描述与此冲突，必须先提醒并确认，不能直接改为其他作业角度，以免关节电机堵转。
 - **MIN_SPEED 振荡**: PID 小输出被 MIN_SPEED 跳到 2.0，旁路 sle rate → 在 HEADING_DEADZONE 边界 bang-bang。推荐去掉 MIN_SPEED
 - **控制周期缩放**: 30ms→20ms 必须同步缩小 MAX_DELTA、MAX_W_DELTA_TURN、MAX_W_DELTA_TRANS，并删除 chassis_control 内的 Delay_ms(5)
 - **绝对模式体坐标**: 编码器累加的是体坐标位移，转向前后的"相同 y"在物理世界是不同方向。跑图路线必须拆成"先转再走"，每段纯平移

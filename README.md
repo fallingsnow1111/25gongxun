@@ -1,123 +1,195 @@
 # Robot Project 2024
 
-## 俯视图
+STM32F750V8 + FreeRTOS 全向轮机器人工程。当前系统由开环速度底盘、机械臂作业、MaixCam Pro 视觉和串口屏状态监视组成。
 
-```
-                   Y+ (电池方向)
-                    ↑
-        ┌───────────┴───────────┐
-        │                       │
-        │   4号(RB)      1号(LB) │
-        │                       │
-        │       ┌─电池─┐       │
-        │       └──────┘       │
-        │                       │
-  X+ ←  │         ┌─关节电机─┐  │  → X-
-  (右)  │         │ M8010   │  │  (左)
-        │         └─────────┘  │
-        │                       │
-        │   3号(RF)  [开关] 2号(LF)│
-        │                       │
-        └───────────┬───────────┘
-                    ↓
-                   Y- (车头/开关)
-```
+## 当前方案
 
-## 坐标系
+| 部分 | 当前实现 |
+|------|----------|
+| 主控 | STM32F750V8Tx，FreeRTOS |
+| 底盘 | X42S 步进电机 ×4，UART3 DMA，开环速度控制 |
+| 航向 | IMU 绝对偏航角闭环保持 |
+| 机械臂 | GO-M8010-6 关节电机 + Y/Z 轴步进电机 + 夹爪舵机 |
+| 视觉 | MaixCam Pro，物料/色环三色同时识别 |
+| 任务码 | XR1503MTEX 二维码模块 |
+| 人机界面 | 淘晶驰 TJC 串口屏，独立 FreeRTOS 任务 |
 
-**左手坐标系**，Y+ 朝向电池侧（车尾）。
+## 底盘坐标与电机
 
-| 轴 | 正方向 | 含义 |
-|----|--------|------|
-| Y+ | 后 | 电池所在方向 |
-| Y- | 前 | 车头/开关方向 |
-| X+ | 右 | |
-| X- | 左 | 关节电机所在方向 |
-| W+ | 逆时针（俯视） | 正角度旋转 |
+跑图接口使用的方向定义：
 
-## 电机编号
+| 参数 | 正值方向 | 负值方向 |
+|------|------------|------------|
+| `vx` | 左移 | 右移 |
+| `vy` | 前进 | 后退 |
+| `target_angle` | 逆时针 | 顺时针 |
 
-| 编号 | 代号 | 位置 |
-|------|------|------|
+| 电机ID | 代号 | 位置 |
+|--------|------|------|
 | 1 | LB | 左后 |
 | 2 | LF | 左前 |
 | 3 | RF | 右前 |
 | 4 | RB | 右后 |
 
-`Motor_Send_Speed_together(1号, 2号, 3号, 4号)`
+## 开环底盘控制
 
-## 关键硬件位置
+底盘驱动器内部加速度设为0，所有速度曲线由主控按5ms周期生成。四轮速度通过 `0xAA` 多电机帧打包，再用广播触发帧同步执行。
 
-| 部件 | 位置 |
-|------|------|
-| 电池 | 1号与4号之间（车尾） |
-| 开关 | 2号与3号之间（车头） |
-| 关节电机 M8010 | 1号与2号之间（左侧） |
-| IMU | 车体中部 |
-| 二维码模块 | 车头 UART5 RX |
-| 串口屏 | 车头 UART5 TX |
+直线运动使用正弦加减速，并在运动中根据IMU偏航角保持车头方向。软件里程计按四轮实际发送的整数RPM与实际保持时间积分，单位为 `RPM*ms`，`60000` 软件脉冲等于电机理论旋转一圈。
 
-## 串口引脚表
-
-| 串口 | TX 引脚 | RX 引脚 | 波特率 | 连接设备 | DMA |
-|------|---------|---------|--------|---------|-----|
-| USART1 | PA9 | PA10 | 115200 | 调试/printf 输出 | 无 |
-| USART2 | PD5 | PD6 | 115200 | IMU（陀螺仪） | RX: DMA1_Stream5 |
-| USART3 | PC10 | PC11 | 115200 | 底盘电机 ×4 (X42S) | RX: DMA1_Stream1 / TX: DMA1_Stream4 |
-| UART5 | PC12 | PD2 | 115200 | 串口屏(TX) / 二维码(RX) | 无 |
-| USART6 | PC6 | PC7 | 9600 | 树莓派视觉模块 | 无 |
-| UART7 | PE8 | PE7 | 115200 | 升降/伸缩电机 (Y/Z轴) | RX: DMA1_Stream3 |
-| UART8 | PE1 | PE0 | 4000000 | 关节电机 GO-M8010-6 (RS485) | 无 |
-
-
-> UART8 波特率 4Mbps，需要 SYSCLK(216MHz) 作为时钟源。
-> RS485 方向控制引脚（DE/RE）见 `gpio.c` `SET_485_DE_UP` / `SET_485_RE_UP` 宏。
-
-## Move_To_Target_area 参数
+当前实车标定系数：
 
 ```c
-Move_To_Target_area(x, y, angle, enable, Relative_Position);
+#define CHASSIS_LONGITUDINAL_PULSE_PER_CM 2478.5f /* 前进、后退 */
+#define CHASSIS_LATERAL_PULSE_PER_CM      2560.5f /* 左移、右移 */
 ```
 
-| 参数 | 含义 | 备注 |
-|------|------|------|
-| x | X 方向位移（mm） | 正值 = 右移 |
-| y | Y 方向位移（mm） | 正值 = **向电池方向移动（Y+）**，负值 = 向车头方向移动 |
-| angle | 目标旋转角（度） | 相对模式下为相对角度 |
+每段路径结束后可读取四个驱动器的实际位置脉冲，用于比较软件积分误差；该反馈只用于标定和调试，不参与跑图闭环。
 
-> **y 轴说明**：`motor_control.c` 中 `car.target_y = (-y * ratio)`，调用时传正值即为向前（Y+），与坐标系定义一致。
+### 直线跑图
 
-## 视觉系统（树莓派）
+```c
+Chassis_MoveByDistance(vx, vy, target_angle, distance_cm);
+```
 
-代码路径：`C:\Users\LuoXue\Desktop\Robot Project\Vision Project\gongxun_cv\raspberry_pi\`
+- 仅用于前后或左右单轴直线，`distance_cm` 始终传正数。
+- 速度由 `vx` 或 `vy` 的绝对值决定。
+- 视觉定位微调使用低速速度控制，不调用距离接口。
 
-| 文件 | 功能 |
+示例：
+
+```c
+Chassis_MoveByDistance(40, 0, 0, 10);    /* 左移10cm */
+Chassis_MoveByDistance(0, 80, 0, 20);    /* 前进20cm */
+Chassis_MoveByDistance(0, 160, 0, 80);   /* 前进80cm */
+Chassis_MoveByDistance(0, -80, -90, 20); /* 保持-90°航向后退20cm */
+```
+
+当前距离接口在40cm以下使用80 tick加减速，40cm以上使用100 tick加减速。
+
+当加速和减速均为100 tick时，速度20/40/80/160完成加减速分别约需4/8/16/32cm。最大速度可按下式估算：
+
+```text
+speed_max = distance_cm * pulse_per_cm / (ramp_ticks * 5ms)
+```
+
+### 原地转向
+
+```c
+Chassis_TurnToAngle(target_angle, timeout_ms);
+```
+
+当前已验证的转向策略：
+
+- 角度PID输出最大150RPM。
+- 转向增速限制为每5ms增加2RPM。
+- 转向减速限制为每5ms减少4RPM。
+- PID输出小于2RPM时补偿为 `+2/-2RPM`，克服电机与整数RPM死区。
+- 角度误差进入 `+/-0.1°` 后停车，连续10个5ms周期满足才判定到位。
+
+实车连续90°转向已验证可收敛，停车500ms后的静态误差保持在0.2°以内。
+
+## MaixCam Pro 视觉
+
+视觉代码：
+
+```text
+C:\Users\LuoXue\Desktop\Robot Project\Vision Project\gongxun_cv\maxicam\maixcam.py
+```
+
+STM32通过USART6发送ASCII命令：
+
+| 命令 | 模式 |
 |------|------|
-| `color_line_det.py` | 色块检测 + 串口发送，使用 `/dev/ttyAMA0`，波特率 9600 |
-| `track.py` | HSV 调参工具，摄像头实时预览 |
+| `'0'` | 空闲 |
+| `'1'` | 红、绿、蓝物料同时识别 |
+| `'2'` | 红、绿、蓝色环同时识别 |
+| `'L'` | 打开辅助照明LED |
+| `'l'` | 关闭辅助照明LED |
 
-树莓派串口配置（`color_line_det.py`）：
-```python
-ser = serial.Serial(
-    port="/dev/ttyAMA0",
-    baudrate=9600,
-    ...
-)
+MaixCam Pro返回多目标帧：
+
+```text
+55 5B mode count cls1 x1 y1 ... AA
 ```
 
-## 树莓派 ↔ 主控通信测试
+STM32将红、绿、蓝目标分别缓存在 `vision_material[]` 和 `vision_ring[]`中。高层代码使用：
 
-最快测试方法：树莓派直接往串口发字节，主控用 USART1（调试口）或任意空闲串口接收打印确认。
-
-**树莓派侧（一行测试脚本）：**
-```python
-import serial, time
-ser = serial.Serial('/dev/ttyAMA0', 9600)
-while True:
-    ser.write(b'123')
-    time.sleep(0.5)
+```c
+Vision_StartMaterial();
+Vision_StartRing();
+Vision_Stop();
+Vision_LED_On();
+Vision_LED_Off();
+Vision_GetMaterialTarget(color, &target);
+Vision_GetRingTarget(color, &target);
 ```
 
-**主控侧**：在对应 UART 的 RX 中断里 `printf` 打印收到的字节，用 USART1 输出到 PC 串口助手查看。
+## 机械臂安全约束
 
-> 注意：树莓派 `/dev/ttyAMA0` 默认被蓝牙占用，需在 `/boot/config.txt` 加 `dtoverlay=disable-bt` 并重启才能用于通用串口。
+- Z轴电机ID为1，Y轴伸缩电机ID为2。
+- 圆盘机夹取、色环识别和色环放置的关节作业角均为 `-180°`。
+- 从仓库取料时，必须先上升到安全高度，再旋转关节。
+- `claw_move_1()` 用于圆盘机夹取、色环识别和色环区物料回收。
+- `claw_move_2()` 用于从仓库取料并放到色环区。
+
+## 串口分配
+
+| 串口 | 波特率 | 设备 | 用途 |
+|------|--------|------|------|
+| USART2 | 115200 | IMU | DMA姿态接收 |
+| USART3 | 115200 | X42S ×4 | 底盘同步速度命令与调试脉冲读取 |
+| UART5 | 115200 | TJC串口屏 / 二维码 | TX更新屏幕，RX接收任务码 |
+| USART6 | 9600 | MaixCam Pro | 视觉模式命令与多目标坐标 |
+| UART7 | 115200 | Y/Z轴电机 | DMA接收到位帧 |
+| UART8 | 4000000 | GO-M8010-6 | RS485关节电机控制 |
+
+## 串口屏
+
+HMI任务每100ms刷新固定状态：
+
+| 控件 | 内容 |
+|------|------|
+| `t0` | 二维码结果，识别后锁定 |
+| `t1` | 固定标题 |
+| `t2` | 车身航向和世界坐标 |
+| `t3` | 软件脉冲积分 |
+| `t4` | 视觉像素误差或5ms周期状态 |
+| `t5` | 驱动器实际脉冲与软件积分误差 |
+| `t6-t8` | 3行滚动日志 |
+
+## 当前流程入口
+
+测试函数统一放在 `APP/test.c`，`task/main_task.c` 只保留一行当前测试或流程入口。
+
+当前流程分段：
+
+```c
+Route_Path1_StartToQR();
+Flow_QRRecognize();
+Route_Path2_QRToTurntable();
+Flow_TurntableCatch();
+Route_Path3_TurntableToProcessing();
+Flow_ProcessingArea();
+```
+
+当前完整入口：
+
+```c
+Flow_RunCurrent();
+```
+
+`task/main_task.c` 目前用于转向误差测试，正式跑图前需将调用切换为需要的路径段或 `Flow_RunCurrent()`。
+
+## 编译
+
+工程使用 Keil MDK-ARM。代码修改后由用户在Keil中手动编译和烧录。
+
+
+当前第二层 6 个二维码逻辑：
+123：1仓红普通放红 → 2仓绿普通放绿 → 3仓蓝逆时针 -32° 取料放蓝
+132：1仓红普通放红 → 2仓蓝普通放蓝 → 3仓绿逆时针 -32° 取料放绿
+213：1仓绿普通放绿 → 2仓红普通放红 → 3仓蓝逆时针 -32° 取料放蓝
+231：1仓绿普通放绿 → 2仓蓝特殊避障，取到蓝并 Z 上升后、旋转到蓝角前先伸 Y → 3仓红逆时针 -32° 取料放红
+312：1仓蓝普通放蓝 → 2仓红普通放红 → 3仓绿逆时针 -32° 取料放绿
+321：1仓蓝普通放蓝 → 2仓绿普通放绿 → 3仓红正常取料 -394°，再放红

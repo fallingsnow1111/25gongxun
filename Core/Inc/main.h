@@ -45,15 +45,11 @@ extern "C" {
 #include "pid.h"
 #include "IMU.h"
 #include "QR_code.h"
-#include "usmart.h"
 #include <stdio.h>
 #include "postion_control.h"
-#include "usmart_rec.h"
 #include "catch.h"
 #include "circe.h"
-#include "circle_control.h"
 #include "GO-M8010-6.h"
-#include "user.h"
 #include "delay.h"
 #include <stdlib.h>
 #include "telescopic_boom.h"

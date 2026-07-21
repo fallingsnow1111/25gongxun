@@ -26,6 +26,11 @@ uint8_t m8010_rx_len,lenth = 0;
 uint32_t M8010_real_postion,M8010_init_postion = 0;
 uint8_t m8010_hight_bit,m8010_low_bit = 0;
 
+volatile uint8_t  M8010_Error  = 0;
+volatile int16_t  M8010_Torque = 0;
+volatile int16_t  M8010_Speed  = 0;
+volatile int8_t   M8010_Temp   = 0;
+
 void M8010_init(void)
 {
 	PID_Init(&M8010_pid,1,0.5,0,20,-20);
@@ -77,6 +82,11 @@ int modify_data(MOTOR_send *motor_s)
 }
 
 
+uint8_t M8010_IsStalled(void)
+{
+    return (M8010_Error == M8010_ERR_OVERCUR);
+}
+
 void M8010_send(int position) {
     const float tolerance = 1.0f;         // 允许1度误差
     const uint32_t timeout_ms = 5000;     // 5秒超时
@@ -109,8 +119,8 @@ void M8010_send(int position) {
 
         M8010.NOW += step;
 
-        if(M8010.NOW > 40.0f || M8010.NOW < (-360.f)) {
-            M8010.NOW = (M8010.NOW > 0) ? 40.0f : -360.0f;
+        if(M8010.NOW > 40.0f || M8010.NOW < (-400.0f)) {
+            M8010.NOW = (M8010.NOW > 0) ? 40.0f : -400.0f;
         }
         M8010.CHANGE = M8010.TARGE - M8010.NOW;
 
@@ -132,7 +142,11 @@ void M8010_send(int position) {
             break;
         }
 
-        HAL_Delay(10);
+        if (M8010_IsStalled()) {
+            break;
+        }
+
+        HAL_Delay(15);
     }
 }
 
@@ -200,7 +214,11 @@ void UART8_IRQHandler(void)
                 if(m8010_rx_buf[14] == m8010_low_bit && m8010_rx_buf[15] == m8010_hight_bit)
                 {
                     M8010_real_postion = (m8010_rx_buf[10] << 24) | (m8010_rx_buf[9]  << 16) | (m8010_rx_buf[8]  << 8) | m8010_rx_buf[7] ;
-				}
+                    M8010_Torque = (int16_t)((m8010_rx_buf[4] << 8) | m8010_rx_buf[3]);
+                    M8010_Speed  = (int16_t)((m8010_rx_buf[6] << 8) | m8010_rx_buf[5]);
+                    M8010_Temp   = (int8_t)m8010_rx_buf[11];
+                    M8010_Error  = m8010_rx_buf[12] & 0x07;
+                }
                 lenth = 0;
                 memset(m8010_rx_buf,0,20);
             }

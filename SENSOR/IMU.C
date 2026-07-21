@@ -109,7 +109,14 @@ void IMU_Process(void)
         if (frame_type == 0x53)    // 角度帧
         {
             float new_yaw = (float)raw / 32768.0f * 180.0f;
-            imu.yaw = 0.9f * new_yaw + 0.1f * imu.yaw;
+            float yaw_delta = new_yaw - imu.yaw;
+
+            while (yaw_delta > 180.0f)  yaw_delta -= 360.0f;
+            while (yaw_delta < -180.0f) yaw_delta += 360.0f;
+
+            imu.yaw += 0.9f * yaw_delta;
+            while (imu.yaw > 180.0f)  imu.yaw -= 360.0f;
+            while (imu.yaw < -180.0f) imu.yaw += 360.0f;
             mpu_flash = ~mpu_flash;
         }
         else if (frame_type == 0x52)   // 角速度帧

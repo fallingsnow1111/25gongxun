@@ -155,6 +155,14 @@ void tjc_send_txt(char* objname, char* attribute, char* txt)
 }
 
 /********************************************************
+功能名称:   TJC_PrintChar
+日期:       2026.07.08
+功能:       printf重定向到串口屏t2-t6日志区, 一行刷新一次
+输入参数:   ch: printf输出的单个字符
+返回值:     无
+修改记录:
+**********************************************************/
+/********************************************************
 功能名称:   tjc_send_val
 日期:       2024.09.18
 功能:       发送数值到串口屏
@@ -170,7 +178,7 @@ void tjc_send_val(char* objname, char* attribute, int val)
     uart_send_string(attribute);
     uart_send_char('=');
     // C语言中val的取值范围是(-2147483648 ~ 2147483647), 最长为-2147483648, 加上结束符\0一共12个字符
-    char txt[12]="";
+    char txt[12] = "";
     intToStr(val, txt);
     uart_send_string(txt);
 	uart_send_char(0xff);

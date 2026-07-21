@@ -22,6 +22,7 @@
 
 /* USER CODE BEGIN 0 */
 #include <stdio.h>
+#include "hmi_task.h"
 
 /* USER CODE END 0 */
 
@@ -695,7 +696,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 #endif
 PUTCHAR_PROTOTYPE
 {
-		HAL_UART_Transmit(&huart1 , (uint8_t *)&ch, 1, 0xFFFF);
+		TJC_PrintChar((char)ch);
 		return ch;
 }
 /* USER CODE END 1 */

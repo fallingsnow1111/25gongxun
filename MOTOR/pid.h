@@ -5,7 +5,6 @@
 #include "main.h"
 
 extern struct PIDstruct pid_coordination;
-extern struct PIDstruct Pid_Circle_Positioning;
 
 float _ABS(float a, float b);
 int MAX_Limit(int a,float max);

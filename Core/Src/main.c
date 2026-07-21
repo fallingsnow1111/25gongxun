@@ -102,7 +102,6 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-//    usmart_init(108);
 //    ///////��ʼ��////////
 //		Delay_Init();
 //		//HAL_TIM_Base_Start_IT(&htim6);//��ʼ
@@ -110,7 +109,6 @@ int main(void)
 //    Gyro_Init();
 //    QR_sense_init();
 //    POSTION_init();
-//    openmv_Init();
 //    M8010_init();
 //    HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_3);
 //    HAL_TIM_PWM_Start(&htim4,TIM_CHANNEL_4);

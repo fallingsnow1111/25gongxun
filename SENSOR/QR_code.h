@@ -13,7 +13,7 @@
 void QR_sense_init(void);
 void U5_send(unsigned char data);
 void MY_UART5_IRQHandler(void);
-extern int first_code,second_code ;
+extern volatile int first_code,second_code ;
 void vofa_printf(char* fmt, ...);
 
 

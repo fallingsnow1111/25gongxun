@@ -1,6 +1,6 @@
 mdk\pid.o: ..\MOTOR\pid.c
 mdk\pid.o: ..\MOTOR\pid.h
-mdk\pid.o: ../USMART/struct_typedef.h
+mdk\pid.o: ../mydefinition/struct_typedef.h
 mdk\pid.o: ../Core/Inc/main.h
 mdk\pid.o: ../Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal.h
 mdk\pid.o: ../Core/Inc/stm32f7xx_hal_conf.h
@@ -53,7 +53,7 @@ mdk\pid.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 mdk\pid.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
 mdk\pid.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\TIME.h
 mdk\pid.o: ../MOTOR/motor.h
-mdk\pid.o: ../USMART/sys.h
+mdk\pid.o: ../mydefinition/sys.h
 mdk\pid.o: ../Core/Inc/tim.h
 mdk\pid.o: ../Core/Inc/main.h
 mdk\pid.o: ../MOTOR/motor_control.h
@@ -63,16 +63,11 @@ mdk\pid.o: ../MOTOR/pid.h
 mdk\pid.o: ../SENSOR/IMU.h
 mdk\pid.o: ../Core/Inc/usart.h
 mdk\pid.o: ../SENSOR/QR_code.h
-mdk\pid.o: ../USMART/usmart.h
-mdk\pid.o: ../USMART/usmart_str.h
 mdk\pid.o: ../MOTOR/postion_control.h
-mdk\pid.o: ../USMART/usmart_rec.h
 mdk\pid.o: ../APP/catch.h
 mdk\pid.o: ../SENSOR/circe.h
-mdk\pid.o: ../MOTOR/circle_control.h
 mdk\pid.o: ../SENSOR/GO-M8010-6.h
 mdk\pid.o: ../SENSOR/ris_protocol.h
-mdk\pid.o: ../APP/user.h
 mdk\pid.o: ../MOTOR/delay.h
 mdk\pid.o: D:\Keil5_MDK\ARM\ARMCC\Bin\..\include\stdlib.h
 mdk\pid.o: ../MOTOR/telescopic_boom.h

@@ -26,7 +26,7 @@
 #define TEST_CHASSIS_SPEED_FINE   5.0f   /* 视觉闭环微调速度。 */
 #define VISION_LOCATE_KP          0.25f  /* 像素误差到平移速度的比例系数。 */
 #define VISION_LOCATE_SPEED_MIN   2.0f   /* 超出死区后的最低调整速度。 */
-#define VISION_LOCATE_SPEED_MAX  20.0f   /* 视觉定位允许的最大调整速度。 */
+#define VISION_LOCATE_SPEED_MAX  15.0f   /* 视觉定位允许的最大调整速度。 */
 
 /* 粗加工区色环定位参数。 */
 #define RING_CENTER_X            115     /* 色环在画面中的目标中心 X 坐标。 */
@@ -49,11 +49,12 @@
 /* 圆盘机物料定位参数。 */
 #define YPJ_CENTER_X              116     /* 物料在画面中的目标中心 X 坐标。 */
 #define YPJ_CENTER_Y              125     /* 物料在画面中的目标中心 Y 坐标。 */
-#define YPJ_TRACK_ROI              80     /* 以目标中心为原点的方形跟踪区域半宽，单位像素。 */
-#define YPJ_LOCATE_DEADZONE         5     /* 物料中心允许的像素误差。 */
+#define YPJ_TRACK_ROI_X            60     /* 以目标中心为原点的 X 方向跟踪区域半宽，单位像素。 */
+#define YPJ_TRACK_ROI_Y            80     /* 以目标中心为原点的 Y 方向跟踪区域半宽，单位像素。 */
+#define YPJ_LOCATE_DEADZONE        10     /* 物料中心允许的像素误差。 */
 #define YPJ_LOCATE_STABLE_COUNT     3     /* 连续满足误差要求多少帧才算定位完成。 */
-#define YPJ_LOCATE_MAX_X_OFFSET_CM  2.0f  /* 定位过程中前后位移限制，单位 cm。 */
-#define YPJ_LOCATE_MAX_Y_OFFSET_CM  1.5f  /* 定位过程中右移位移限制，单位 cm。 */
+#define YPJ_LOCATE_MAX_X_OFFSET_CM  1.5f  /* 定位过程中前后位移限制，单位 cm。 */
+#define YPJ_LOCATE_MAX_Y_OFFSET_CM  1.0f  /* 定位过程中右移位移限制，单位 cm。 */
 
 /* 二维码小范围搜索。 */
 #define YPJ_QR_SCAN_DISTANCE_CM   2.0f    /* 每次二维码小范围搜索的固定移动距离。 */
@@ -71,7 +72,7 @@
 #define PATH2_ACCEL_TICKS        200U     /* 加速 500ms，1 tick = 5ms。 */
 #define PATH2_DECEL_TICKS        200U     /* 减速 750ms，降低停车冲击。 */
 #define PATH2_RIGHT_SPEED          20.0f   /* 到达圆盘机后的低速右移速度。 */
-#define PATH2_RIGHT_DISTANCE_CM    5.0f   /* 到达圆盘机后的右移距离，单位 cm。 */
+#define PATH2_RIGHT_DISTANCE_CM    6.0f   /* 到达圆盘机后的右移距离，单位 cm。 */
 
 /* 路径 3：圆盘机到粗加工区。 */
 #define PATH3_BACK_SPEED          80.0f   /* 圆盘机夹取完成后的倒车速度。 */
@@ -79,7 +80,7 @@
 #define PATH3_LEFT_SPEED          20.0f   /* 转弯前左移避线速度。 */
 #define PATH3_LEFT_DISTANCE_CM     5.0f   /* 转弯前左移避线距离，单位 cm。 */
 #define PATH3_FIRST_ANGLE        -90.0f   /* 第一次顺时针转90°后的目标航向。 */
-#define PATH3_LONG_BACK_SPEED    170.0f   /* 到粗加工区的长距离倒车速度。 */
+#define PATH3_LONG_BACK_SPEED    140.0f   /* 到粗加工区的长距离倒车速度。 */
 #define PATH3_LONG_BACK_CM       173.0f   /* 到粗加工区的长距离倒车距离，单位 cm。 */
 #define PATH3_LONG_BACK_ACCEL_TICKS 250U  /* 173cm 长距离倒车加速时间，1 tick = 5ms。 */
 #define PATH3_LONG_BACK_DECEL_TICKS 150U  /* 173cm 长距离倒车减速时间，1 tick = 5ms。 */
@@ -89,35 +90,37 @@
 
 /* 路径 4：粗加工区物料全部回收后的路线。 */
 #define PATH4_BACK_SPEED         120.0f   /* 离开粗加工区的倒车速度。 */
-#define PATH4_BACK_DISTANCE_CM   85.0f    /* 离开粗加工区的倒车距离，单位 cm。 */
+#define PATH4_BACK_DISTANCE_CM   83.0f    /* 离开粗加工区的倒车距离，单位 cm。 */
 #define PATH4_BACK_ACCEL_TICKS   150U     /* 倒车加速 500ms，1 tick = 5ms。 */
 #define PATH4_BACK_DECEL_TICKS   150U     /* 倒车减速 750ms，降低停车冲击。 */
 #define PATH4_LEFT_SPEED          20.0f    /* 转弯前左移避线速度。 */
 #define PATH4_LEFT_DISTANCE_CM     5.0f    /* 转弯前左移避线距离，单位 cm。 */
-#define PATH4_TURN_ANGLE        -270.0f   /* 从-180°继续顺时针90°后的连续世界航向。 */
-#define PATH4_FORWARD_SPEED      180.0f   /* 前往暂存区的移动速度。 */
-#define PATH4_FORWARD_DISTANCE_CM 85.0f   /* 前往暂存区的距离，单位 cm。 */
+#define PATH4_TURN_ANGLE        -269.8f   /* 从-180°继续顺时针90°后的连续世界航向。 */
+#define PATH4_FORWARD_SPEED      120.0f   /* 前往暂存区的移动速度。 */
+#define PATH4_FORWARD_DISTANCE_CM 83.0f   /* 前往暂存区的距离，单位 cm。 */
 #define PATH4_FINAL_RIGHT_SPEED   20.0f   /* 转向后右移对准速度。 */
-#define PATH4_FINAL_RIGHT_CM       4.0f   /* 转向后右移对准距离，单位 cm。 */
+#define PATH4_FINAL_RIGHT_CM       5.0f   /* 转向后右移对准距离，单位 cm。 */
 
 /* 路径 5：第一轮暂存区完成后返回圆盘机。 */
-#define PATH5_BACK_SPEED          160.0f  /* 离开暂存区的倒车速度。 */
-#define PATH5_BACK_DISTANCE_CM     93.0f  /* 离开暂存区的倒车距离，单位 cm。 */
-#define PATH5_LEFT_SPEED           20.0f  /* 转弯前左移避线速度。 */
-#define PATH5_LEFT_DISTANCE_CM      7.0f  /* 转弯前左移避线距离，单位 cm。 */
-#define PATH5_TURN_ANGLE         -360.0f  /* 从-270°继续顺时针90°后的连续世界航向。 */
-#define PATH5_FINAL_BACK_SPEED    160.0f  /* 转向后驶向圆盘机的倒车速度。 */
-#define PATH5_FINAL_BACK_CM        42.0f  /* 转向后驶向圆盘机的倒车距离，单位 cm。 */
+#define PATH5_BACK_SPEED          100.0f  /* 离开暂存区的倒车速度。 */
+#define PATH5_BACK_DISTANCE_CM     90.0f  /* 离开暂存区的倒车距离，单位 cm。 */
+#define PATH5_LEFT_SPEED           20.0f  /* 倒车前左移避线速度。 */
+#define PATH5_LEFT_DISTANCE_CM      7.0f  /* 倒车前左移避线距离，单位 cm。 */
+#define PATH5_TURN_ANGLE         -359.8f  /* 从-270°继续顺时针90°后的连续世界航向。 */
+#define PATH5_FINAL_BACK_SPEED    100.0f  /* 转向后驶向圆盘机的倒车速度。 */
+#define PATH5_FINAL_BACK_CM        40.0f  /* 转向后驶向圆盘机的倒车距离，单位 cm。 */
+#define PATH5_FINAL_RIGHT_SPEED    20.0f  /* Path5 final right adjustment speed. */
+#define PATH5_FINAL_RIGHT_CM        2.0f  /* Path5 final right adjustment distance, cm. */
 
 /* 路径 6：第二轮暂存区完成后返回启停区。 */
-#define PATH6_BACK_SPEED          170.0f  /* 离开第二轮暂存区的倒车速度。 */
+#define PATH6_BACK_SPEED          120.0f  /* 离开第二轮暂存区的倒车速度。 */
 #define PATH6_BACK_DISTANCE_CM     88.0f  /* 从绿环离开暂存区的基准倒车距离，单位 cm。 */
 #define PATH6_BACK_ACCEL_TICKS    100U    /* 倒车加速 500ms，1 tick = 5ms。 */
 #define PATH6_BACK_DECEL_TICKS    150U    /* 倒车减速 750ms，降低停车冲击。 */
 #define PATH6_PRETURN_LEFT_SPEED   20.0f   /* 转弯前左移避线速度。 */
 #define PATH6_PRETURN_LEFT_CM       7.0f   /* 转弯前左移避线距离，单位 cm。 */
-#define PATH6_TURN_ANGLE         -358.0f  /* 返航前顺时针转向后的目标航向。 */
-#define PATH6_LONG_BACK_SPEED     200.0f  /* 朝启停区长距离倒车的速度。 */
+#define PATH6_TURN_ANGLE         -359.0f  /* 返航前顺时针转向后的目标航向。 */
+#define PATH6_LONG_BACK_SPEED     180.0f  /* 朝启停区长距离倒车的速度。 */
 #define PATH6_LONG_BACK_CM        186.0f  /* 朝启停区长距离倒车的距离，单位 cm。 */
 #define PATH6_RIGHT_SPEED          80.0f  /* 最后右移对准启停区的速度。 */
 #define PATH6_RIGHT_DISTANCE_CM    16.0f  /* 最后右移对准启停区的距离，单位 cm。 */
@@ -431,6 +434,22 @@ volatile uint32_t ypj_debug_frame_count = 0;
 static float ypj_anchor_x = 0.0f;
 static float ypj_anchor_y = 0.0f;
 
+static void Yuanpanji_ReturnAnchor(float target_angle)
+{
+	Chassis_WorldCommitSegment(target_angle);
+	Chassis_WorldBeginSegment();
+	Chassis_MoveByDistance(0,
+						   (ypj_anchor_y - car.actual_y) > 0 ? 50.0f : -50.0f,
+						   target_angle,
+						   FMy_Abs(ypj_anchor_y - car.actual_y));
+	Chassis_MoveByDistance((ypj_anchor_x - car.actual_x) > 0 ? 100.0f : -100.0f,
+						   0,
+						   target_angle,
+						   FMy_Abs(ypj_anchor_x - car.actual_x));
+	Motor_setspeed(0, 0, 0);
+	vTaskDelay(pdMS_TO_TICKS(200));
+}
+
 static void CatchLocatedMaterialToWarehouse(uint8_t color, uint16_t catch_height)
 {
 	uint8_t warehouse_index;
@@ -642,24 +661,13 @@ static void Yuanpanji_LocateOpenLoop(uint8_t cls, char *name, float target_angle
 			stable_count = 0;
 			Motor_setspeed(0, 0, 0);
 			vTaskDelay(pdMS_TO_TICKS(100));
-			Chassis_WorldCommitSegment(target_angle);
 			HMI_LogWarn("%s exceed limit x%.1f y%.1f", name, offset_x, offset_y);
-			Chassis_WorldBeginSegment();
-			Chassis_MoveByDistance(0,
-								   (ypj_anchor_y - car.actual_y) > 0 ? 50.0f : -50.0f,
-								   target_angle,
-								   FMy_Abs(ypj_anchor_y - car.actual_y));
-			Chassis_MoveByDistance((ypj_anchor_x - car.actual_x) > 0 ? 100.0f : -100.0f,
-								   0,
-								   target_angle,
-								   FMy_Abs(ypj_anchor_x - car.actual_x));
-			Motor_setspeed(0, 0, 0);
-			vTaskDelay(pdMS_TO_TICKS(200));
+			Yuanpanji_ReturnAnchor(target_angle);
 			return;
 		}
 
-		if(Flow_AbsInt(err_x) > YPJ_TRACK_ROI ||
-		   Flow_AbsInt(err_y) > YPJ_TRACK_ROI)
+		if(Flow_AbsInt(err_x) > YPJ_TRACK_ROI_X ||
+		   Flow_AbsInt(err_y) > YPJ_TRACK_ROI_Y)
 		{
 			ypj_debug_stage = 14;
 			stable_count = 0;
@@ -935,8 +943,11 @@ static void Flow_RingArea(float target_heading, RING_WORK_LAYER_T work_layer,
 				flow_current_ring = color;
 			}
 			{
-				uint8_t clear = (color == BLUE && i < 2) ? 1 : 0;
-				uint8_t cw    = (color == RED &&
+				uint8_t clear = (work_layer == RING_WORK_LAYER_SECOND &&
+								 second_code == 231 && i == 1 && color == BLUE) ? 1 : 0;
+				uint8_t cw    = (work_layer == RING_WORK_LAYER_SECOND &&
+								 (second_code == 231 || second_code == 321) &&
+								 i == 2 && color == RED &&
 								 Get_Warehouse_index_from_color(RED) == 2) ? 1 : 0;
 				if(Ring_PlaceFromWarehouse(color, work_height, clear, cw) == 0)
 					break;
@@ -1072,15 +1083,17 @@ void Route_Path5_StorageToTurntable(void)
 
 	compensated_back_cm = Ring_CompensatedDistance(PATH5_BACK_DISTANCE_CM);
 	HMI_LogInfo("path5 start");
+	Chassis_MoveByDistance(PATH5_LEFT_SPEED, 0, PATH4_TURN_ANGLE,
+					   PATH5_LEFT_DISTANCE_CM);
 	HMI_LogInfo("back %.0fcm", compensated_back_cm);
 	Chassis_MoveByDistance(0, -PATH5_BACK_SPEED, PATH4_TURN_ANGLE,
 					   compensated_back_cm);
-	Chassis_MoveByDistance(PATH5_LEFT_SPEED, 0, PATH4_TURN_ANGLE,
-					   PATH5_LEFT_DISTANCE_CM);
 	Chassis_TurnToAngle(Yaw_DriftCorrect(PATH4_TURN_ANGLE, PATH5_TURN_ANGLE),
 					   YPJ_TURN_TIMEOUT_MS);
 	Chassis_MoveByDistance(0, -PATH5_FINAL_BACK_SPEED, PATH5_TURN_ANGLE,
 					   PATH5_FINAL_BACK_CM);
+	Chassis_MoveByDistance(-PATH5_FINAL_RIGHT_SPEED, 0, PATH5_TURN_ANGLE,
+					   PATH5_FINAL_RIGHT_CM);
 	Motor_setspeed(0, 0, 0);
 	HMI_LogInfo("round2 ready");
 }
@@ -1229,4 +1242,3 @@ void Flow_RunCurrent(void)
 		return;
 	Route_Path6_StorageToHome();
 }
-

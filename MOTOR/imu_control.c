@@ -8,11 +8,11 @@
 static int Compensating_corners=4;
 
 /* 底盘航向 PID：先调 P 改善响应，再用 D 抑制转弯末端超调，I 当前不用。 */
-#define GYRO_PID_KP          2.42f  /* 航向比例增益，增大后转向更快，但过大容易振荡。 */
+#define GYRO_PID_KP          2.1f  /* 航向比例增益，增大后转向更快，但过大容易振荡。 */
 #define GYRO_PID_KI          0.0f   /* 航向积分增益，当前保持为 0。 */
 #define GYRO_PID_KD          0.5f   /* 航向微分增益，增大可抑制超调，但过大响应会变钝。 */
-#define GYRO_PID_OUTPUT_MAX  150.0f /* 航向 PID 最大输出。 */
-#define GYRO_PID_OUTPUT_MIN -150.0f /* 航向 PID 最小输出。 */
+#define GYRO_PID_OUTPUT_MAX  120.0f /* 航向 PID 最大输出。 */
+#define GYRO_PID_OUTPUT_MIN -120.0f /* 航向 PID 最小输出。 */
 
 struct IMU_RUNDATA inu_run;
 struct IMU_RUNDATA inu_turn;
@@ -85,6 +85,7 @@ void Direction_Calibration(int target_angle)
    返回 target_angle + drift_error，使机器人物理上转到正确的方向。 */
 float Yaw_DriftCorrect(float expected_current, float target_angle)
 {
+#if YAW_DRIFT_COMP_ENABLE
     float current = normalize_angle(imu.yaw);
     float expected = normalize_angle(expected_current);
     float error = current - expected;
@@ -93,4 +94,8 @@ float Yaw_DriftCorrect(float expected_current, float target_angle)
     while (error < -180.0f) error += 360.0f;
 
     return target_angle + error;
+#else
+    (void)expected_current;
+    return target_angle;
+#endif
 }

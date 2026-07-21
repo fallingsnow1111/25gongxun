@@ -29,7 +29,7 @@ void claw_move_2(int action)
 	switch(action)
 	{
 		case open:
-			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, 115);
+			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, 110);
 			break;
 		case close:
 			__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, 150);

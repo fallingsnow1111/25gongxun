@@ -60,14 +60,18 @@ uint8_t Circle_PlaceFromWarehouseAtPose(uint8_t warehouse_index, uint16_t place_
 	vTaskDelay(pdMS_TO_TICKS(100));
 
 	Z_SetHeight(CIRCLE_SAFE_HEIGHT);
-	if (need_clear && place_height == CIRCLE_SECOND_LAYER_HEIGHT)
+	if (place_height == CIRCLE_SECOND_LAYER_HEIGHT)
 	{
-		/* CCW 侧取料后 Y 轴伸出避让，防止旋转时扫到已放环。 */
-		Y_SetLength(95);
-	}
-	else if (place_height == CIRCLE_SECOND_LAYER_HEIGHT)
-	{
-		Y_SetLength(0);
+		if(need_clear)
+		{
+			/* 第二层特殊步：取到物料并抬升后，先伸到避障长度再旋转。 */
+			Y_SetLength(CIRCLE_SECOND_LAYER_AVOID_LENGTH);
+		}
+		else
+		{
+			/* 123/213/132/312/321 默认流程：先缩回 Y，再旋转到目标放置角。 */
+			Y_SetLength(0);
+		}
 	}
 	M8010_SetAngle(place_angle);
 	Y_SetLength(place_length);

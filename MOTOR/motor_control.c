@@ -12,8 +12,10 @@
 volatile uint32_t chassis_period_overrun_count = 0;
 volatile uint32_t chassis_period_max_ms = 0;
 
+#define CHASSIS_TURN_USE_DOUBLE_LOOP 0U  /* 1=double loop; 0=single angle PID experiment. */
+
 #define CHASSIS_TURN_THRESHOLD     0.1f /* 常规转向的到位误差，单位度。 */
-#define CHASSIS_TURN_SETTLE_COUNT    10U /* 角度连续约50ms满足阈值才算到位。 */
+#define CHASSIS_TURN_SETTLE_COUNT    7U /* 角度连续约50ms满足阈值才算到位。 */
 #define CHASSIS_TURN_MIN_SPEED      1.0f /* 双环最小输出，实车测试后再确定机械有效下限。 */
 #define CHASSIS_TURN_ACCEL_DELTA    2.0f /* 原地转向每5ms最多增加2RPM。 */
 #define CHASSIS_TURN_DECEL_DELTA    4.0f /* 原地转向每5ms最多减少4RPM。 */
@@ -485,8 +487,13 @@ static uint8_t Chassis_TurnToAngleOnce(float target_angle, uint32_t timeout_ms)
 	float last_turn_speed = 0.0f;
 	float speed_delta;
 	float delta_limit;
+#if CHASSIS_TURN_USE_DOUBLE_LOOP
 	float rate_integral = 0.0f;
 	float filtered_rate = -imu.angular_rate;
+#else
+	Gyro_Pid.integral = 0.0f;
+	Gyro_Pid.previousError = 0.0f;
+#endif
 	TickType_t last_wake = xTaskGetTickCount();
 	TickType_t last_cycle = last_wake;
 
@@ -494,10 +501,12 @@ static uint8_t Chassis_TurnToAngleOnce(float target_angle, uint32_t timeout_ms)
     {
         float current_angle = normalize_angle(imu.yaw);
         float angle_error = getAngleZ(current_angle, target_angle);
+#if CHASSIS_TURN_USE_DOUBLE_LOOP
         float measured_rate = -imu.angular_rate;
 
         filtered_rate += CHASSIS_TURN_RATE_FILTER *
                          (measured_rate - filtered_rate);
+#endif
 
         if (fabsf(angle_error) <= CHASSIS_TURN_THRESHOLD)
         {
@@ -518,6 +527,7 @@ static uint8_t Chassis_TurnToAngleOnce(float target_angle, uint32_t timeout_ms)
 		{
 			settle_count = 0;
 		}
+#if CHASSIS_TURN_USE_DOUBLE_LOOP
 		{
 			float target_rate = angle_error * CHASSIS_TURN_ANGLE_KP;
 			float rate_error;
@@ -542,6 +552,13 @@ static uint8_t Chassis_TurnToAngleOnce(float target_angle, uint32_t timeout_ms)
 			else if(turn_speed < -CHASSIS_TURN_RPM_MAX)
 				turn_speed = -CHASSIS_TURN_RPM_MAX;
 		}
+#else
+		turn_speed = Direction_Calibration_turn(target_angle);
+		if(turn_speed > CHASSIS_TURN_RPM_MAX)
+			turn_speed = CHASSIS_TURN_RPM_MAX;
+		else if(turn_speed < -CHASSIS_TURN_RPM_MAX)
+			turn_speed = -CHASSIS_TURN_RPM_MAX;
+#endif
 		delta_limit = (turn_speed * last_turn_speed >= 0.0f &&
 					   fabsf(turn_speed) > fabsf(last_turn_speed)) ?
 					  CHASSIS_TURN_ACCEL_DELTA : CHASSIS_TURN_DECEL_DELTA;

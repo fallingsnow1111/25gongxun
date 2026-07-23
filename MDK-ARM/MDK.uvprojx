@@ -2530,16 +2530,6 @@
               <FilePath>..\task\main_task.h</FilePath>
             </File>
             <File>
-              <FileName>action_sets.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\task\action_sets.c</FilePath>
-            </File>
-            <File>
-              <FileName>action_sets.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\task\action_sets.h</FilePath>
-            </File>
-            <File>
               <FileName>imu_task.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\task\imu_task.c</FilePath>

@@ -4,7 +4,6 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "main_task.h"
-#include "action_sets.h"
 
 void Start_Task_Create(void);
 

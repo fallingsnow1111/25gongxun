@@ -51,6 +51,12 @@
 #define RING_CENTER_X            122     /* 色环在画面中的目标中心 X 坐标。 */
 #define RING_CENTER_Y            133     /* 色环在画面中的目标中心 Y 坐标。 */
 
+/* 圆盘机物料 ROI 判断参数，用于夹取高度测试。 */
+#define TEST_YPJ_CENTER_X        116
+#define TEST_YPJ_CENTER_Y        125
+#define TEST_YPJ_TRACK_ROI_X      80
+#define TEST_YPJ_TRACK_ROI_Y      80
+
 /* 色环切换参数。 */
 #define RING_SWITCH_SPEED         50.0f  /* 色环之间固定移动的速度。 */
 #define RING_SWITCH_DISTANCE_CM   15.0f  /* 相邻两个色环的中心距离，单位 cm。 */
@@ -786,6 +792,122 @@ void Vision_Parse_Test(void)
 		}
 
 		vTaskDelay(pdMS_TO_TICKS(20));
+	}
+}
+
+static int Test_AbsInt(int value)
+{
+	return value < 0 ? -value : value;
+}
+
+static uint8_t Yuanpanji_TestWaitAnyMaterialRoi(void)
+{
+	static const uint8_t colors[3] = {RED, GREEN, BLUE};
+	VISION_TARGET_T target;
+	uint32_t last_frame_count = vision_frame_count;
+
+	while(1)
+	{
+		if(vision_frame_count == last_frame_count)
+		{
+			vTaskDelay(pdMS_TO_TICKS(10));
+			continue;
+		}
+
+		last_frame_count = vision_frame_count;
+		for(uint8_t i = 0; i < 3; i++)
+		{
+			uint8_t color = colors[i];
+			int err_x;
+			int err_y;
+
+			if(Vision_GetMaterialTarget(color, &target) == 0)
+				continue;
+
+			err_x = TEST_YPJ_CENTER_X - (int)target.x;
+			err_y = TEST_YPJ_CENTER_Y - (int)target.y;
+			HMI_SetPixelError(err_x, err_y, 1);
+			HMI_LogInfo("%s %03d,%03d", color == RED ? "RED" :
+						color == GREEN ? "GREEN" : "BLUE",
+						target.x, target.y);
+
+			if(Test_AbsInt(err_x) <= TEST_YPJ_TRACK_ROI_X &&
+			   Test_AbsInt(err_y) <= TEST_YPJ_TRACK_ROI_Y)
+			{
+				return color;
+			}
+		}
+
+		vTaskDelay(pdMS_TO_TICKS(20));
+	}
+}
+
+static void Yuanpanji_TestCatchToWarehouse1(uint16_t catch_height)
+{
+	HMI_SetArmText("Z CATCH");
+	Z_SetHeight(catch_height);
+	claw_move_1(close);
+	vTaskDelay(pdMS_TO_TICKS(170));
+
+	HMI_SetArmText("Z UP");
+	Z_SetHeight(CIRCLE_SAFE_HEIGHT);
+
+	HMI_SetArmText("PUT WH1");
+	Y_SetLength(Y_LENGHT_WAREHOUSE);
+	M8010_SetAngle(FIRST_WAREHOUSE_PUT_ANGLE);
+	Z_SetHeight(PUT_HOUSE_HEIGHT);
+	claw_move_2(open);
+	vTaskDelay(pdMS_TO_TICKS(150));
+
+	Z_SetHeight(CIRCLE_SAFE_HEIGHT);
+	claw_move_1(open);
+}
+
+void Yuanpanji_Warehouse1_RingPlaceHeight_Test(void)
+{
+	uint8_t color;
+
+	if(Flow_ArmPoseInit() == 0)
+		return;
+
+	HMI_InitScreen();
+	HMI_SetSys("Z TEST", "YPJ-WH1-RING");
+	HMI_SetChassisText("STOP");
+	HMI_SetArmText("DETECT");
+	HMI_LogInfo("ypj height test");
+
+	Motor_setspeed(0, 0, 0);
+	Init_Warehouse(1);
+	USART6_readdata_SeetZero();
+	Set_Circle_Center(TEST_YPJ_CENTER_X, TEST_YPJ_CENTER_Y);
+	Vision_LED_On();
+
+	Yuanpanji_PrepareDetectPose();
+	M8010_SetAngle(PUT_AND_CATCH_ANGLE);
+	Vision_StartMaterial();
+	vTaskDelay(pdMS_TO_TICKS(300));
+	HMI_SetVisionText("ANY ROI");
+	color = Yuanpanji_TestWaitAnyMaterialRoi();
+	HMI_LogInfo("catch any %d", color);
+
+	Vision_Stop();
+	Vision_LED_Off();
+	Motor_setspeed(0, 0, 0);
+
+	Yuanpanji_TestCatchToWarehouse1(YUAN_PAN_HEIGHT);
+	Z_SetHeight(CIRCLE_SAFE_HEIGHT);
+
+	TaskFlow_PlaceFromWarehouseIndex(0, "WH1", CIRCLE_PLACE_HEIGHT, 0, 0);
+
+	Motor_setspeed(0, 0, 0);
+	Z_SetHeight(CIRCLE_SAFE_HEIGHT);
+	HMI_SetArmText("DONE");
+	HMI_SetSys("Z TEST", "DONE");
+	HMI_LogInfo("ypj height test done");
+
+	while(1)
+	{
+		vTaskDelay(pdMS_TO_TICKS(200));
 	}
 }
 

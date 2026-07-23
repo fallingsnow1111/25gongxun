@@ -6,12 +6,6 @@ TaskHandle_t main_task_Handle;
 #define MAIN_TASK_STACK    512
 #define MAIN_TASK_PRIORITY 5
 
-void Wait_other_task_finish(uint32_t tar_TaskNotify)
-{
-    xTaskNotifyWait(0, tar_TaskNotify, NULL, portMAX_DELAY);
-    vTaskDelay(pdMS_TO_TICKS(1));
-}
-
 static void Main_Task(void *pvParameters)
 {
     (void)pvParameters;

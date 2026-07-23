@@ -20,6 +20,7 @@ void IMU_Stable_Straight_Test(void);
 void Ring_Warehouse_Clearance_Test(void);
 void Ring_Location_Test(void);
 void Ring_LocateOne_Place123_Test(void);
+void Yuanpanji_Warehouse1_RingPlaceHeight_Test(void);
 
 /* 夹爪重新安装后的舵机位置循环校正测试。 */
 void Claw_Calibration_Test(void);

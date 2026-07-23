@@ -17,14 +17,6 @@ typedef enum{
 	Absolute_Position=1//绝对位置模式
 }MODE_POSITION;
 
-typedef enum{
-	YUANPANJI_ACTION=0,//准备识别圆盘机的动作组
-	CIRCLE_ACTION=1,   //准备定位圆盘机的动作组
-    CATCH_YUANPANJI_ACTION=2,
-    POSITONING_CIRCLE_ACTION=3,
-    ACITON_INIT=4
-}ACTION_TOTAL_SET;
-
 typedef struct wasehouse_single_t {
    uint8_t color;
    int angle;
@@ -36,11 +28,6 @@ typedef struct WASEHOUSE_T{
     WAREHOUSE_SINGLE_T thrid;  // 第三个仓库
 }WASEHOUSE_T;
 
-
-typedef struct ACTION_FLAG_T{
-	uint8_t   finish_flag;
-    ACTION_TOTAL_SET set_action; //当前动作组
-}ACTION_FLAG_T;
 
 typedef struct CHECK_FLAG_t
 {
@@ -64,7 +51,6 @@ typedef struct CARDATA_T {
     float actual_w;  // 实际角度W
     volatile ABLE_T imu_modeable;// 模式（是否使能陀螺仪控制）
     volatile ABLE_T Odometer_able;//是否使用里程计
-    volatile ACTION_FLAG_T action_set;//动作组
 } CARDATA_T;
 
 

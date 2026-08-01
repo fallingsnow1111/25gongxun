@@ -22,7 +22,7 @@
 #define ARM_INIT_JOINT_SETTLE_MS       1000U /* 关节转动后的机械稳定时间。 */
 #define ARM_INIT_ZERO_INTERVAL_MS        20U /* UART7两条清零命令之间的间隔。 */
 
-/* 底盘速度档位：修改速度后，所有对应距离都需要重新标定。 */
+/* 底盘速度档位：距离接口为软件脉冲积分闭环，改速度不影响到位距离；短距离选低档让加减速放得下。 */
 #define TEST_CHASSIS_SPEED_FINE   5.0f   /* 视觉闭环微调速度。 */
 #define VISION_LOCATE_KP          0.25f  /* 像素误差到平移速度的比例系数。 */
 #define VISION_LOCATE_SPEED_MIN   2.0f   /* 超出死区后的最低调整速度。 */

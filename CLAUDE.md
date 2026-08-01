@@ -9,24 +9,28 @@ STM32F750V8 + FreeRTOS 机器人调试助手。帮定位问题、写测试、给
 - Toolchain: Keil MDK-ARM
 - 底盘: X42S 步进 ×4, UART3 DMA（0xAA 多电机同步协议）
 - 关节电机: GO-M8010-6, UART8 RS485
-- IMU: USART2 DMA（500Hz，偏航角不归零用于绝对模式）
+- IMU: HWT101, USART2 DMA（11字节帧, 200Hz 输出, 5ms IMU_Process 周期任务解析）
 - 二维码: XR1503MTEX, UART5 RX
 - 串口屏: 淘晶驰 TJC, UART5 TX
+- 视觉: MaixCam Pro + OpenCV（色环/圆盘机定位），代码在 `Vision Project\gongxun_cv\raspberry_pi\`
 - 时序基准: TIM6 (delaytime), TIM14 (HAL Tick 替代 SysTick)
-- 控制周期: 底盘 20ms (vTaskDelayUntil)，主任务 5 级优先、底盘 6 级优先
+- 控制周期: 底盘开环 5ms (OPEN_LOOP_PERIOD_MS, vTaskDelayUntil)；任务优先级 IMU 7 / Main 5 / Start 5 / HMI 4，无独立底盘任务
 
 ## Key Paths
-- 底盘控制: `task/chassis_control_task.c`（PID + 限幅 + 死区 + 到位判定）
-- 电机驱动: `MOTOR/motor.c`（0xF6/0xAA 协议）, `MOTOR/motor_control.c`（Move_To_Target_area）
-- 关节电机: `SENSOR/GO-M8010-6.c`
-- IMU: `SENSOR/IMU.C`, `MOTOR/imu_control.c`（Direction_Calibration_turn、normalize_angle）
+- 底盘控制（开环）: `MOTOR/motor_control.c`（Chassis_MoveByDistance / Chassis_TurnToAngle / Chassis_OpenLoop_SetSpeed / Chassis_BlendSpeedAngle）
+- 电机驱动: `MOTOR/motor.c`（0xAA 多机速度包 + 同步触发, uart3WriteBuf 5ms 超时保护）
+- 机械臂 Z/Y: `MOTOR/postion_control.c`（POSTION_init / Z_SetHeight / Y_SetLength，UART7）
+- 关节电机: `SENSOR/GO-M8010-6.c`（UART8）
+- IMU: `SENSOR/IMU.C`, `MOTOR/imu_control.c`（Direction_Calibration_turn、normalize_angle、Yaw_DriftCorrect）
 - 二维码: `SENSOR/QR_code.c`
 - 串口屏: `SENSOR/tjc_usart_hmi.c`
+- 视觉: `Vision Project\gongxun_cv\raspberry_pi\color_line_det.py`（OpenCV + MaixCam Pro）
 - PID: `MOTOR/pid.c`
-- 延时: `MOTOR/delay.c`
+- 延时: `MOTOR/delay.c`（TIM6 delaytime）
 - 结构体: `mydefinition/Struct_encapsulation.h`（MODE_POSITION 绝对/相对枚举）
-- 主流程: `task/main_task.c`（Route_Test / Route_Test_ABS / 扫码函数）
-- 初始化: `task/init_task.c`, `task/start_task.c`
+- 主流程: `task/main_task.c` → `APP/task_flow.c`（Flow_RunCurrent 跑图）；测试: `APP/test.c`
+- 初始化: `task/start_task.c`（Init_Task_Create，POSTION_init 等）
+- 经验文档: `调试经验汇总.md`（根目录，工程问题分类速查）
 - CubeMX 生成: `Core/Src/*.c`, `Core/Inc/*.h`
 
 ## Interaction Rules
@@ -49,17 +53,17 @@ STM32F750V8 + FreeRTOS 机器人调试助手。帮定位问题、写测试、给
 ### 3. 调试优先用 Watch 变量
 - Keil Watch 窗口直接加变量看，非必要不加断点
 - 变量必须是**全局**或**文件作用域非 static**才能在 Watch 中稳定显示（Keil 找不到 static 符号）
-- 需观测的关键变量：`motor_check.flag_finish`, `motorX.actual_angle`, `MOTOR_ACTIONFALG`, `car.actual_y/x/w`, `imu.yaw`, `settle_count`
+- 需观测的关键变量：`motor_check.flag_finish`, `motor_actual_pulse[4]`, `motor_debug_cmd_rpm_x10[4]`, `chassis_period_overrun_count`, `chassis_odom_tx_fail_count`, `imu.yaw`, `imu.angular_rate`, `car.actual_x/y/w`, `Z_POSTION.BIT`（完整清单见 `调试经验汇总.md` 附录 B）
 
 ### 4. 注释要准确
 - 中文/英文都行，但不能写错方向/含义
 - 不确定的方向/数值不写注释，让用户自己判断
 
 ### 5. 修根因，不打补丁
-- 卡死 → 查 volatile、查临界区、查 ISR 锁死、查 settle_count 清零逻辑
-- 跳变 → 查 static 变量共享、查 wrap 逻辑、查 MIN_SPEED 旁路 sle rate
-- 不收敛 → 查 PID 参数、查死区逻辑、查 HEADING_DEADZONE 与 ORIENTATION_THRESHOLD 间隙
-- 走弯 → 先看 imu.yaw 是单向漂移还是来回摆，根因完全不同
+- 卡死 → 查 volatile、查临界区、查 ISR 锁死、查 Z 到位等待（Z_MAX_TIMEOUT_MS 超时）、查脉冲快照 flag_finish
+- 跳变 → 查 static 变量共享、查 wrap 逻辑
+- 不收敛/转不到位 → 查 Gyro_Pid 参数（Kp/Kd）、查转向阈值与 CHASSIS_TURN_MIN_SPEED、查角度最短路径归一化
+- 走弯 → 先看 imu.yaw 是单向漂移还是来回摆：漂移 → Imu_setZero 后 200ms 未等 / 需 Yaw_DriftCorrect；摆动 → Kd 或机械
 
 ### 6. 改动前先给方案，等我确认再动手
 - 先给改进方案（改什么、怎么改、为什么），等我审查
@@ -84,7 +88,7 @@ STM32F750V8 + FreeRTOS 机器人调试助手。帮定位问题、写测试、给
 
 ### 9. 封装与复用
 - 逻辑重复出现 2 次以上 → 提成 static 函数
-- 测试函数和最终跑图函数分开（Route_Test vs Route_Test_ABS）
+- 测试函数和跑图函数分开（`APP/test.c` 测试 vs `APP/task_flow.c` Flow_RunCurrent 跑图）
 - 扫码、微调、传感器等待等独立逻辑单独封装，不嵌在跑图逻辑里
 - 可调参数列表放在函数开头（如 adj 数组），不改控制流
 
@@ -93,7 +97,8 @@ STM32F750V8 + FreeRTOS 机器人调试助手。帮定位问题、写测试、给
 - 不依赖用户自己发现编译错误，主动指出
 
 ### 11. 参数联动
-- 改变控制周期 → 所有 delta 限值必须按比例缩放
+- 距离接口（`Chassis_MoveByDistance`）是软件脉冲积分闭环：`PULSE_PER_CM` 是机械常数，改速度**不影响到位距离**，不需要重标定；短距离才需要降速档（加减速占满行程，5cm→20、10cm→40、20cm→80、40cm+→160）
+- 时间标定接口（`Chassis_HoldSpeedAngle`/`Chassis_BlendSpeedAngle`/`Chassis_MoveTurnOnce`/`Chassis_DriftStraightTurn`）按 tick×5ms 跑，**改速度/周期要按档重新调参**
 - 改变绝对坐标中的一个值 → 后续所有坐标的移动差值保持不变
 - 改变一个 #define → 检查所有引用点是否语义一致
 
@@ -107,18 +112,17 @@ STM32F750V8 + FreeRTOS 机器人调试助手。帮定位问题、写测试、给
 ### 已修复
 - `delaytime` 缺 `volatile` → `Delay_ms` 死循环（已修复）
 - `normalize_angle` 的 `static flag` 共享 → 180° 转头 yaw 跳变（已改为无状态版本）
-- `Direction_Calibration_turn` 死区输出 ±1 → 转头来回摆（已移除，统一用 chassis_control 死区）
+- `Direction_Calibration_turn` 死区输出 ±1 → 转头来回摆（已移除，统一走 Gyro_Pid）
 - `flag_finish` 竞态条件 → 3 号电机反馈丢失（已由实测验证）
 
 ### 当前已知
-- **MIN_SPEED 振荡**: PID 小输出被 MIN_SPEED 跳到 2.0，旁路 sle rate → 在 HEADING_DEADZONE 边界 bang-bang。推荐去掉 MIN_SPEED
-- **控制周期缩放**: 30ms→20ms 必须同步缩小 MAX_DELTA、MAX_W_DELTA_TURN、MAX_W_DELTA_TRANS，并删除 chassis_control 内的 Delay_ms(5)
-- **绝对模式体坐标**: 编码器累加的是体坐标位移，转向前后的"相同 y"在物理世界是不同方向。跑图路线必须拆成"先转再走"，每段纯平移
-- **Imu_setZero 等待**: 发完归零命令需要 Delay_ms(200) 等 IMU 稳定，否则下一段动作的初始 yaw 偏置导致走弯
-- **UART3 DMA 缓冲**: 所有传给 HAL_UART_Transmit_DMA 的 buffer 必须是 static 或全局（函数返回时栈释放，DMA 还在读）
-- **Set_chassis_able 时序**: 复位编码器/IMU 前必须先挂起底盘任务（unable），复位完再恢复（enable），避免 UART3 总线竞争
-- **HEADING_DEADZONE = ORIENTATION_THRESHOLD**: 两值不同时中间有振荡区（w=0 但 settle_count 不计数）。如果精度可接受，设为相同值最稳定
-- **err_w 未归一化到 ±180°**: 绝对角度 180°/270° 时 naive 差值可达 360°，必须 while 归一化
+- **UART3 带宽瓶颈**: `Motor_setspeed` 每次 41 字节（0xAA 37B + 同步触发 4B），@115200 ≈3.6ms，5ms 周期内几乎占满 → 控制周期不能压到 2ms
+- **距离接口是脉冲闭环**: `Chassis_MoveByDistance` 用 `target_pulse = distance_cm × PULSE_PER_CM`，边跑边比对软件积分脉冲（`Chassis_OdomGetSegment`）提前减速。`PULSE_PER_CM` 是机械常数，**改速度不需要重标定**；短距离用低速度档让加减速放得下（5cm→20、10cm→40、20cm→80、40cm+→160）
+- **Imu_setZero 等待**: 发完归零命令需 200ms 再读 `imu.yaw`（测试参数已固化 `IMU_STRAIGHT_ZERO_WAIT_MS=200`），否则直行走弯
+- **UART3 DMA 缓冲**: 所有传给 DMA 的 buffer 必须 static 或全局（0xAA 37B all_send 等），不能放 DTCM
+- **角度最短路径**: `Direction_Calibration_turn`/`getAngleZ`/`BlendSpeedAngle` 内部已 while 归一化到 ±180°；**新增角度计算必须同样归一化**（270° 与 -90° 是同一方向）
+- **UART7 机械臂**: `Z_SetHeight` 阻塞等到位帧，带 4000ms 超时；上电后等 500ms 再 `POSTION_init` 防冷启动污染 DMA
+- **世界坐标 vs 体坐标**: 段内软件脉冲积分，段末 `Chassis_WorldCommitSegment` 旋转变换算世界坐标；跑图拆"先转再走"
 
 ## Test Function Template
 ```c
@@ -129,23 +133,17 @@ static void Xxx_Test(void)
     // 停住 / 循环
 }
 ```
-Main_Task 里调用，vTaskDelay 间隔，不用的测试注释掉。
+测试函数放 `APP/test.c`，跑图函数放 `APP/task_flow.c`（Flow_RunCurrent 调用），vTaskDelay 间隔，不用的测试注释掉。
 
-## 扫码 / 微调函数模板
+## 视觉定位 / 微调函数模板（当前）
 ```c
-// 返回 1=成功, 0=超时放弃
-static uint8_t Scan_QR(float base_x, float base_y)
+// 色环/物料视觉定位：像素误差 → 平移速度，连续稳定帧才算完成。参考 TaskFlow_RingLocateOne。
+// 参数：VISION_LOCATE_KP=0.25、SPEED_MIN=2.0、SPEED_MAX=15.0、LOCATE_DEADZONE、LOCATE_STABLE_COUNT（APP/task_flow.c 顶部）
+static uint8_t Vision_Locate(float vx, float vy, float target_angle)
 {
-    first_code = 0; second_code = 0;       // 清除旧数据
-    const float adj[][2] = {{0,0}, {-30,0}, {-30,20}, {-30,-20}};
-    for (uint8_t i = 0; i < 4; i++) {
-        Move_To_Target_area(base_x + adj[i][0], base_y + adj[i][1],
-                            0, enable, Absolute_Position);
-        uint32_t t = HAL_GetTick();
-        while (!qr_found && (HAL_GetTick() - t) < 1000)
-            vTaskDelay(pdMS_TO_TICKS(50));
-        if (qr_found) { HMI_SEND(); return 1; }
-    }
+    // dx = 目标中心 - 识别中心;  vx = clamp(-dx * VISION_LOCATE_KP, ±SPEED_MAX)，低于 SPEED_MIN 用 SPEED_MIN
+    // Chassis_MoveByDistance(vx, vy, target_angle, 0.5f) 小步接近
+    // 连续 LOCATE_STABLE_COUNT 帧进死区 → return 1;  超时 RING_LOCATE_TIMEOUT_MS → return 0
     return 0;
 }
 ```

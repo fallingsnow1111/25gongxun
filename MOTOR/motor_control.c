@@ -35,7 +35,7 @@ volatile uint32_t chassis_period_max_ms = 0;
 #define CHASSIS_HEADING_NORMAL      1U
 #define CHASSIS_HEADING_SMOOTH      2U
 
-#define OPEN_LOOP_PERIOD_MS 5 /* 开环速度更新周期，修改后所有路径周期参数都要重新标定。 */
+#define OPEN_LOOP_PERIOD_MS 5 /* 开环速度更新周期；距离接口为脉冲积分闭环不受影响，按 tick 计时的连续运动函数需按新周期重调。 */
 #define MOTOR_PULSE_READ_SETTLE_MS 20U /* 停车后等待驱动器完成响应，再读取实际位置。 */
 #define PI_F 3.1415926f			// 正弦加减速计算用圆周率
 
